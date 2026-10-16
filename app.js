@@ -2610,26 +2610,73 @@
 
   // ---------- home page motion ----------
   // Example routes cycling under the logo (illustrative, each step is a real link on Wikipedia).
+  // Home-page demo: a mini article where a cursor finds the right link, clicks it, and the page flips
+  // to the next article. Each step's text is a short summary; [[x]] is a link, [[x|>]] the one to click.
   const DEMO_ROUTES = [
-    ['Pizza', 'Naples', 'Mount Vesuvius', 'Volcano'],
-    ['Dog', 'Canidae', 'Wolf'],
-    ['Chocolate', 'Mesoamerica', 'Mexico'],
+    [
+      ['Pizza', 'Pizza is a [[flatbread]] dish topped with [[tomato]] and [[cheese]], first made famous in [[Naples|>]], Italy.'],
+      ['Naples', 'Naples is a port city in southern [[Italy]] on the [[Bay of Naples]], in the shadow of [[Mount Vesuvius|>]].'],
+      ['Mount Vesuvius', 'Mount Vesuvius is an active [[volcano|>]] near Naples, best known for burying [[Pompeii]] in AD 79.'],
+      ['Volcano', 'A volcano is an opening in the Earth’s crust where molten rock, ash and gas escape.'],
+    ],
+    [
+      ['Dog', 'The dog is a domesticated [[mammal]] of the family [[Canidae|>]], kept by humans for over 15,000 years.'],
+      ['Canidae', 'Canidae is the family of dog-like [[carnivorans]], including [[foxes]], [[jackals]] and the [[wolf|>]].'],
+      ['Wolf', 'The wolf is a large wild canine native to Eurasia and North America.'],
+    ],
+    [
+      ['Chocolate', 'Chocolate is made from roasted [[cacao]] beans, first grown in [[Mesoamerica|>]] thousands of years ago.'],
+      ['Mesoamerica', 'Mesoamerica is a historical region covering much of modern [[Mexico|>]] and [[Central America]], home of the [[Maya]].'],
+      ['Mexico', 'Mexico is a country in North America, home to more than 120 million people.'],
+    ],
   ];
   function runRouteDemo() {
-    const box = $('#route-demo');
-    if (!box) return;
-    let i = Math.floor(Math.random() * DEMO_ROUTES.length);
-    const STEP = 700;
-    const play = () => {
-      if (!$('#home').classList.contains('active') || document.hidden) { setTimeout(play, 1500); return; }
-      const r = DEMO_ROUTES[i++ % DEMO_ROUTES.length];
-      $('#board-target').textContent = `Target: ${r[r.length - 1]}`;
-      box.classList.remove('out');
-      box.innerHTML = r.map((t, k) => `<div class="rd-row${k === r.length - 1 ? ' end' : ''}" style="--d:${k * STEP}ms"><i>${String(k).padStart(2, '0')}</i><b>${esc(t)}</b></div>`).join('')
-        + `<div class="rd-count" style="--d:${r.length * STEP}ms">${r.length - 1} clicks</div>`;
-      setTimeout(() => box.classList.add('out'), r.length * STEP + 2600);
-      setTimeout(play, r.length * STEP + 3000);
+    const board = $('.board');
+    if (!board) return;
+    const page = $('#route-demo'), title = $('#demo-title'), text = $('#demo-text'), url = $('#demo-url');
+    const trail = $('#demo-trail'), clicks = $('#demo-clicks'), cursor = $('#demo-cursor');
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const render = (step) => {
+      title.textContent = step[0];
+      url.textContent = `wiki/${step[0].replace(/ /g, '_')}`;
+      text.innerHTML = esc(step[1]).replace(/\[\[([^\]|]+)(\|&gt;)?\]\]/g, (_, label, next) => `<span class="dl${next ? ' next' : ''}">${label}</span>`);
     };
+    const moveCursorTo = (el) => {
+      const b = board.getBoundingClientRect(), r = el.getBoundingClientRect();
+      cursor.style.transform = `translate(${r.left - b.left + r.width * 0.55}px, ${r.top - b.top + r.height * 0.55}px)`;
+    };
+    let i = Math.floor(Math.random() * DEMO_ROUTES.length);
+    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    async function play() {
+      const route = DEMO_ROUTES[i++ % DEMO_ROUTES.length];
+      const names = route.map((s) => s[0]);
+      $('#board-target').textContent = `Target: ${names[names.length - 1]}`;
+      board.classList.remove('done');
+      for (let k = 0; k < route.length; k++) {
+        render(route[k]);
+        clicks.textContent = k;
+        trail.innerHTML = names.slice(0, k + 1).map((n, j) => `<span class="${j === k ? 'cur' : ''}">${esc(n)}</span>`).join('<i>›</i>');
+        page.classList.remove('flip');
+        void page.offsetWidth;
+        page.classList.add('flip');
+        if (k === route.length - 1) break;
+        if (still) { await wait(1800); continue; }
+        await wait(380);
+        const link = text.querySelector('.dl.next');
+        if (!link) break;
+        moveCursorTo(link);
+        await wait(480);
+        link.classList.add('hit');
+        cursor.classList.add('press');
+        await wait(220);
+        cursor.classList.remove('press');
+      }
+      board.classList.add('done');
+      await wait(2200);
+      if (!$('#home').classList.contains('active') || document.hidden) await wait(1500);
+      play();
+    }
+    cursor.style.transform = 'translate(70%, 260px)';
     play();
   }
 
