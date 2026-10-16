@@ -19,7 +19,7 @@
     "busyRoomsOff": 6
   },
   "analytics": {
-    "posthogKey": "",
+    "posthogKey": "phc_nsR3ocmkkWPf7gywDHjyZyNRx8nb5AGwhMobXZgJd8Vr",
     "posthogHost": "https://us.i.posthog.com"
   }
 }
