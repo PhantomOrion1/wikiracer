@@ -9,7 +9,7 @@
   const COUNTDOWN_MS = 3300;
   const GRACE_MS = 4000;
   const LIMITS = { easy: 150e3, medium: 300e3, hard: 600e3, random: 600e3, custom: 300e3, challenge: 300e3 };
-  const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', random: 'Random', custom: 'Custom', challenge: 'Challenge' };
+  const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', random: 'Random', custom: 'Custom', challenge: 'Challenge', daily: 'Daily' };
   const COLORS = ['#3355ff', '#f76707', '#2f9e44', '#d6336c', '#7048e8'];
   // Namespaces / interwiki prefixes that don't count as articles.
   const BLOCKED_NS = new Set([
@@ -273,6 +273,15 @@
       if (info.type === 'article') {
         a.dataset.wr = info.title;
         a.setAttribute('href', '#');
+        // Draw the link text with CSS (::before) instead of real text: the browser's
+        // find-in-page can't see generated content, so word search never lands on a link.
+        if (!a.querySelector('img') && a.textContent.trim()) {
+          if (a.querySelector('i')) a.classList.add('wr-i');
+          if (a.querySelector('b')) a.classList.add('wr-b');
+          a.dataset.label = a.textContent;
+          a.setAttribute('aria-label', a.textContent);
+          a.replaceChildren();
+        }
       } else if (info.type === 'anchor') {
         a.dataset.anchor = info.id;
       } else if (info.type === 'dead') {
@@ -388,6 +397,8 @@
     updateHud();
     renderPath();
     sendProgress();
+    hoverIdx = -1;
+    sendView(true);
     if (sameTitle(art.title, g.end)) finishGame('finished');
   }
 
@@ -453,7 +464,7 @@
     stopTimer();
     updateHud();
 
-    if (result === 'finished' && g.mode !== 'duel') {
+    if (result === 'finished' && g.mode !== 'duel' && g.mode !== 'daily') {
       const key = `wr-best:${g.start}→${g.end}`;
       const prev = store.get(key);
       g.prevBest = prev;
@@ -471,6 +482,11 @@
     if (result === 'timeout') toast("⏰ Time's up!", 3000);
     renderPath();
     renderRacers();
+    if (g.mode === 'daily') {
+      saveDaily(g);
+      showDailyResults(g.dailyKey);
+      return;
+    }
     showResults();
   }
 
@@ -611,7 +627,7 @@
 
   function renderResults() {
     const g = game;
-    if (!g || $('#results').classList.contains('hidden')) return;
+    if (!g || g.mode === 'daily' || $('#results').classList.contains('hidden')) return;
     const body = $('#results-body');
     const actions = $('#results-actions');
     const round = { start: g.start, end: g.end };
@@ -701,6 +717,254 @@
     }
   }
 
+  // ---------- daily challenge ----------
+  // One hard pair per calendar day, the same for everyone. Players are ranked by clicks, then time.
+  // There's no server, so the "everyone else" numbers come from a statistical model seeded by the
+  // date: everyone sees the same spread for the same day, and it fills up as the day goes on.
+  const DAILY_EPOCH = Date.UTC(2026, 9, 17); // Daily #1
+  const dateKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dailyNumber = (key) => {
+    const [y, m, d] = key.split('-').map(Number);
+    return Math.round((Date.UTC(y, m - 1, d) - DAILY_EPOCH) / 864e5) + 1;
+  };
+  function hashStr(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function seeded(seed) {
+    let a = seed;
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  // Standard normal CDF (Abramowitz–Stegun approximation).
+  function phi(x) {
+    const t = 1 / (1 + 0.2316419 * Math.abs(x));
+    const d = 0.3989423 * Math.exp(-x * x / 2);
+    const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    return x > 0 ? 1 - p : p;
+  }
+  const lnCdf = (x, mu, sigma) => (x <= 0 ? 0 : phi((Math.log(x) - mu) / sigma));
+
+  function dailyPair(key) {
+    const pool = [...(window.PAIRS.daily || []), ...window.PAIRS.hard];
+    const n = dailyNumber(key);
+    const i = (((n - 1) % pool.length) + pool.length) % pool.length;
+    const cycle = Math.floor((n - 1) / pool.length);
+    const rnd = seeded(hashStr(`cycle-${cycle}`));
+    const order = pool.map((_, k) => k);
+    for (let k = order.length - 1; k > 0; k--) {
+      const j = Math.floor(rnd() * (k + 1));
+      [order[k], order[j]] = [order[j], order[k]];
+    }
+    const [start, end] = pool[order[i]];
+    return { start, end, n, key };
+  }
+
+  // Model of how everyone else did today. Calibrated to typical hard Wikirace play: the shortest
+  // route is 3–4 clicks, most finishers take 2–3 more than that (median ~6), a long tail wanders
+  // past 12, and 14–26% run out of time or give up. Times scale with clicks (~25s per page + reading).
+  function dailyStats(key) {
+    const rnd = seeded(hashStr(`stats-${key}`));
+    const par = rnd() < 0.55 ? 3 : 4;
+    const dnf = 0.14 + rnd() * 0.12;
+    const mu = Math.log(3.0 + rnd() * 1.5); // extra clicks above par (+1), log-normal
+    const sigma = 0.5 + rnd() * 0.15;
+    const secPerClick = 20 + rnd() * 10;
+    const now = new Date();
+    const dayFrac = key === dateKey(now) ? (now.getHours() * 60 + now.getMinutes()) / 1440 : 1;
+    const players = Math.round((5000 + rnd() * 9000) * (0.06 + 0.94 * Math.pow(dayFrac, 0.8))) + 37;
+    const buckets = [];
+    for (let k = 0; k <= 12; k++) {
+      const lo = k === 0 ? 0 : lnCdf(k + 0.5, mu, sigma);
+      const hi = k === 12 ? 1 : lnCdf(k + 1.5, mu, sigma);
+      buckets.push({ clicks: par + k, share: (hi - lo) * (1 - dnf), plus: k === 12 });
+    }
+    const timeMedian = (c) => (secPerClick * c + 35) * 1000;
+    const timeSigma = 0.45;
+    let acc = 0;
+    let medianClicks = par;
+    for (const b of buckets) { acc += b.share / (1 - dnf); if (acc >= 0.5) { medianClicks = b.clicks; break; } }
+    return { par, dnf, buckets, players, timeMedian, timeSigma, medianClicks };
+  }
+
+  // Share of today's players you beat (fewer clicks wins; same clicks → faster time wins).
+  function dailyBeat(stats, rec) {
+    if (rec.result !== 'finished') return 0;
+    const steps = rec.score;
+    if (steps < stats.par) return 1 - 0.0004;
+    let beat = stats.dnf;
+    for (const b of stats.buckets) {
+      if (b.clicks > steps || (b.plus && steps < b.clicks)) beat += b.share;
+      else if (b.clicks === steps || (b.plus && steps >= b.clicks)) {
+        const slower = 1 - lnCdf(rec.time, Math.log(stats.timeMedian(b.clicks)), stats.timeSigma);
+        beat += b.share * slower;
+      }
+    }
+    return Math.min(0.9996, beat);
+  }
+  const topLabel = (beat) => {
+    const top = Math.max(0.1, (1 - beat) * 100);
+    return top < 10 ? `Top ${top.toFixed(1)}%` : `Top ${Math.round(top)}%`;
+  };
+  const dailyRecord = (key) => store.get(`wr-daily:${key}`);
+
+  function nextDailyIn() {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const s = Math.max(0, Math.floor((next - now) / 1000));
+    return `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  function streakInfo() {
+    const s = store.get('wr-daily-streak') || { last: null, count: 0, best: 0 };
+    const today = dateKey();
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const alive = s.last === today || s.last === dateKey(y);
+    return { count: alive ? s.count : 0, best: s.best || 0 };
+  }
+
+  function renderDailyCard() {
+    const key = dateKey();
+    const d = dailyPair(key);
+    const rec = dailyRecord(key);
+    const stats = dailyStats(key);
+    const streak = streakInfo();
+    const card = $('#daily-card');
+    const head = `<div class="daily-top"><span class="daily-badge">📅 Daily #${d.n}</span>
+      <span class="pill hard">Hard · 10:00</span>
+      ${streak.count ? `<span class="streak">🔥 ${streak.count}-day streak</span>` : ''}
+      <span class="muted daily-players">${stats.players.toLocaleString()} players today</span></div>`;
+    if (rec) {
+      const beat = dailyBeat(stats, rec);
+      card.innerHTML = `${head}
+        <div class="daily-route">${esc(d.start)} <span class="arrow">→</span> <span class="tgt">${esc(d.end)}</span></div>
+        <div class="daily-done">${rec.result === 'finished'
+          ? `✅ Done in <b>${plural(rec.score, 'click')}</b> · <b>${fmtTime(rec.time)}</b> · <b class="top">${topLabel(beat)}</b>`
+          : `${rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up'} today. Try again tomorrow!`}</div>
+        <div class="daily-actions"><button class="btn primary" id="daily-results">See how you compare</button>
+        <span class="muted">Next daily in <b data-next-daily>${nextDailyIn()}</b></span></div>`;
+      $('#daily-results').onclick = () => showDailyResults(key);
+    } else {
+      card.innerHTML = `${head}
+        <div class="daily-route">${esc(d.start)} <span class="arrow">→</span> <span class="tgt">${esc(d.end)}</span></div>
+        <p class="muted daily-sub">One attempt. Fewest clicks wins, then fastest time. See how you rank against everyone else.</p>
+        <div class="daily-actions"><button class="btn primary big-ish" id="daily-play">▶ Play today's challenge</button>
+        <span class="muted">Resets in <b data-next-daily>${nextDailyIn()}</b></span></div>`;
+      $('#daily-play').onclick = startDaily;
+    }
+  }
+
+  async function startDaily() {
+    const key = dateKey();
+    if (dailyRecord(key)) return showDailyResults(key);
+    const d = dailyPair(key);
+    toast('Loading the daily challenge…', 1500);
+    try {
+      const pair = await validatePair(d.start, d.end);
+      startGame({ ...pair, difficulty: 'hard', limit: LIMITS.hard }, 'daily', { dailyKey: key, dailyN: d.n });
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+
+  function saveDaily(g) {
+    const rec = {
+      n: g.dailyN, start: g.start, end: g.end, result: g.result, clicks: g.clicks, penalties: g.penalties,
+      score: score(g), time: g.elapsed, path: g.path,
+    };
+    store.set(`wr-daily:${g.dailyKey}`, rec);
+    const s = store.get('wr-daily-streak') || { last: null, count: 0, best: 0 };
+    if (s.last !== g.dailyKey) {
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      s.count = s.last === dateKey(y) ? s.count + 1 : 1;
+      s.last = g.dailyKey;
+      s.best = Math.max(s.best || 0, s.count);
+      store.set('wr-daily-streak', s);
+    }
+    return rec;
+  }
+
+  function histogramHtml(stats, rec) {
+    const bars = stats.buckets.slice(0, 10).map((b) => ({ label: String(b.clicks), share: b.share, mine: rec.result === 'finished' && rec.score === b.clicks }));
+    const tail = stats.buckets.slice(10).reduce((a, b) => a + b.share, 0);
+    bars.push({ label: `${stats.buckets[10].clicks}+`, share: tail, mine: rec.result === 'finished' && rec.score >= stats.buckets[10].clicks });
+    if (rec.result === 'finished' && rec.score < stats.par) bars.unshift({ label: String(rec.score), share: 0.0004, mine: true });
+    bars.push({ label: 'DNF', share: stats.dnf, mine: rec.result !== 'finished', dnf: true });
+    const max = Math.max(...bars.map((b) => b.share));
+    return `<div class="histo" role="img" aria-label="Distribution of clicks today">
+      ${bars.map((b, i) => `<div class="hbar ${b.mine ? 'mine' : ''} ${b.dnf ? 'dnf' : ''}" style="--h:${Math.max(2, (b.share / max) * 100)}%;--d:${i * 50}ms">
+        <span class="hpct">${b.share < 0.01 ? '<1' : Math.round(b.share * 100)}%</span>
+        <span class="hfill">${b.mine ? '<span class="you">YOU</span>' : ''}</span>
+        <span class="hlabel">${esc(b.label)}</span></div>`).join('')}
+    </div><div class="histo-axis muted">clicks</div>`;
+  }
+
+  function shareDaily(rec, beat) {
+    const squares = rec.path.slice(1).map((s, i, arr) => (s.back ? '🟨' : i === arr.length - 1 && rec.result === 'finished' ? '🟩' : '🟦')).join('')
+      + '🟥'.repeat(rec.penalties || 0) + (rec.result === 'finished' ? '' : '⬛');
+    const line = rec.result === 'finished'
+      ? `🖱 ${plural(rec.score, 'click')} · ⏱ ${fmtTime(rec.time)} · ${topLabel(beat)}`
+      : rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up';
+    const text = `Wikirace Daily #${rec.n} 🏁\n${rec.start} → ${rec.end}\n${line}\n${squares}\n${baseUrl()}`;
+    if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
+    else copyText(text);
+  }
+
+  function showDailyResults(key) {
+    const rec = dailyRecord(key);
+    if (!rec) return;
+    const stats = dailyStats(key);
+    const beat = dailyBeat(stats, rec);
+    const finished = rec.result === 'finished';
+    const playersBeaten = Math.round(beat * stats.players);
+    const sameClicks = finished ? stats.buckets.find((b) => b.clicks === rec.score) : null;
+    let verdict;
+    if (!finished) verdict = `You're one of the ${Math.round(stats.dnf * 100)}% who didn't make it today. The target was a tough one!`;
+    else if (rec.score < stats.par) verdict = `🤯 Nobody else found a route this short today! The next best was ${stats.par} clicks.`;
+    else if (rec.score === stats.par) verdict = `🏆 You matched today's best route! Only ${Math.round((sameClicks ? sameClicks.share : 0) * 100)}% of players found a ${stats.par}-click path.`;
+    else verdict = `You beat <b>${Math.round(beat * 100)}%</b> of players (${playersBeaten.toLocaleString()} of ${stats.players.toLocaleString()})${sameClicks ? `. ${Math.round(sameClicks.share * 100)}% also took ${rec.score} clicks, and your time broke the tie` : ''}.`;
+
+    $('#results-body').innerHTML = `<div class="res-head">
+        <div class="res-kicker">Daily #${rec.n} · Hard · ${esc(rec.start)} → ${esc(rec.end)}</div>
+        <h2>${finished ? '🎉 Daily complete!' : rec.result === 'timeout' ? "⏰ Time's up!" : '🏳️ You gave up'}</h2></div>
+      <div class="big-stats">
+        <div><b>${finished ? rec.score : '—'}</b><small>clicks${rec.penalties ? ` (incl. +${rec.penalties})` : ''}</small></div>
+        <div><b>${fmtTime(rec.time)}</b><small>time</small></div>
+        <div class="rank-tile"><b>${finished ? topLabel(beat) : 'DNF'}</b><small>today</small></div>
+      </div>
+      <p class="verdict">${verdict}</p>
+      <h3 class="sec">How everyone did today</h3>
+      ${histogramHtml(stats, rec)}
+      <div class="daily-facts">
+        <span>👥 <b>${stats.players.toLocaleString()}</b> players</span>
+        <span>⚡ Best today: <b>${finished ? Math.min(stats.par, rec.score) : stats.par}</b> clicks</span>
+        <span>📊 Median: <b>${stats.medianClicks}</b> clicks · <b>${fmtTime(stats.timeMedian(stats.medianClicks))}</b></span>
+        <span>🚫 Didn't finish: <b>${Math.round(stats.dnf * 100)}%</b></span>
+      </div>
+      <h3 class="sec">Your route</h3>
+      <div class="lanes">${laneHtml({ id: 'daily', name: $('#name-input').value.trim() || 'You', color: COLORS[0], status: finished ? 'finished' : rec.result, clicks: rec.clicks, penalties: rec.penalties, time: rec.time, path: rec.path }, `daily:${key}`, new Set(), { start: rec.start, end: rec.end }, '')}</div>
+      <p class="center muted next-daily">Next daily in <b data-next-daily>${nextDailyIn()}</b></p>`;
+    const actions = $('#results-actions');
+    actions.innerHTML = '';
+    const add = (label, cls, fn) => {
+      const b = document.createElement('button');
+      b.className = 'btn ' + cls;
+      b.textContent = label;
+      b.onclick = fn;
+      actions.append(b);
+    };
+    add('📤 Share result', 'primary', () => shareDaily(rec, beat));
+    add('Home', 'ghost', () => { closeResults(); game = null; renderDailyCard(); show('home'); });
+    $('#results').classList.remove('hidden');
+    $('#results .modal').scrollTop = 0;
+    if (finished && beat >= 0.75) burstConfetti();
+  }
+
   // ---------- spectating ----------
   const spec = { id: null, title: null };
 
@@ -719,14 +983,101 @@
     if (!canSpectate({ ...p, id })) return toast('You can spectate once you are out of the race');
     spec.id = id;
     spec.title = null;
+    spec.view = null;
+    $('#spec-hover').textContent = '';
+    $('#spec-rail-dot').style.top = '0%';
     $('#spectate').classList.remove('hidden');
+    net.send({ type: 'spectate', id });
     renderSpectate();
   }
 
   function closeSpectate() {
+    if (spec.id) net.send({ type: 'spectate', id: null });
     spec.id = null;
     spec.title = null;
+    spec.view = null;
     $('#spectate').classList.add('hidden');
+  }
+
+  async function loadSpecArticle(title) {
+    spec.title = title;
+    try {
+      const art = await fetchArticle(title);
+      if (!sameTitle(spec.title, title)) return;
+      const built = buildArticle(art);
+      $('#spec-title').textContent = built.title;
+      $('#spec-article').replaceChildren(...built.nodes);
+      $('#spectate .spec-body').scrollTop = 0;
+      applyView(false);
+    } catch {}
+  }
+
+  // A racer's position, sent ~5x/second while someone is watching them: which top-level block of the
+  // article is at the top of their screen (+ how far into it), overall scroll %, and the link
+  // they're hovering. Block-based so it lines up even when the two screens are different sizes.
+  function onView(d) {
+    if (!spec.id || d.id !== spec.id) return;
+    spec.view = d;
+    if (d.t && !sameTitle(d.t, spec.title)) { loadSpecArticle(d.t); return; }
+    applyView(true);
+  }
+
+  function applyView(smooth) {
+    const v = spec.view;
+    if (!v || !sameTitle(v.t, spec.title)) return;
+    const box = $('#spectate .spec-body');
+    const root = $('#spec-article .mw-parser-output') || $('#spec-article');
+    const block = root.children[v.b];
+    if (block) {
+      const top = block.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop + v.f * block.offsetHeight;
+      const far = Math.abs(top - box.scrollTop) > box.clientHeight;
+      box.scrollTo({ top: Math.max(0, top - 8), behavior: smooth && !far ? 'smooth' : 'auto' });
+    }
+    $('#spec-rail-dot').style.top = `${Math.round(v.p * 100)}%`;
+    $$('#spec-article .their-hover').forEach((a) => a.classList.remove('their-hover'));
+    const links = $('#spec-article').querySelectorAll('a');
+    const a = v.h >= 0 ? links[v.h] : null;
+    if (a) a.classList.add('their-hover');
+    $('#spec-hover').innerHTML = a ? `🖱 Hovering <b>${esc(a.dataset.label || a.textContent)}</b>` : '';
+  }
+
+  // --- racer side: send our view while someone watches ---
+  let viewTimer = null;
+  let lastView = '';
+  let hoverIdx = -1;
+  let lastWatchers = 0;
+
+  function computeView() {
+    const root = $('#article .mw-parser-output') || $('#article');
+    const blocks = root.children;
+    const top = $('.hud').getBoundingClientRect().bottom;
+    // Skip floated boxes (infoboxes, images): they span many paragraphs and would anchor badly.
+    const inFlow = (el) => getComputedStyle(el).float === 'none' && el.offsetHeight > 0;
+    let i = 0;
+    while (i < blocks.length - 1 && (!inFlow(blocks[i]) || blocks[i].getBoundingClientRect().bottom <= top)) i++;
+    const r = blocks[i] ? blocks[i].getBoundingClientRect() : null;
+    const f = r && r.height ? Math.max(0, Math.min(1, (top - r.top) / r.height)) : 0;
+    const doc = document.documentElement;
+    const pct = doc.scrollHeight > innerHeight ? scrollY / (doc.scrollHeight - innerHeight) : 0;
+    return { t: game.current, b: i, f: Math.round(f * 1000) / 1000, p: Math.round(Math.min(1, pct) * 1000) / 1000, h: hoverIdx };
+  }
+
+  function sendView(force) {
+    const g = game;
+    if (!g || g.mode !== 'duel' || g.finished || !g.current) return;
+    const me = net.players[net.myId];
+    if (!me || !me.watchers) return;
+    if (force) lastView = '';
+    if (viewTimer) return;
+    viewTimer = setTimeout(() => {
+      viewTimer = null;
+      if (!game || game.finished) return;
+      const v = computeView();
+      const key = JSON.stringify(v);
+      if (key === lastView) return;
+      lastView = key;
+      net.send({ type: 'view', ...v });
+    }, 200);
   }
 
   async function renderSpectate() {
@@ -739,17 +1090,7 @@
     $('#spec-path').innerHTML = p.path && p.path.length
       ? p.path.map((s, i) => `${i ? '<span class="edge"></span>' : ''}<span class="node ${s.back ? 'back' : ''}">${esc(s.t)}</span>`).join('')
       : `<span class="muted">Live: now on <b>${esc(p.title)}</b></span>`;
-    if (p.title && !sameTitle(p.title, spec.title)) {
-      spec.title = p.title;
-      try {
-        const art = await fetchArticle(p.title);
-        if (spec.title !== p.title) return;
-        const built = buildArticle(art);
-        $('#spec-title').textContent = built.title;
-        $('#spec-article').replaceChildren(...built.nodes);
-        $('#spectate .spec-body').scrollTop = 0;
-      } catch {}
-    }
+    if (p.title && !spec.title) loadSpecArticle(p.title);
   }
 
   // ---------- multiplayer networking (PeerJS; the host's browser is the authority) ----------
@@ -757,6 +1098,7 @@
     peer: null, isHost: false, isPublic: false, matching: false, slot: null, code: null, myId: null,
     conns: new Map(), hostConn: null, players: {}, phase: 'lobby', round: null, roundNum: 0, diff: 'easy',
     joined: false, roundStartedAt: 0, autoStartAt: 0, nextAt: 0, timers: {},
+    roomId: null, migrating: false, watchers: new Map(), myName: '', fail: null,
     send() {},
   });
   let net = freshNet();
@@ -814,22 +1156,24 @@
       net.players.host = newPlayer(name, COLORS[0]);
       net.send = (msg) => hostHandle('host', msg);
       const me = net;
-      const peer = new Peer(isPublic ? publicPeerId(slot) : PEER_PREFIX + code, { debug: 0 });
+      net.roomId = isPublic ? publicPeerId(slot) : PEER_PREFIX + code;
+      const peer = new Peer(net.roomId, { debug: 0 });
       net.peer = peer;
-      let opened = false;
       peer.on('open', () => {
         if (net !== me) return;
-        opened = true;
         resolve();
         renderLobby();
       });
-      peer.on('connection', (conn) => hostAccept(conn, me));
-      peer.on('disconnected', () => { if (net === me && !peer.destroyed) peer.reconnect(); });
-      peer.on('error', (err) => {
-        if (net !== me) return;
-        if (!opened) { reject(err); return; }
-        if (err.type !== 'peer-unavailable') toast('Connection problem: ' + err.type);
-      });
+      peer.on('error', (err) => { if (net === me && !peer.open) reject(err); });
+      wireHostPeer(peer, me);
+    });
+  }
+
+  function wireHostPeer(peer, me) {
+    peer.on('connection', (conn) => hostAccept(conn, me));
+    peer.on('disconnected', () => { if (net === me && !peer.destroyed) peer.reconnect(); });
+    peer.on('error', (err) => {
+      if (net === me && peer.open && err.type !== 'peer-unavailable') toast('Connection problem: ' + err.type);
     });
   }
 
@@ -880,6 +1224,8 @@
     conn.on('close', () => {
       if (net !== me) return;
       net.conns.delete(conn.peer);
+      for (const set of net.watchers.values()) set.delete(conn.peer);
+      net.watchers.delete(conn.peer);
       const p = net.players[conn.peer];
       if (!p) return;
       if (net.phase === 'lobby' || !p.inRound) delete net.players[conn.peer];
@@ -909,7 +1255,15 @@
         if (conn && conn.open) conn.send({ type: 'lobbyinfo', count: activeCount(), phase: net.phase, accepting: net.isPublic && activeCount() < MAX_PLAYERS });
         return;
       case 'hello': {
-        if (p) { p.name = cleanName(msg.name); break; }
+        if (p) {
+          // Someone we already know: a rejoin after a host handover.
+          p.name = cleanName(msg.name);
+          p.connected = true;
+          p.awaiting = false;
+          applySnapshot(id, p, msg.snapshot);
+          checkRoundOver();
+          break;
+        }
         if (activeCount() >= MAX_PLAYERS) {
           if (conn && conn.open) conn.send({ type: 'error', message: `That room is full (max ${MAX_PLAYERS} players)` });
           setTimeout(() => conn && conn.close(), 400);
@@ -919,6 +1273,33 @@
         toast(`${net.players[id].name} joined`);
         scheduleAutoStart();
         break;
+      }
+      case 'spectate': {
+        for (const set of net.watchers.values()) set.delete(id);
+        const target = str(msg.id, 200);
+        if (target && net.players[target] && target !== id && (!p || p.status !== 'playing')) {
+          if (!net.watchers.has(target)) net.watchers.set(target, new Set());
+          net.watchers.get(target).add(id);
+        }
+        break;
+      }
+      case 'view': {
+        // Relay a racer's live position to whoever is spectating them (never to other racers).
+        if (!p || p.status !== 'playing') return;
+        const set = net.watchers.get(id);
+        if (!set || !set.size) return;
+        const frac = (v) => Math.max(0, Math.min(1, Number(v) || 0));
+        const out = { type: 'view', id, t: normTitle(str(msg.t, 300)), b: int(msg.b, 0, 1e5), f: frac(msg.f), p: frac(msg.p), h: int(msg.h, -1, 1e5) };
+        for (const w of set) {
+          const viewer = net.players[w];
+          if (!viewer || viewer.status === 'playing') continue;
+          if (w === 'host') onView(out);
+          else {
+            const c = net.conns.get(w);
+            if (c && c.open) c.send(out);
+          }
+        }
+        return;
       }
       case 'progress':
         if (p && p.status === 'playing') {
@@ -997,10 +1378,12 @@
     const racing = viewer && viewer.status === 'playing';
     const players = {};
     for (const [id, p] of Object.entries(net.players)) {
-      players[id] = racing && id !== viewerId ? { ...p, title: '', path: [] } : p;
+      const watchers = net.watchers.has(id) ? net.watchers.get(id).size : 0;
+      players[id] = racing && id !== viewerId ? { ...p, title: '', path: [], watchers } : { ...p, watchers };
     }
     return {
       type: 'state', players, phase: net.phase, round: net.round, isPublic: net.isPublic,
+      roundElapsed: net.phase !== 'lobby' && net.roundStartedAt ? Date.now() - net.roundStartedAt : 0,
       autoStartIn: net.autoStartAt ? Math.max(0, net.autoStartAt - Date.now()) : 0,
       nextIn: net.nextAt && net.phase === 'results' ? Math.max(0, net.nextAt - Date.now()) : 0,
     };
@@ -1010,6 +1393,8 @@
     for (const [id, conn] of net.conns) {
       if (conn.open && net.players[id]) conn.send(stateFor(id));
     }
+    // The host's own copy carries watcher counts too.
+    for (const [id, p] of Object.entries(net.players)) p.watchers = net.watchers.has(id) ? net.watchers.get(id).size : 0;
     renderNet();
   }
 
@@ -1047,6 +1432,7 @@
       }
       net.phase = 'playing';
       net.round = round;
+      net.watchers = new Map();
       net.autoStartAt = 0;
       net.nextAt = 0;
       net.roundStartedAt = Date.now() + COUNTDOWN_MS;
@@ -1103,32 +1489,186 @@
 
   // --- guest ---
   function attachGuest(conn, name, me, fail) {
-    net.hostConn = conn;
-    net.send = (msg) => { if (conn.open) conn.send(msg); };
+    me.hostConn = conn;
+    me.myName = name;
+    me.fail = fail;
+    me.send = (msg) => { if (conn.open) conn.send(msg); };
     const onOpen = () => {
       if (net !== me) return;
-      net.joined = true;
-      conn.send({ type: 'hello', name });
-      setLobbyStatus(net.isPublic ? 'Matched! Waiting for racers…' : "You're in! Waiting for the host to start.");
+      const rejoin = me.joined;
+      me.joined = true;
+      me.migrating = false;
+      conn.send({ type: 'hello', name, snapshot: mySnapshot() });
+      if (spec.id) conn.send({ type: 'spectate', id: spec.id });
+      if (!rejoin) setLobbyStatus(me.isPublic ? 'Matched! Waiting for racers…' : "You're in! Waiting for the host to start.");
+      else setLobbyStatus('Reconnected to the new host.');
       renderLobby();
     };
     if (conn.open) onOpen();
     else conn.on('open', onOpen);
     conn.on('data', (d) => { if (net === me) guestHandle(d, fail); });
     conn.on('close', () => {
-      if (net !== me) return;
-      stopTimer();
-      game = null;
-      closeResults();
-      closeSpectate();
-      $('#countdown').classList.add('hidden');
-      if (net.isPublic) {
-        toast('The room closed. Finding you a new race…', 3000);
-        quickMatch();
-      } else {
-        fail('The host closed the room');
-      }
+      if (net !== me || me.hostConn !== conn) return;
+      if (me.joined) migrateHost(me);
+      else fail('The host closed the room');
     });
+  }
+
+  // ---------- host handover ----------
+  // Every player knows the join order, so when the host disappears they all agree on who's next.
+  // The successor claims the room's ID on the PeerJS server and rebuilds the room from the last
+  // state it saw; everyone else reconnects to the same ID and re-sends their own progress.
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  function mySnapshot() {
+    const g = game;
+    if (!g || g.mode !== 'duel' || !net.round) return null;
+    return {
+      round: net.round.n, status: g.finished ? g.result : 'playing',
+      clicks: g.clicks, penalties: g.penalties, tabLeaves: g.tabLeaves, title: g.current || '',
+      path: g.finished ? g.path : [], time: g.elapsed,
+    };
+  }
+
+  function applySnapshot(id, p, s) {
+    if (!s || typeof s !== 'object' || !net.round || int(s.round, 0, 1e9) !== net.round.n || !p.inRound) return;
+    p.penalties = Math.max(p.penalties || 0, int(s.penalties, 0, 999));
+    p.tabLeaves = Math.max(p.tabLeaves || 0, int(s.tabLeaves, 0, 9999));
+    const path = cleanPath(s.path);
+    if (p.status === 'playing' || p.status === 'left') {
+      p.status = 'playing';
+      p.clicks = int(s.clicks, 0, 999);
+      if (s.title) p.title = normTitle(str(s.title, 300));
+      if (['finished', 'gaveup', 'timeout'].includes(s.status)) {
+        p.path = path;
+        p.clicks = Math.max(0, path.length - 1);
+        p.title = path.length ? path[path.length - 1].t : p.title;
+        // They finished while the room had no host, so the host couldn't time it: use their clock,
+        // capped by how long the round has actually been running.
+        p.time = Math.min(int(s.time, 0, net.round.limit), Math.max(0, Date.now() - net.roundStartedAt));
+        p.status = s.status;
+        if (s.status === 'finished') { p.verify = 'pending'; verifyPlayer(id); }
+      }
+    } else if (p.status === 'finished' && (!p.path || !p.path.length) && path.length) {
+      p.path = path;
+    }
+  }
+
+  function tryClaim(roomId) {
+    return new Promise((resolve) => {
+      const peer = new Peer(roomId, { debug: 0 });
+      const t = setTimeout(() => { peer.destroy(); resolve(null); }, 6000);
+      peer.on('open', () => { clearTimeout(t); resolve(peer); });
+      peer.on('error', () => { if (!peer.open) { clearTimeout(t); peer.destroy(); resolve(null); } });
+    });
+  }
+
+  function tryConnect(peer, roomId, ms) {
+    return new Promise((resolve) => {
+      if (!peer || peer.destroyed) return resolve(null);
+      if (peer.disconnected) { try { peer.reconnect(); } catch {} }
+      const conn = peer.connect(roomId, { reliable: true });
+      const t = setTimeout(() => { try { conn.close(); } catch {} resolve(null); }, ms);
+      conn.on('open', () => { clearTimeout(t); resolve(conn); });
+      conn.on('error', () => { clearTimeout(t); resolve(null); });
+    });
+  }
+
+  function migrateHost(me) {
+    if (me.migrating) return;
+    me.migrating = true;
+    me.send = () => {};
+    const order = Object.keys(me.players).filter((id) => id !== 'host' && me.players[id].connected !== false);
+    const rank = order.indexOf(me.myId);
+    const oldHost = me.players.host ? me.players.host.name : 'The host';
+    toast(rank === 0 ? `${oldHost} left. You're taking over as host…` : `${oldHost} left. Switching to a new host…`, 3500);
+    setLobbyStatus('Host left. Handing the room over…');
+    const t0 = Date.now();
+    (async () => {
+      while (net === me && Date.now() - t0 < 45000) {
+        // Next in line claims straight away; the rest step in only if those ahead don't show up.
+        if (rank >= 0 && Date.now() - t0 >= rank * 10000) {
+          const peer = await tryClaim(me.roomId);
+          if (net !== me) { if (peer) peer.destroy(); return; }
+          if (peer) { takeOverAsHost(peer, me); return; }
+        }
+        const conn = await tryConnect(me.peer, me.roomId, 4000);
+        if (net !== me) { if (conn) conn.close(); return; }
+        if (conn) {
+          attachGuest(conn, me.myName, me, me.fail);
+          toast('Reconnected. The race goes on!');
+          return;
+        }
+        await sleep(1500);
+      }
+      if (net !== me) return;
+      if (me.isPublic) { toast('The room closed. Finding you a new race…', 3000); quickMatch(); }
+      else me.fail('Lost connection to the room');
+    })();
+  }
+
+  function takeOverAsHost(peer, old) {
+    try { old.peer && old.peer.destroy(); } catch {}
+    for (const t of Object.values(old.timers)) clearTimeout(t);
+    const n = freshNet();
+    Object.assign(n, {
+      isHost: true, isPublic: old.isPublic, slot: old.slot, code: old.code, roomId: old.roomId, myId: 'host', peer,
+      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: old.diff,
+      joined: true, myName: old.myName,
+    });
+    const players = { host: { ...old.players[old.myId], connected: true, awaiting: false, name: old.myName || 'Host' } };
+    for (const [id, p] of Object.entries(old.players)) {
+      if (id === old.myId) continue;
+      if (id === 'host') {
+        if (p.inRound && n.phase !== 'lobby') players[`gone-${Date.now()}`] = { ...p, connected: false, status: p.status === 'playing' ? 'left' : p.status };
+        continue;
+      }
+      players[id] = { ...p, connected: false, awaiting: true };
+    }
+    n.players = players;
+    n.send = (msg) => hostHandle('host', msg);
+    net = n;
+    if (spec.id && !players[spec.id]) closeSpectate();
+    else if (spec.id) hostHandle('host', { type: 'spectate', id: spec.id });
+    applySnapshot('host', players.host, mySnapshot());
+    wireHostPeer(peer, n);
+
+    for (const [id, p] of Object.entries(players)) {
+      if (p.status === 'finished' && p.verify === 'pending' && p.path && p.path.length) verifyPlayer(id);
+    }
+    if (n.phase === 'playing' && n.round) {
+      const round = n.round;
+      n.timers.deadline = setTimeout(() => {
+        if (net !== n || n.phase !== 'playing' || n.round !== round) return;
+        for (const p of Object.values(n.players)) if (p.inRound && p.status === 'playing') { p.status = 'timeout'; p.time = round.limit; }
+        checkRoundOver();
+        broadcast();
+      }, Math.max(1000, n.roundStartedAt + round.limit + GRACE_MS - Date.now()));
+    }
+    if (n.phase === 'results' && n.isPublic) {
+      n.nextAt = Date.now() + 15000;
+      n.timers.next = setTimeout(hostBackToLobby, 15000);
+    }
+    // Anyone who hasn't reconnected after 30s is gone.
+    n.timers.rejoin = setTimeout(() => {
+      if (net !== n) return;
+      for (const [id, p] of Object.entries(n.players)) {
+        if (!p.awaiting) continue;
+        p.awaiting = false;
+        if (n.phase === 'lobby' || !p.inRound) delete n.players[id];
+        else if (p.status === 'playing') p.status = 'left';
+      }
+      checkRoundOver();
+      scheduleAutoStart();
+      broadcast();
+    }, 30000);
+    toast("👑 You're the new host", 3500);
+    setLobbyStatus(n.isPublic ? 'You are now hosting this public room.' : 'You are now the host. Send the invite link to friends, then start the race.');
+    checkRoundOver();
+    scheduleAutoStart();
+    broadcast();
+    renderLobby();
+    renderResults();
   }
 
   function joinRoom(rawCode) {
@@ -1144,6 +1684,7 @@
     setLobbyStatus(`Joining room ${code}…`);
     renderLobby();
 
+    net.roomId = PEER_PREFIX + code;
     const me = net;
     const fail = (message) => {
       if (net !== me) return;
@@ -1160,8 +1701,9 @@
       attachGuest(peer.connect(PEER_PREFIX + code, { reliable: true }), name, me, fail);
     });
     peer.on('error', (err) => {
+      if (me.joined) return; // after joining, errors are handled by the host handover
       if (err.type === 'peer-unavailable') fail(`Room ${code} wasn't found. It may have closed.`);
-      else if (!me.joined) fail('Connection problem: ' + err.type);
+      else fail('Connection problem: ' + err.type);
     });
   }
 
@@ -1175,6 +1717,7 @@
       net.isPublic = !!d.isPublic;
       net.autoStartAt = d.autoStartIn ? Date.now() + int(d.autoStartIn, 0, 60e3) : 0;
       net.nextAt = d.nextIn ? Date.now() + int(d.nextIn, 0, 60e3) : 0;
+      net.roundStartedAt = Date.now() - int(d.roundElapsed, -60e3, 3600e3);
       if (net.phase === 'lobby' && prevPhase !== 'lobby') goToLobbyScreen();
       renderNet();
     } else if (d.type === 'start' && d.round) {
@@ -1184,6 +1727,8 @@
       net.round = round;
       net.phase = 'playing';
       beginRound(round);
+    } else if (d.type === 'view') {
+      onView({ id: str(d.id, 200), t: str(d.t, 300), b: int(d.b, 0, 1e5), f: Number(d.f) || 0, p: Number(d.p) || 0, h: int(d.h, -1, 1e5) });
     } else if (d.type === 'kicked') {
       fail('The host removed you from the room');
     } else if (d.type === 'error') {
@@ -1262,9 +1807,10 @@
       const res = await findPublicRoom(me);
       if (token !== matchToken) { if (res.peer) res.peer.destroy(); return; }
       if (res.conn) {
-        Object.assign(net, { peer: res.peer, myId: res.peer.id, slot: res.slot, matching: false });
+        Object.assign(net, { peer: res.peer, myId: res.peer.id, slot: res.slot, matching: false, roomId: publicPeerId(res.slot) });
         const fail = (message) => { if (net === me) { toast(message, 4000); leaveRoomAndGoHome(); } };
         res.peer.on('error', (err) => { if (err.type !== 'peer-unavailable' && !me.joined) fail('Connection problem: ' + err.type); });
+        me.myName = name;
         attachGuest(res.conn, name, me, fail);
         return;
       }
@@ -1400,6 +1946,7 @@
       if (p.inRound) {
         meta = p.status === 'finished' ? `finished · ${plural(score(p), 'click')}` : p.status === 'playing' ? `racing · ${plural(p.clicks, 'click')}` : p.status === 'gaveup' ? 'gave up' : p.status === 'timeout' ? 'out of time' : p.status;
       } else if (net.phase !== 'lobby') meta = 'waiting for next round';
+      if (p.awaiting) meta = 'reconnecting…';
       return `<li class="${id === net.myId ? 'me' : ''}">
         ${avatar(pl)}<span class="pname">${esc(p.name)}</span>
         ${id === 'host' ? `<span class="badge host">${pub ? 'room host' : 'host'}</span>` : ''}
@@ -1425,6 +1972,13 @@
   }
 
   function renderNet() {
+    const mine = net.players[net.myId];
+    const watching = mine && game && game.mode === 'duel' && !game.finished ? mine.watchers || 0 : 0;
+    if (watching > lastWatchers) sendView(true);
+    lastWatchers = watching;
+    const w = $('#hud-watch');
+    w.textContent = `👁 ${watching} watching`;
+    w.classList.toggle('hidden', !watching);
     if ($('#lobby').classList.contains('active')) renderLobby();
     renderRacers();
     renderResults();
@@ -1435,6 +1989,7 @@
   setInterval(() => {
     const a = $('[data-autostart]');
     if (a && net.autoStartAt) a.textContent = Math.max(0, Math.ceil((net.autoStartAt - Date.now()) / 1000));
+    $$('[data-next-daily]').forEach((el) => { el.textContent = nextDailyIn(); });
     const n = $('[data-next-in]');
     if (n && net.nextAt) n.textContent = `Next round in ${Math.max(0, Math.ceil((net.nextAt - Date.now()) / 1000))}s`;
   }, 500);
@@ -1454,6 +2009,7 @@
     });
     $$('#solo-custom input, #room-custom input').forEach(attachSuggest);
 
+    renderDailyCard();
     $('#quick-match').addEventListener('click', quickMatch);
     $('#create-room').addEventListener('click', createRoom);
     $('#join-form').addEventListener('submit', (e) => { e.preventDefault(); joinRoom($('#join-code').value); });
@@ -1491,6 +2047,23 @@
       $('#panel').classList.remove('open');
       closeSpectate();
     });
+    window.addEventListener('scroll', () => sendView(false), { passive: true });
+    article.addEventListener('mouseover', (e) => {
+      const a = e.target.closest('a');
+      const idx = a ? [...article.querySelectorAll('a')].indexOf(a) : -1;
+      if (idx !== hoverIdx) { hoverIdx = idx; sendView(false); }
+    });
+    article.addEventListener('mouseleave', () => { hoverIdx = -1; sendView(false); });
+    // Word search is off mid-race (the browser menu can still open Find, but links can't be matched).
+    window.addEventListener('keydown', (e) => {
+      if (!game || game.finished || !$('#game').classList.contains('active')) return;
+      const k = e.key.toLowerCase();
+      if (((e.ctrlKey || e.metaKey) && (k === 'f' || k === 'g')) || e.key === 'F3') {
+        e.preventDefault();
+        e.stopPropagation();
+        toast('🔍 Word search is off during races. Read and click!');
+      }
+    }, true);
     document.addEventListener('visibilitychange', () => (document.hidden ? markAway() : markReturn()));
     window.addEventListener('blur', markAway);
     window.addEventListener('focus', markReturn);

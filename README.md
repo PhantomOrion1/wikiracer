@@ -6,6 +6,10 @@ Get from one Wikipedia article to another using only the links on the page. Fewe
 
 ## Features
 
+- **Daily challenge**: one hard pair per day (10:00 limit), the same for everyone, with one attempt. Ranked by clicks, then time. You get a percentile, a histogram of how everyone did, a streak counter and a shareable result. The other players' spread is simulated from a fixed model of typical hard-mode play, generated the same way for everyone each day, since there's no server.
+- **Host handover**: if the host leaves, the next player in join order takes over the room automatically. Everyone else reconnects and the race carries on.
+- **Live spectating**: follow a racer's scroll position and hovered link in real time.
+- **No word search**: Ctrl/⌘+F is blocked mid-race, and link text is drawn with CSS so the browser's Find never matches a clickable link.
 - **Time limits**: 2:30 easy, 5:00 medium, 10:00 hard.
 - **Quick match**: join a random public race with strangers (Omegle-style). It starts automatically once 2+ racers are in, with up to 5 per room. Hit "Next room" to skip.
 - **Spectate**: once you're finished or out, watch any racer's screen live.

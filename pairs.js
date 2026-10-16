@@ -41,6 +41,23 @@ window.PAIRS = {
     ["Golf", "Vikings"],
     ["Emoji", "Great Wall of China"],
   ],
+  // Daily challenge pool (hard). Each day picks one deterministically, so everyone gets the same pair.
+  daily: [
+    ["Narwhal", "Renaissance"], ["Bonsai", "Moon landing"], ["Gargoyle", "Photosynthesis"],
+    ["Kombucha", "Industrial Revolution"], ["Trampoline", "Ancient Egypt"], ["Ukulele", "Volcano"],
+    ["Chopsticks", "Electricity"], ["Hedgehog", "William Shakespeare"], ["Popcorn", "Roman Empire"],
+    ["Igloo", "Jazz"], ["Flamingo", "Printing press"], ["Dodo", "Silicon Valley"],
+    ["Monocle", "Amazon rainforest"], ["Hammock", "Nobel Prize"], ["Tumbleweed", "Ludwig van Beethoven"],
+    ["Wasabi", "Mars"], ["Lava lamp", "Ancient Rome"], ["Crossword", "Coral reef"],
+    ["Bagel", "Mount Everest"], ["Kite", "Byzantine Empire"], ["Marshmallow", "Great Depression"],
+    ["Snow globe", "Samurai"], ["Sloth", "Olympic Games"], ["Jellyfish", "Leonardo da Vinci"],
+    ["Harmonica", "Moon"], ["Scarecrow", "Internet"], ["Pretzel", "Vikings"],
+    ["Ice resurfacer", "Pharaoh"], ["Cactus", "Titanic"], ["Umbrella", "DNA"],
+    ["Mime artist", "Napoleon"], ["Wombat", "Eiffel Tower"], ["Lollipop", "Aztecs"],
+    ["Accordion", "Chernobyl disaster"], ["Peafowl", "Bitcoin"], ["Barcode", "Dinosaur"],
+    ["Skateboarding", "Mona Lisa"], ["Pancake", "Solar System"], ["Hot air balloon", "Buddhism"],
+    ["Mosquito", "Renaissance"],
+  ],
   hard: [
     ["Tardigrade", "Eurovision Song Contest"],
     ["Toaster", "Genghis Khan"],

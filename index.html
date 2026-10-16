@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <!-- HOME -->
@@ -23,6 +23,8 @@
       </header>
 
       <div id="challenge-banner" class="card challenge hidden"></div>
+
+      <div class="card daily" id="daily-card"></div>
 
       <label class="name-field">
         <span>Your name</span>
@@ -62,16 +64,40 @@
         </div>
       </div>
 
-      <details class="card rules">
-        <summary>How to play</summary>
-        <ul>
-          <li>Start on one article and reach the target using only links inside the article. Search, external links, and category or file pages don't work.</li>
-          <li>Every page change is one click, including the in-game <b>Back</b> button. Fewest clicks wins, and ties go to the fastest time.</li>
-          <li>Time limits: <b>2:30</b> easy, <b>5:00</b> medium, <b>10:00</b> hard.</li>
-          <li><b>Stay on the tab.</b> The first time you leave you get a warning. After that, every time you leave adds a +1 click penalty.</li>
-          <li>In multiplayer the host checks every route against Wikipedia. Routes with fake clicks are flagged.</li>
-          <li>Finished early? Spectate the others live, or play Flappy Wiki while you wait.</li>
-        </ul>
+      <details class="card howto" open>
+        <summary><h2>How to play</h2><span class="muted toggle-hint">tap to hide</span></summary>
+        <ol class="steps">
+          <li><span class="step-n">1</span><div><b>📍 Start</b><p>You land on a Wikipedia article.</p></div></li>
+          <li><span class="step-n">2</span><div><b>🔗 Click links</b><p>Only links inside the article. No search bar.</p></div></li>
+          <li><span class="step-n">3</span><div><b>🏁 Reach the target</b><p>Fewest clicks wins. Ties go to the fastest time.</p></div></li>
+        </ol>
+        <div class="rule-grid">
+          <div class="rule">
+            <div class="rule-h">⏱ Time limits</div>
+            <div class="pills"><span class="pill easy">Easy 2:30</span><span class="pill medium">Medium 5:00</span><span class="pill hard">Hard 10:00</span></div>
+          </div>
+          <div class="rule">
+            <div class="rule-h">🖱 What's a click?</div>
+            <p>Every page you open counts, <b>including the ← Back button</b>.</p>
+          </div>
+          <div class="rule">
+            <div class="rule-h">🚫 Not allowed</div>
+            <ul>
+              <li><b>Leaving the tab</b>: one warning, then +1 click each time</li>
+              <li><b>Word search</b> (Ctrl/⌘+F) is switched off</li>
+              <li>External, category and file links don't work</li>
+            </ul>
+          </div>
+          <div class="rule">
+            <div class="rule-h">👥 Multiplayer</div>
+            <ul>
+              <li>Up to <b>5 players</b> per room</li>
+              <li>Every route is checked against Wikipedia</li>
+              <li>Done early? <b>Spectate</b> or play <b>Flappy Wiki</b></li>
+              <li>If the host leaves, the next player takes over</li>
+            </ul>
+          </div>
+        </div>
       </details>
       <p class="foot muted">Articles load live from <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer">Wikipedia</a> (CC BY-SA).</p>
     </div>
@@ -135,6 +161,7 @@
           <span class="muted">Target</span>
           <strong id="hud-target">—</strong>
         </div>
+        <span id="hud-watch" class="watch hidden"></span>
       </div>
       <div class="hud-stats">
         <div class="stat"><span><span id="hud-clicks">0</span><sup id="hud-pen" class="pen hidden"></sup></span><small>clicks</small></div>
@@ -191,9 +218,11 @@
       <header class="spec-head">
         <span class="live-dot"></span>
         <div class="spec-who" id="spec-who"></div>
+        <div class="spec-hover" id="spec-hover"></div>
         <button class="btn small" id="spec-close">✕ Close</button>
       </header>
       <div class="spec-path" id="spec-path"></div>
+      <div class="spec-rail" title="How far down the page they are"><span id="spec-rail-dot"></span></div>
       <div class="spec-body">
         <h1 class="article-title" id="spec-title"></h1>
         <article class="article readonly" id="spec-article"></article>
@@ -220,8 +249,8 @@
   <datalist id="suggest-end"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="pairs.js"></script>
-  <script src="flappy.js"></script>
-  <script src="app.js"></script>
+  <script src="pairs.js?v=5"></script>
+  <script src="flappy.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
