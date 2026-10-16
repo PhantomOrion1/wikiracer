@@ -2647,32 +2647,41 @@
     };
     let i = Math.floor(Math.random() * DEMO_ROUTES.length);
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    // The trail is the chain being built: each clicked article pops onto the end.
+    const showTrail = (names, upto, pop) => {
+      trail.innerHTML = names.slice(0, upto + 1).map((n, j) =>
+        `${j ? '<i>›</i>' : ''}<span class="${j === upto ? 'cur' : ''}${pop && j === upto ? ' pop' : ''}">${esc(n)}</span>`).join('');
+      clicks.textContent = upto;
+      if (pop) { clicks.classList.remove('bump'); void clicks.offsetWidth; clicks.classList.add('bump'); }
+    };
     async function play() {
       const route = DEMO_ROUTES[i++ % DEMO_ROUTES.length];
       const names = route.map((s) => s[0]);
       $('#board-target').textContent = `Target: ${names[names.length - 1]}`;
       board.classList.remove('done');
+      showTrail(names, 0, false);
       for (let k = 0; k < route.length; k++) {
         render(route[k]);
-        clicks.textContent = k;
-        trail.innerHTML = names.slice(0, k + 1).map((n, j) => `<span class="${j === k ? 'cur' : ''}">${esc(n)}</span>`).join('<i>›</i>');
         page.classList.remove('flip');
         void page.offsetWidth;
         page.classList.add('flip');
         if (k === route.length - 1) break;
-        if (still) { await wait(1800); continue; }
-        await wait(380);
+        if (still) { await wait(2200); showTrail(names, k + 1, false); continue; }
+        await wait(650);                       // read the page
         const link = text.querySelector('.dl.next');
         if (!link) break;
         moveCursorTo(link);
-        await wait(480);
+        await wait(700);                       // cursor travels to the link
         link.classList.add('hit');
         cursor.classList.add('press');
-        await wait(220);
+        await wait(200);
         cursor.classList.remove('press');
+        await wait(350);                       // the clicked link stays lit…
+        showTrail(names, k + 1, true);         // …then joins the chain
+        await wait(650);
       }
       board.classList.add('done');
-      await wait(2200);
+      await wait(2800);
       if (!$('#home').classList.contains('active') || document.hidden) await wait(1500);
       play();
     }

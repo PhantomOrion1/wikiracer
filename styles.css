@@ -636,3 +636,31 @@ input { border-radius: 0; font-family: var(--sans); }
 .lobby-head .logo, .hud .logo { font-family: var(--brand); font-weight: 400; font-stretch: 100%; text-transform: uppercase; letter-spacing: 0; }
 .lobby-head .logo span, .hud .logo span { color: var(--accent); }
 @media (max-width: 760px) { .headline.brand { font-size: 64px; } }
+
+/* ---------- hero v2: controls under the brand, chain-y trail, lifted layout ---------- */
+#home .home-wrap { justify-content: center; padding-top: 3vh; padding-bottom: 9vh; gap: 22px; }
+.hero { align-items: center; }
+.hero-controls { display: flex; gap: 10px; margin-top: 22px; max-width: 520px; }
+.hero-controls .name-field { margin: 0; flex: 1; }
+.hero-controls input { width: 100%; border: 2px solid var(--ink-line); background: var(--surface); color: var(--text); padding: 9px 12px; font: 700 15px var(--sans); }
+.hero-controls .sq { white-space: nowrap; padding: 9px 16px; }
+.demo-foot { font-size: 13px; padding-top: 12px; }
+.demo-trail { gap: 6px 8px; align-items: center; }
+.demo-trail span { background: #222; color: #cfcac0; padding: 3px 9px; border: 1px solid #3a3a3a; }
+.demo-trail span.cur { background: #f4f2ed; color: #111; border-color: #f4f2ed; }
+.demo-trail i { color: var(--accent); font-size: 20px; font-weight: 800; line-height: 1; }
+.demo-trail .pop { animation: chain-pop .45s cubic-bezier(.2,1.6,.4,1); }
+@keyframes chain-pop { from { transform: scale(.4) translateY(-14px); opacity: 0; background: var(--accent); color: #fff; } 60% { background: var(--accent); color: #fff; } }
+.demo-clicks b { display: inline-block; font-size: 18px; }
+.demo-clicks b.bump { animation: bump .4s ease; }
+@keyframes bump { 40% { transform: scale(1.6); } }
+.demo-cursor { transition: transform .62s cubic-bezier(.45,.05,.25,1); }
+.dl.hit { box-shadow: 0 0 0 3px rgba(255,68,51,.35); }
+/* difficulty buttons take their colour on hover */
+.diffs .sq[data-solo="easy"]:hover { background: var(--easy); border-color: var(--easy); color: #fff; }
+.diffs .sq[data-solo="medium"]:hover { background: var(--medium); border-color: var(--medium); color: #fff; }
+.diffs .sq[data-solo="hard"]:hover { background: var(--hard); border-color: var(--hard); color: #fff; }
+@media (max-width: 760px) { #home .home-wrap { padding-bottom: 24px; } .hero-controls { max-width: none; } }
+#home .home-wrap { padding-top: 4vh; padding-bottom: 7vh; gap: 34px; }
+.board { min-height: 330px; }
+.actions .blk { min-height: 178px; }

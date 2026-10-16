@@ -11,23 +11,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Bungee&family=JetBrains+Mono:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=22">
+  <link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
   <!-- HOME -->
   <section id="home" class="screen active">
     <div class="home-wrap">
-      <nav class="topnav rise" style="--i:0">
-        <div class="sp"></div>
-        <button class="navlink" id="open-howto">How to play</button>
-        <label class="name-field"><span class="sr">Your name</span><input id="name-input" maxlength="20" placeholder="YOUR NAME" autocomplete="nickname"></label>
-      </nav>
 
       <div class="hero">
         <div class="hero-text rise" style="--i:1">
           <h1 class="headline brand">Wiki<br><span>Racer</span></h1>
           <p class="hero-sub big">Race through Wikipedia, <em>one link at a time.</em></p>
-          <p class="hero-sub small">Fewest clicks wins. Up to 8 racers live.</p>
+          <div class="hero-controls">
+            <label class="name-field"><span class="sr">Your name</span><input id="name-input" maxlength="20" placeholder="YOUR NAME" autocomplete="nickname"></label>
+            <button class="sq light" id="open-howto">How to play</button>
+          </div>
         </div>
         <div class="board rise" style="--i:2" aria-hidden="true">
           <div class="board-head"><span><span class="rec"></span>Live race</span><span id="board-target">Target</span></div>
@@ -78,13 +76,6 @@
         </div>
       </div>
 
-      <div class="howstrip rise" style="--i:7">
-        <span class="t">How to play</span>
-        <span><b>1</b>Land on an article</span>
-        <span><b>2</b>Click links only, no search</span>
-        <span><b>3</b>Hit the target in the fewest clicks</span>
-        <button class="navlink sp-left" id="open-howto-2">Full rules →</button>
-      </div>
       <p class="credit">Articles from <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer">Wikipedia</a>, CC BY-SA</p>
     </div>
   </section>
@@ -274,10 +265,10 @@
   <datalist id="suggest-end"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="pairs.js?v=22"></script>
-  <script src="bots.js?v=22"></script>
-  <script src="vital.js?v=22"></script>
-  <script src="flappy.js?v=22"></script>
-  <script src="app.js?v=22"></script>
+  <script src="pairs.js?v=24"></script>
+  <script src="bots.js?v=24"></script>
+  <script src="vital.js?v=24"></script>
+  <script src="flappy.js?v=24"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>
