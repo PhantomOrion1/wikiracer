@@ -2704,8 +2704,6 @@
   function init() {
     runRouteDemo();
     initHowTo();
-    const played = playedList().length;
-    $('#solo-stats').textContent = played ? `${played} race${played === 1 ? '' : 's'} played on this device` : 'No races yet';
     const nameInput = $('#name-input');
     nameInput.value = store.get('wr-name') || '';
     nameInput.addEventListener('change', () => store.set('wr-name', nameInput.value.trim()));
