@@ -2018,8 +2018,43 @@
     if (n && net.nextAt) n.textContent = `Next round in ${Math.max(0, Math.ceil((net.nextAt - Date.now()) / 1000))}s`;
   }, 500);
 
+  // ---------- home page motion ----------
+  // Example routes cycling under the logo (illustrative, each step is a real link on Wikipedia).
+  const DEMO_ROUTES = [
+    ['Pizza', 'Naples', 'Mount Vesuvius', 'Volcano'],
+    ['Dog', 'Canidae', 'Wolf'],
+    ['Chocolate', 'Mesoamerica', 'Mexico'],
+  ];
+  function runRouteDemo() {
+    const box = $('#route-demo');
+    if (!box) return;
+    let i = Math.floor(Math.random() * DEMO_ROUTES.length);
+    const play = () => {
+      if (!$('#home').classList.contains('active')) { setTimeout(play, 1500); return; }
+      const r = DEMO_ROUTES[i++ % DEMO_ROUTES.length];
+      box.classList.remove('out');
+      box.innerHTML = r.map((t, k) => `${k ? `<span class="rd-line" style="--d:${k * 420 - 120}ms"></span>` : ''}<span class="rd-chip ${k === r.length - 1 ? 'end' : ''}" style="--d:${k * 420}ms">${k === r.length - 1 ? '🏁 ' : ''}${esc(t)}</span>`).join('')
+        + `<span class="rd-count" style="--d:${r.length * 420}ms">${r.length - 1} clicks</span>`;
+      setTimeout(() => box.classList.add('out'), r.length * 420 + 2600);
+      setTimeout(play, r.length * 420 + 3100);
+    };
+    play();
+  }
+
+  function initSpotlight() {
+    document.addEventListener('pointermove', (e) => {
+      const card = e.target.closest && e.target.closest('.card.glow');
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+      card.style.setProperty('--my', `${e.clientY - r.top}px`);
+    }, { passive: true });
+  }
+
   // ---------- wiring ----------
   function init() {
+    runRouteDemo();
+    initSpotlight();
     const nameInput = $('#name-input');
     nameInput.value = store.get('wr-name') || '';
     nameInput.addEventListener('change', () => store.set('wr-name', nameInput.value.trim()));
