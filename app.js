@@ -3,7 +3,28 @@
 
   const API = 'https://en.wikipedia.org/w/api.php';
   const PEER_PREFIX = 'wikirace-room-v1-';
-  const PUBLIC_SLOTS = 8;
+  // Runtime settings. config.json (same folder) can override any of these without a code change,
+  // e.g. turn fill-in racers down to 0 as the site gets busy, or point at your own PeerJS server.
+  const CONFIG = {
+    publicSlots: 12,
+    bots: {
+      enabled: true, maxPerRoom: 2, maxHumans: 2, secondChance: 0.5,
+      firstDelayMs: [4000, 11000], secondDelayMs: [7000, 18000], leaveChance: 0.2,
+      busyRoomsHalf: 3, busyRoomsOff: 6,
+    },
+    peer: null,
+  };
+  async function loadConfig() {
+    try {
+      const r = await fetch(`config.json?m=${Math.floor(Date.now() / 300000)}`);
+      if (!r.ok) return;
+      const j = await r.json();
+      if (typeof j.publicSlots === 'number') CONFIG.publicSlots = Math.max(1, Math.min(30, j.publicSlots));
+      if (j.bots && typeof j.bots === 'object') Object.assign(CONFIG.bots, j.bots);
+      if (j.peer && typeof j.peer === 'object') CONFIG.peer = j.peer;
+    } catch {}
+  }
+  const peerOpts = () => ({ debug: 0, ...(CONFIG.peer || {}) });
   const publicPeerId = (i) => `${PEER_PREFIX}public-${i}`;
   const MAX_PLAYERS = 5;
   const COUNTDOWN_MS = 3300;
@@ -39,9 +60,17 @@
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
   const int = (v, min, max) => Math.max(min, Math.min(max, Math.floor(Number(v)) || 0));
-  const cleanName = (n) => String(n || '')
-    .replace(/[\u0000-\u001f\u007f​-‏‪-‮⁦-⁩]/g, '')
-    .replace(/\s+/g, ' ').trim().slice(0, 20) || 'Player';
+  const BAD_WORDS = ['fuck', 'shit', 'cunt', 'nigg', 'fag', 'retard', 'rape', 'nazi', 'hitler', 'whore', 'slut', 'dick', 'cock', 'pussy', 'bitch', 'wank', 'twat', 'porn', 'kike', 'spic', 'chink', 'tranny', 'paedo', 'pedo'];
+  const isOffensive = (n) => {
+    const flat = n.toLowerCase().replace(/[0@4]/g, (c) => ({ 0: 'o', '@': 'a', 4: 'a' }[c])).replace(/[1!|]/g, 'i').replace(/3/g, 'e').replace(/[5$]/g, 's').replace(/7/g, 't').replace(/[^a-z]/g, '');
+    return BAD_WORDS.some((w) => flat.includes(w));
+  };
+  const cleanName = (n) => {
+    const name = String(n || '')
+      .replace(/[\u0000-\u001f\u007f​-‏‪-‮⁦-⁩]/g, '')
+      .replace(/\s+/g, ' ').trim().slice(0, 20) || 'Player';
+    return isOffensive(name) ? 'Player' : name;
+  };
   const limitFor = (diff) => LIMITS[diff] || LIMITS.custom;
   const score = (p) => (p.clicks || 0) + (p.penalties || 0);
   const store = {
@@ -78,11 +107,23 @@
   }
 
   // ---------- Wikipedia ----------
-  async function api(params) {
+  // Wikipedia API with retry + backoff (429s, 5xx, rate-limit errors) so busy moments don't break races.
+  async function api(params, tries = 3) {
     const url = API + '?' + new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params });
-    const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
-    if (!r.ok) throw new Error(`Wikipedia request failed (${r.status})`);
-    return r.json();
+    for (let i = 0; ; i++) {
+      try {
+        const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+        if (r.status === 429 || r.status >= 500) throw Object.assign(new Error(`Wikipedia is busy (${r.status})`), { retry: true });
+        if (!r.ok) throw new Error(`Wikipedia request failed (${r.status})`);
+        const j = await r.json();
+        if (j.error && /ratelimit|maxlag|readonly/i.test(j.error.code || '')) throw Object.assign(new Error('Wikipedia is busy, try again'), { retry: true });
+        return j;
+      } catch (e) {
+        const network = e instanceof TypeError;
+        if (i >= tries - 1 || !(e.retry || network)) throw e;
+        await new Promise((res) => setTimeout(res, 700 * 2 ** i + Math.random() * 500));
+      }
+    }
   }
 
   const articleCache = new Map();
@@ -91,7 +132,7 @@
     if (articleCache.has(key)) return articleCache.get(key);
     const p = api({
       action: 'parse', page: title, prop: 'text|displaytitle', redirects: '1',
-      disableeditsection: '1', disabletoc: '1', disablelimitreport: '1',
+      disableeditsection: '1', disabletoc: '1', disablelimitreport: '1', smaxage: '1800', maxage: '1800',
     }).then((j) => {
       if (j.error) throw new Error(j.error.code === 'missingtitle' ? `"${title}" doesn't exist on Wikipedia` : j.error.info);
       return { title: j.parse.title, displaytitle: j.parse.displaytitle, html: j.parse.text };
@@ -108,7 +149,7 @@
     const p = api({
       action: 'query', titles: title, redirects: '1',
       prop: 'pageprops|description|pageimages|extracts',
-      exintro: '1', explaintext: '1', exsentences: '3', piprop: 'thumbnail', pithumbsize: '400',
+      exintro: '1', explaintext: '1', exsentences: '3', piprop: 'thumbnail', pithumbsize: '400', smaxage: '3600', maxage: '3600',
     }).then((j) => {
       const pg = j.query && j.query.pages && j.query.pages[0];
       if (!pg || pg.missing || pg.invalid) throw new Error(`"${title}" isn't a Wikipedia article`);
@@ -204,11 +245,55 @@
   }
 
   // ---------- picking pairs ----------
-  const usedPairs = new Set();
+  // ---------- pair generation ----------
+  // Pairs come from Wikipedia's Vital Articles (vital.js: ~1,000 core topics + ~3,500 more, by subject):
+  //   easy   = two core articles from the same subject      (~100k combinations)
+  //   medium = two core articles from different subjects   (~900k)
+  //   hard   = a lesser-known article → a core article in a different subject (~3M)
+  // plus the hand-picked pairs about a quarter of the time. Anything where the start links straight to
+  // the target is rejected, and each browser remembers what it has played so pairs never repeat.
+  const PLAYED_KEY = 'wr-played';
+  const playedList = () => store.get(PLAYED_KEY) || [];
+  const pairKey = (s, e) => `${normTitle(s)}→${normTitle(e)}`;
+  function markPlayed(s, e) {
+    const list = playedList().filter((k) => k !== pairKey(s, e));
+    list.push(pairKey(s, e));
+    store.set(PLAYED_KEY, list.slice(-4000));
+  }
+  function recentTitles(n = 40) {
+    const set = new Set();
+    for (const k of playedList().slice(-n)) k.split('→').forEach((t) => set.add(t));
+    return set;
+  }
+
   async function validatePair(s, e) {
     const [a, b] = await Promise.all([fetchInfo(s), fetchInfo(e)]);
     if (sameTitle(a.title, b.title)) throw new Error('Start and target are the same article');
     return { start: a.title, end: b.title };
+  }
+
+  async function linksDirectly(start, end) {
+    const j = await api({ action: 'query', prop: 'links', titles: start, pltitles: end, redirects: '1', smaxage: '3600', maxage: '3600' });
+    return ((j.query && j.query.pages) || []).some((pg) => pg.links && pg.links.length);
+  }
+
+  const anyOf = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  function subjectBySize(level) {
+    const subjects = Object.keys(level).filter((c) => level[c].length);
+    const total = subjects.reduce((n, c) => n + level[c].length, 0);
+    let r = Math.random() * total;
+    for (const c of subjects) { r -= level[c].length; if (r <= 0) return c; }
+    return subjects[0];
+  }
+  function generatedCandidate(diff) {
+    const V = window.VITAL;
+    if (!V) return null;
+    const c1 = subjectBySize(V.l3);
+    let c2 = c1;
+    if (diff !== 'easy') while (c2 === c1) c2 = subjectBySize(V.l3);
+    const start = diff === 'hard' ? anyOf(V.l4[c1] || V.l3[c1]) : anyOf(V.l3[c1]);
+    const end = anyOf(V.l3[c2]);
+    return [start, end];
   }
 
   async function pickPair(diff, custom = []) {
@@ -224,14 +309,21 @@
       }
       throw new Error("Couldn't find random articles, try again");
     }
-    const list = window.PAIRS[diff];
-    let pool = list.filter((p) => !usedPairs.has(p.join('→')));
-    if (!pool.length) {
-      list.forEach((p) => usedPairs.delete(p.join('→')));
-      pool = list;
+    const played = new Set(playedList());
+    const recent = recentTitles();
+    const fresh = ([s, e]) => !played.has(pairKey(s, e)) && !recent.has(normTitle(s)) && !recent.has(normTitle(e));
+    const curated = (window.PAIRS[diff] || []).filter(fresh);
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const cand = curated.length && (Math.random() < 0.25 || !window.VITAL) ? curated.splice(Math.floor(Math.random() * curated.length), 1)[0] : generatedCandidate(diff);
+      if (!cand || !fresh(cand) || sameTitle(cand[0], cand[1])) continue;
+      try {
+        const [pair, direct] = await Promise.all([validatePair(cand[0], cand[1]), linksDirectly(cand[0], cand[1])]);
+        if (direct || played.has(pairKey(pair.start, pair.end))) continue;
+        return pair;
+      } catch {}
     }
-    const p = pool[Math.floor(Math.random() * pool.length)];
-    usedPairs.add(p.join('→'));
+    // Everything's been played (or Wikipedia is unreachable): fall back to any curated pair.
+    const p = anyOf(window.PAIRS[diff]);
     return validatePair(p[0], p[1]);
   }
 
@@ -308,6 +400,7 @@
     closeResults();
     closeSpectate();
     window.Flappy.close();
+    markPlayed(round.start, round.end);
     game = {
       start: round.start, end: round.end, difficulty: round.difficulty, limit: round.limit || limitFor(round.difficulty),
       mode, ...extra,
@@ -753,6 +846,18 @@
   function dailyPair(key) {
     const pool = [...(window.PAIRS.daily || []), ...window.PAIRS.hard];
     const n = dailyNumber(key);
+    // After the hand-picked run, every day is generated from the Vital Articles snapshot with a
+    // date-seeded RNG: a lesser-known start and a core target from a different subject.
+    if (n > pool.length && window.VITAL) {
+      const rnd = seeded(hashStr(`daily-${key}`));
+      const V = window.VITAL;
+      const subjects = Object.keys(V.l3).filter((c) => V.l3[c].length).sort();
+      const c1 = subjects[Math.floor(rnd() * subjects.length)];
+      let c2 = c1;
+      while (c2 === c1) c2 = subjects[Math.floor(rnd() * subjects.length)];
+      const starts = V.l4[c1] && V.l4[c1].length ? V.l4[c1] : V.l3[c1];
+      return { start: starts[Math.floor(rnd() * starts.length)], end: V.l3[c2][Math.floor(rnd() * V.l3[c2].length)], n, key };
+    }
     const i = (((n - 1) % pool.length) + pool.length) % pool.length;
     const cycle = Math.floor((n - 1) / pool.length);
     const rnd = seeded(hashStr(`cycle-${cycle}`));
@@ -835,26 +940,23 @@
     const stats = dailyStats(key);
     const streak = streakInfo();
     const card = $('#daily-card');
-    const head = `<div class="daily-top"><span class="daily-badge">📅 Daily #${d.n}</span>
-      <span class="pill hard">Hard · 10:00</span>
-      ${streak.count ? `<span class="streak">🔥 ${streak.count}-day streak</span>` : ''}
-      <span class="muted daily-players">${stats.players.toLocaleString()} players today</span></div>`;
+    const head = `<div class="daily-top"><span class="mono-label">02 / Daily #${d.n} <span class="tag-hard">Hard · 10:00</span></span>
+      <span class="daily-players">${streak.count ? `<span class="streak">${streak.count}-day streak</span> · ` : ''}${stats.players.toLocaleString()} today</span></div>`;
     if (rec) {
       const beat = dailyBeat(stats, rec);
       card.innerHTML = `${head}
         <div class="daily-route">${esc(d.start)} <span class="arrow">→</span> <span class="tgt">${esc(d.end)}</span></div>
         <div class="daily-done">${rec.result === 'finished'
-          ? `✅ Done in <b>${plural(rec.score, 'click')}</b> · <b>${fmtTime(rec.time)}</b> · <b class="top">${topLabel(beat)}</b>`
-          : `${rec.result === 'timeout' ? '⏰ Ran out of time' : rec.abandoned ? '🚪 Left mid-challenge' : '🏳️ Gave up'} today. Try again tomorrow!`}</div>
-        <div class="daily-actions"><button class="btn primary" id="daily-results">See how you compare</button>
+          ? `Done in <b>${plural(rec.score, 'click')}</b> · <b>${fmtTime(rec.time)}</b> · <b class="top">${topLabel(beat)}</b>`
+          : `${rec.result === 'timeout' ? 'Ran out of time' : rec.abandoned ? 'Left mid-race' : 'Gave up'} today. New race tomorrow.`}</div>
+        <div class="daily-actions"><button class="btn primary" id="daily-results">See how you ranked</button>
         <span class="muted">Next daily in <b data-next-daily>${nextDailyIn()}</b></span></div>`;
       $('#daily-results').onclick = () => showDailyResults(key);
     } else {
       card.innerHTML = `${head}
         <div class="daily-route mystery"><span class="q">? ? ?</span> <span class="arrow">→</span> <span class="q tgt">? ? ?</span></div>
-        <p class="muted daily-sub">The articles stay secret until you hit start, then you get a 3-second look before the clock runs.
-          <b>One attempt</b>: fewest clicks wins, then fastest time.</p>
-        <div class="daily-actions"><button class="btn primary big-ish" id="daily-play">▶ Start today's challenge</button>
+        <p class="daily-sub">Same race for everyone, revealed when you start. One attempt.</p>
+        <div class="daily-actions"><button class="btn primary" id="daily-play">Start today's race</button>
         <span class="muted">Resets in <b data-next-daily>${nextDailyIn()}</b></span></div>`;
       $('#daily-play').onclick = startDaily;
     }
@@ -1114,6 +1216,7 @@
     conns: new Map(), hostConn: null, players: {}, phase: 'lobby', round: null, roundNum: 0, diff: 'easy',
     joined: false, roundStartedAt: 0, autoStartAt: 0, nextAt: 0, timers: {},
     roomId: null, migrating: false, watchers: new Map(), myName: '', fail: null,
+    bots: new Map(), busyRooms: 0, secondBotRolled: false,
     send() {},
   });
   let net = freshNet();
@@ -1172,7 +1275,7 @@
       net.send = (msg) => hostHandle('host', msg);
       const me = net;
       net.roomId = isPublic ? publicPeerId(slot) : PEER_PREFIX + code;
-      const peer = new Peer(net.roomId, { debug: 0 });
+      const peer = new Peer(net.roomId, peerOpts());
       net.peer = peer;
       peer.on('open', () => {
         if (net !== me) return;
@@ -1251,6 +1354,7 @@
       }
       if (spec.id === conn.peer) closeSpectate();
       scheduleAutoStart();
+      botPolicy();
       broadcast();
     });
   }
@@ -1279,6 +1383,7 @@
           checkRoundOver();
           break;
         }
+        if (activeCount() >= MAX_PLAYERS && net.bots.size && net.phase === 'lobby') removeBot([...net.bots.keys()].pop());
         if (activeCount() >= MAX_PLAYERS) {
           if (conn && conn.open) conn.send({ type: 'error', message: `That room is full (max ${MAX_PLAYERS} players)` });
           setTimeout(() => conn && conn.close(), 400);
@@ -1287,6 +1392,7 @@
         net.players[id] = newPlayer(cleanName(msg.name), nextColor());
         toast(`${net.players[id].name} joined`);
         scheduleAutoStart();
+        botPolicy();
         break;
       }
       case 'spectate': {
@@ -1304,16 +1410,7 @@
         const set = net.watchers.get(id);
         if (!set || !set.size) return;
         const frac = (v) => Math.max(0, Math.min(1, Number(v) || 0));
-        const out = { type: 'view', id, t: normTitle(str(msg.t, 300)), b: int(msg.b, 0, 1e5), f: frac(msg.f), p: frac(msg.p), h: int(msg.h, -1, 1e5) };
-        for (const w of set) {
-          const viewer = net.players[w];
-          if (!viewer || viewer.status === 'playing') continue;
-          if (w === 'host') onView(out);
-          else {
-            const c = net.conns.get(w);
-            if (c && c.open) c.send(out);
-          }
-        }
+        relayView(id, { type: 'view', id, t: normTitle(str(msg.t, 300)), b: int(msg.b, 0, 1e5), f: frac(msg.f), p: frac(msg.p), h: int(msg.h, -1, 1e5) });
         return;
       }
       case 'progress':
@@ -1463,6 +1560,7 @@
       for (const [id, conn] of net.conns) if (conn.open && net.players[id]) conn.send({ type: 'start', round });
       broadcast();
       beginRound(round);
+      startBots(round);
     } catch (e) {
       toast(e.message);
       if (net.isPublic) scheduleAutoStart();
@@ -1488,8 +1586,10 @@
       if (!p.connected) delete net.players[id];
       else Object.assign(p, { status: 'lobby', inRound: false });
     }
+    if (net.isPublic) botsAfterRound();
     goToLobbyScreen();
     scheduleAutoStart();
+    botPolicy();
     broadcast();
   }
 
@@ -1500,6 +1600,316 @@
     setTimeout(() => conn && conn.close(), 300);
     delete net.players[id];
     broadcast();
+  }
+
+  // ---------- fill-in racers for quick match ----------
+  // Public rooms only (never private rooms or the daily). The host's browser runs them. They take
+  // real routes found through the Wikipedia link graph, play at a range of skill levels, and always
+  // finish (or give up) before 75% of the time limit. No more than CONFIG.bots.maxPerRoom per room, and
+  // they back off as real players arrive, so they fade out naturally as the site gets busier.
+  // Clients can't tell them apart: ids look like normal peer ids and the bot flag never leaves the host.
+  const BOT_TIERS = [
+    { w: 0.28, detours: [1, 3], secPerClick: [20, 36], warmup: [8, 16], giveUp: 0.16, pen: 0.12 }, // new to it
+    { w: 0.38, detours: [0, 2], secPerClick: [14, 25], warmup: [6, 13], giveUp: 0.08, pen: 0.06 }, // casual
+    { w: 0.25, detours: [0, 1], secPerClick: [9, 16], warmup: [4, 9], giveUp: 0.03, pen: 0.02 },   // good
+    { w: 0.09, detours: [0, 0], secPerClick: [6, 11], warmup: [3, 7], giveUp: 0.01, pen: 0 },      // sharp
+  ];
+  const DIFF_MUL = { easy: 0.6, medium: 1, hard: 1.45, random: 1.6, custom: 1 };
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const randInt = (a, b) => Math.floor(rand(a, b + 1));
+  const pickWeighted = (list) => {
+    let r = Math.random() * list.reduce((s, x) => s + x.w, 0);
+    for (const x of list) { r -= x.w; if (r <= 0) return x; }
+    return list[list.length - 1];
+  };
+  const isBot = (id) => net.bots && net.bots.has(id);
+  const humanCount = () => Object.entries(net.players).filter(([id, p]) => p.connected && !isBot(id)).length;
+
+  function botName() {
+    const taken = new Set(Object.values(net.players).map((p) => p.name.toLowerCase()));
+    const pool = (window.BOT_NAMES || []).filter((n) => !taken.has(n.toLowerCase()) && !recentBotNames.includes(n));
+    const name = pool.length ? pool[Math.floor(Math.random() * pool.length)] : `racer${randInt(10, 99)}`;
+    recentBotNames.push(name);
+    if (recentBotNames.length > 40) recentBotNames.shift();
+    return name;
+  }
+  const recentBotNames = [];
+
+  function addBot() {
+    if (!net.isHost || !net.isPublic || net.phase !== 'lobby' || activeCount() >= MAX_PLAYERS) return;
+    const id = crypto.randomUUID();
+    net.players[id] = newPlayer(botName(), nextColor());
+    net.bots.set(id, { tier: pickWeighted(BOT_TIERS), timers: [], view: { b: 0, p: 0 } });
+    toast(`${net.players[id].name} joined`);
+    scheduleAutoStart();
+    broadcast();
+  }
+
+  function clearBotTimers(id) {
+    const b = net.bots.get(id);
+    if (b) { b.timers.forEach(clearTimeout); b.timers = []; }
+  }
+
+  function removeBot(id) {
+    if (!isBot(id)) return;
+    clearBotTimers(id);
+    net.bots.delete(id);
+    for (const set of net.watchers.values()) set.delete(id);
+    const p = net.players[id];
+    if (p) {
+      if (net.phase === 'lobby' || !p.inRound) delete net.players[id];
+      else { p.connected = false; if (p.status === 'playing') p.status = 'left'; }
+    }
+    scheduleAutoStart();
+    broadcast();
+  }
+
+  // How many fill-ins this room should have right now.
+  function botTarget() {
+    const cfg = CONFIG.bots;
+    if (!cfg.enabled || !net.isHost || !net.isPublic) return 0;
+    const humans = humanCount();
+    if (humans === 0 || humans > cfg.maxHumans) return 0;
+    let max = Math.min(cfg.maxPerRoom, 2);
+    // Other public rooms already busy means real players are around: lean on them instead.
+    if (net.busyRooms >= cfg.busyRoomsOff) max = 0;
+    else if (net.busyRooms >= cfg.busyRoomsHalf) max = Math.min(max, 1);
+    return Math.min(max, MAX_PLAYERS - 1 - humans); // always leave a seat for a real person
+  }
+
+  function botPolicy() {
+    if (!net.isHost || !net.isPublic) return;
+    const target = botTarget();
+    const bots = [...net.bots.keys()].filter((id) => net.players[id]);
+    if (net.phase !== 'lobby') return;
+    if (bots.length > target) {
+      // Too many: one wanders off after a natural pause.
+      if (!net.timers.botLeave) {
+        net.timers.botLeave = setTimeout(() => {
+          net.timers.botLeave = null;
+          const extra = [...net.bots.keys()].filter((id) => net.players[id]);
+          if (extra.length > botTarget()) removeBot(extra[extra.length - 1]);
+          botPolicy();
+        }, rand(1500, 5000));
+      }
+      return;
+    }
+    if (bots.length < target && !net.timers.botJoin) {
+      const first = bots.length === 0;
+      if (!first && net.secondBotRolled) return;
+      if (!first) {
+        net.secondBotRolled = true;
+        if (Math.random() > CONFIG.bots.secondChance) return;
+      }
+      const [lo, hi] = first ? CONFIG.bots.firstDelayMs : CONFIG.bots.secondDelayMs;
+      net.timers.botJoin = setTimeout(() => {
+        net.timers.botJoin = null;
+        if (net.phase === 'lobby' && [...net.bots.keys()].filter((id) => net.players[id]).length < botTarget()) addBot();
+        botPolicy();
+      }, rand(lo, hi));
+    }
+  }
+
+  // After a round some fill-ins leave (more likely when real people are around), like real players do.
+  function botsAfterRound() {
+    const humans = humanCount();
+    for (const id of [...net.bots.keys()]) {
+      clearBotTimers(id);
+      const chance = CONFIG.bots.leaveChance + (humans >= 2 ? 0.3 : 0);
+      if (Math.random() < chance) removeBot(id);
+    }
+    net.secondBotRolled = false;
+  }
+
+  // --- route planning through the real link graph (~4–7 cached API calls per round) ---
+  async function pagesQuery(params) {
+    const j = await api({ action: 'query', redirects: '1', prop: 'info', smaxage: '3600', maxage: '3600', ...params });
+    return ((j.query && j.query.pages) || []).filter((p) => !p.missing && p.ns === 0).map((p) => ({ t: p.title, len: p.length || 0 }));
+  }
+  const linksOfPage = (title) => pagesQuery({ generator: 'links', titles: title, gplnamespace: '0', gpllimit: 'max' });
+  const pagesLinkingTo = (title) => pagesQuery({ generator: 'linkshere', titles: title, glhnamespace: '0', glhlimit: 'max', glhshow: '!redirect' });
+  const byLen = (a, b) => b.len - a.len; // long articles are usually broad "hub" topics
+  const topPick = (list) => list.sort(byLen)[Math.floor(Math.random() * Math.min(3, list.length))];
+
+  async function linkPairs(froms, tos) {
+    const j = await api({ action: 'query', prop: 'links', titles: froms.join('|'), pltitles: tos.join('|'), pllimit: 'max', smaxage: '3600', maxage: '3600' });
+    const hits = [];
+    for (const pg of (j.query && j.query.pages) || []) for (const l of pg.links || []) hits.push([pg.title, l.title]);
+    return hits.sort(() => Math.random() - 0.5).slice(0, 6);
+  }
+
+  // Finds several real routes (shortest found first) so each fill-in can take a different one.
+  async function planRoute(start, end) {
+    const [S, T] = await Promise.all([linksOfPage(start), pagesLinkingTo(end)]);
+    // Detour candidates: prominent pages linked from the start (what people actually wander into).
+    const startLinks = [...S].sort(byLen).slice(0, 60).map((x) => x.t).filter((t) => !sameTitle(t, end));
+    const plan = (routes) => ({ routes, startLinks });
+    if (S.some((x) => sameTitle(x.t, end))) return plan([[start, end]]);
+    const tset = new Set(T.map((x) => normTitle(x.t)));
+    const common = S.filter((x) => tset.has(normTitle(x.t))).sort(byLen).slice(0, 6);
+    if (common.length) return plan(common.map((x) => [start, x.t, end]));
+    const xs = [...S].sort(byLen).slice(0, 50).map((x) => x.t);
+    const ys = [...T].sort(byLen).slice(0, 100).map((x) => x.t);
+    for (let i = 0; i < ys.length; i += 50) {
+      const hits = await linkPairs(xs, ys.slice(i, i + 50));
+      if (hits.length) return plan(hits.map(([x, y]) => [start, x, y, end]));
+    }
+    if (!xs.length) return plan([]);
+    const hub = xs[Math.floor(Math.random() * Math.min(2, xs.length))];
+    const Z = (await linksOfPage(hub)).filter((z) => !sameTitle(z.t, start));
+    const zc = Z.filter((z) => tset.has(normTitle(z.t))).sort(byLen).slice(0, 6);
+    if (zc.length) return plan(zc.map((z) => [start, hub, z.t, end]));
+    const zs = Z.sort(byLen).slice(0, 50).map((z) => z.t);
+    for (let i = 0; i < ys.length && zs.length; i += 50) {
+      const hits = await linkPairs(zs, ys.slice(i, i + 50));
+      if (hits.length) return plan(hits.map(([z, y]) => [start, hub, z, y, end]));
+    }
+    return plan([]);
+  }
+
+  async function startBots(round) {
+    const ids = [...net.bots.keys()].filter((id) => net.players[id] && net.players[id].inRound);
+    if (!ids.length) return;
+    const me = net;
+    let plan = null;
+    try { plan = await planRoute(round.start, round.end); } catch {}
+    if (net !== me || net.round !== round || net.phase !== 'playing') return;
+    for (const id of ids) net.bots.get(id).routeKey = null;
+    for (const id of ids) simulateBot(id, round, plan);
+  }
+
+  function simulateBot(id, round, plan) {
+    const b = net.bots.get(id);
+    const p = net.players[id];
+    if (!b || !p) return;
+    const tier = b.tier;
+    const dm = DIFF_MUL[round.difficulty] || 1;
+    const cap = round.limit * 0.75;
+
+    // Build the route: real shortest-ish path plus "explore and come back" detours for weaker players.
+    const path = [{ t: round.start, via: round.start, back: false }];
+    // Each fill-in takes its own route where possible, and stronger players favour the shortest.
+    const routes = (plan && plan.routes) || [];
+    const used = new Set([...net.bots.values()].map((x) => x.routeKey).filter(Boolean));
+    const sorted = [...routes].sort((a, c) => a.length - c.length);
+    const fresh = sorted.filter((r) => !used.has(r.join('|')));
+    const options = fresh.length ? fresh : sorted;
+    const route = options.length ? options[tier.giveUp < 0.05 ? 0 : Math.floor(Math.random() * options.length)] : null;
+    b.routeKey = route ? route.join('|') : null;
+    if (route) {
+      const pool = plan.startLinks.filter((t) => !route.some((r) => sameTitle(r, t)));
+      const detours = Math.min(pool.length, randInt(tier.detours[0], tier.detours[1] + (dm > 1.2 ? 1 : 0)));
+      for (let k = 0; k < detours; k++) {
+        const w = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+        path.push({ t: w, via: w, back: false }, { t: round.start, via: round.start, back: true });
+      }
+      for (const t of route.slice(1)) path.push({ t, via: t, back: false });
+    }
+    const givesUp = !route || Math.random() < tier.giveUp * dm;
+
+    // Timing: warm-up read of the first page, then a think time per click, all inside 75% of the clock.
+    const steps = route ? path.length - 1 : randInt(2, 5);
+    let times = [];
+    let tSum = rand(tier.warmup[0], tier.warmup[1]) * 1000;
+    for (let i = 0; i < steps; i++) {
+      tSum += rand(tier.secPerClick[0], tier.secPerClick[1]) * Math.sqrt(dm) * 1000;
+      times.push(tSum);
+    }
+    const finishAt = times[times.length - 1] + rand(400, 1500);
+    const budget = cap * rand(0.55, 0.97);
+    if (finishAt > budget) times = times.map((t) => (t * budget) / finishAt);
+
+    const at = (ms, fn) => {
+      const delay = net.roundStartedAt + ms - Date.now();
+      b.timers.push(setTimeout(() => {
+        if (net.players[id] !== p || p.status !== 'playing' || net.round !== round) return;
+        fn();
+      }, Math.max(0, delay)));
+    };
+
+    // Tab-switch penalty for some, mid-race.
+    if (Math.random() < tier.pen) at(times[Math.floor(times.length / 2)] || 20000, () => { p.tabLeaves = 2; p.penalties = 1; broadcast(); });
+
+    if (givesUp) {
+      const quitAt = Math.min(cap * rand(0.35, 0.95), (times[times.length - 1] || cap * 0.5) + rand(10e3, 60e3));
+      // Follow the real route partway (never reaching the target), or explore links off the start page
+      // and come back, so even a give-up route only uses real links.
+      const wander = plan && plan.startLinks.length ? plan.startLinks : [];
+      const walk = [{ t: round.start, via: round.start, back: false }];
+      times.forEach((t, i) => {
+        if (t >= quitAt) return;
+        let step = null;
+        if (route && i + 1 < path.length - 1) step = path[i + 1];
+        else if (!route && wander.length) {
+          step = i % 2 === 0
+            ? { t: wander[(i * 7 + 3) % wander.length], via: '', back: false }
+            : { t: round.start, via: round.start, back: true };
+        }
+        if (!step) return;
+        walk.push(step);
+        const n = walk.length - 1;
+        at(t, () => { p.clicks = n; p.title = step.t; resetBotView(b); broadcast(); });
+      });
+      at(quitAt, () => {
+        p.status = 'gaveup';
+        p.path = walk.slice(0, p.clicks + 1).map((x) => ({ ...x, via: x.via || x.t }));
+        p.time = Date.now() - net.roundStartedAt;
+        checkRoundOver();
+        broadcast();
+      });
+      return;
+    }
+
+    times.forEach((t, i) => at(t, () => {
+      p.clicks = i + 1;
+      p.title = path[i + 1].t;
+      resetBotView(b);
+      if (i + 1 < path.length - 1) broadcast();
+    }));
+    at(times[times.length - 1] + 50, () => {
+      p.status = 'finished';
+      p.path = path;
+      p.clicks = path.length - 1;
+      p.title = round.end;
+      p.time = Math.min(round.limit, Date.now() - net.roundStartedAt);
+      p.verify = 'pending';
+      checkRoundOver();
+      broadcast();
+      b.timers.push(setTimeout(() => {
+        if (net.players[id] !== p || p.verify !== 'pending') return;
+        p.verify = 'ok';
+        checkRoundOver();
+        broadcast();
+      }, rand(500, 1800)));
+    });
+  }
+
+  // Spectating a fill-in: drift down the page like someone reading and skimming.
+  function resetBotView(b) { b.view = { b: 0, p: 0 }; }
+  setInterval(() => {
+    if (!net.isHost || !net.bots || !net.bots.size) return;
+    for (const [id, b] of net.bots) {
+      const p = net.players[id];
+      const set = net.watchers.get(id);
+      if (!p || p.status !== 'playing' || !set || !set.size) continue;
+      if (Math.random() < 0.7) b.view.b += randInt(0, 3);
+      b.view.p = Math.min(0.95, b.view.b / 70);
+      relayView(id, { type: 'view', id, t: p.title, b: b.view.b, f: Math.round(Math.random() * 100) / 100, p: b.view.p, h: -1 });
+    }
+  }, 1300);
+
+  function relayView(id, out) {
+    const set = net.watchers.get(id);
+    if (!set) return;
+    for (const w of set) {
+      const viewer = net.players[w];
+      if (!viewer || viewer.status === 'playing') continue;
+      if (w === 'host') onView(out);
+      else {
+        const c = net.conns.get(w);
+        if (c && c.open) c.send(out);
+      }
+    }
   }
 
   // --- guest ---
@@ -1571,7 +1981,7 @@
 
   function tryClaim(roomId) {
     return new Promise((resolve) => {
-      const peer = new Peer(roomId, { debug: 0 });
+      const peer = new Peer(roomId, peerOpts());
       const t = setTimeout(() => { peer.destroy(); resolve(null); }, 6000);
       peer.on('open', () => { clearTimeout(t); resolve(peer); });
       peer.on('error', () => { if (!peer.open) { clearTimeout(t); peer.destroy(); resolve(null); } });
@@ -1708,7 +2118,7 @@
     };
     setTimeout(() => { if (!me.joined) fail("Couldn't reach that room. Check the code and that the host still has it open."); }, 15000);
 
-    const peer = new Peer({ debug: 0 });
+    const peer = new Peer(peerOpts());
     net.peer = peer;
     peer.on('open', () => {
       if (net !== me) return;
@@ -1754,7 +2164,7 @@
   // --- quick match: finds an open public room, or opens one for others to find ---
   function findPublicRoom(me) {
     return new Promise((resolve) => {
-      const peer = new Peer({ debug: 0 });
+      const peer = new Peer(peerOpts());
       me.peer = peer;
       const results = new Map();
       let done = false;
@@ -1766,18 +2176,19 @@
           .sort((a, b) => (a[1].info.phase === 'lobby' ? 0 : 1) - (b[1].info.phase === 'lobby' ? 0 : 1) || b[1].info.count - a[1].info.count);
         const best = open[0];
         for (const [, r] of results) if (r && (!best || r !== best[1])) r.conn.close();
-        if (best) resolve({ peer, conn: best[1].conn, slot: best[0] });
+        const busy = [...results.values()].filter((r) => r && r.info.count > 0).length;
+        if (best) resolve({ peer, conn: best[1].conn, slot: best[0], busy });
         else {
           const free = [];
-          for (let i = 0; i < PUBLIC_SLOTS; i++) if (!results.get(i)) free.push(i);
+          for (let i = 0; i < CONFIG.publicSlots; i++) if (!results.get(i)) free.push(i);
           peer.destroy();
-          resolve({ free });
+          resolve({ free, busy });
         }
       };
       const timer = setTimeout(finish, 6000);
-      const check = () => { if (results.size >= PUBLIC_SLOTS) finish(); };
+      const check = () => { if (results.size >= CONFIG.publicSlots) finish(); };
       peer.on('open', () => {
-        for (let i = 0; i < PUBLIC_SLOTS; i++) {
+        for (let i = 0; i < CONFIG.publicSlots; i++) {
           const conn = peer.connect(publicPeerId(i), { reliable: true });
           const onData = (d) => {
             if (d && d.type === 'lobbyinfo') {
@@ -1834,8 +2245,10 @@
         try {
           await hostRoom({ name, isPublic: true, slot });
           if (token !== matchToken) { leaveRoom(); return; }
+          net.busyRooms = res.busy || 0;
           setLobbyStatus('Waiting for other racers to join. The race starts automatically once 2 or more are here.');
           renderLobby();
+          botPolicy();
           return;
         } catch (e) {
           if (token !== matchToken) return;
@@ -1904,6 +2317,7 @@
 
   function leaveRoom() {
     const old = net;
+    if (old.bots) for (const b of old.bots.values()) b.timers.forEach(clearTimeout);
     clearTimers();
     net = freshNet();
     try { old.hostConn && old.hostConn.close(); } catch {}
@@ -2033,7 +2447,7 @@
       if (!$('#home').classList.contains('active')) { setTimeout(play, 1500); return; }
       const r = DEMO_ROUTES[i++ % DEMO_ROUTES.length];
       box.classList.remove('out');
-      box.innerHTML = r.map((t, k) => `${k ? `<span class="rd-line" style="--d:${k * 420 - 120}ms"></span>` : ''}<span class="rd-chip ${k === r.length - 1 ? 'end' : ''}" style="--d:${k * 420}ms">${k === r.length - 1 ? '🏁 ' : ''}${esc(t)}</span>`).join('')
+      box.innerHTML = r.map((t, k) => `${k ? `<span class="rd-line" style="--d:${k * 420 - 120}ms"></span>` : ''}<span class="rd-chip ${k === r.length - 1 ? 'end' : ''}" style="--d:${k * 420}ms">${esc(t)}</span>`).join('')
         + `<span class="rd-count" style="--d:${r.length * 420}ms">${r.length - 1} clicks</span>`;
       setTimeout(() => box.classList.add('out'), r.length * 420 + 2600);
       setTimeout(play, r.length * 420 + 3100);
@@ -2041,20 +2455,20 @@
     play();
   }
 
-  function initSpotlight() {
-    document.addEventListener('pointermove', (e) => {
-      const card = e.target.closest && e.target.closest('.card.glow');
-      if (!card) return;
-      const r = card.getBoundingClientRect();
-      card.style.setProperty('--mx', `${e.clientX - r.left}px`);
-      card.style.setProperty('--my', `${e.clientY - r.top}px`);
-    }, { passive: true });
+  function initHowTo() {
+    const box = $('#howto');
+    $('#open-howto').addEventListener('click', () => box.classList.remove('hidden'));
+    $('#close-howto').addEventListener('click', () => box.classList.add('hidden'));
+    box.addEventListener('click', (e) => { if (e.target === box) box.classList.add('hidden'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') box.classList.add('hidden'); });
   }
 
   // ---------- wiring ----------
   function init() {
     runRouteDemo();
-    initSpotlight();
+    initHowTo();
+    const played = playedList().length;
+    $('#solo-stats').textContent = played ? `${played} race${played === 1 ? '' : 's'} played on this device` : 'No races yet';
     const nameInput = $('#name-input');
     nameInput.value = store.get('wr-name') || '';
     nameInput.addEventListener('change', () => store.set('wr-name', nameInput.value.trim()));
@@ -2164,5 +2578,6 @@
     }
   }
 
+  loadConfig();
   init();
 })();

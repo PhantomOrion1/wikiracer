@@ -3,83 +3,99 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src https://*.wikipedia.org https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>WikiRacer</title>
   <meta name="description" content="Race through Wikipedia from one article to another in as few clicks as possible. Play solo, quick match strangers, or duel your friends live.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
   <!-- HOME -->
   <section id="home" class="screen active">
-    <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
     <div class="home-wrap">
-      <header class="hero">
-        <div class="hero-badge reveal" style="--delay:0ms"><span class="live-dot"></span> Live multiplayer Wikipedia racing</div>
-        <h1 class="logo reveal" style="--delay:80ms">Wiki<span>Racer</span></h1>
-        <p class="tagline reveal" style="--delay:160ms">Start on one Wikipedia article. Reach another using only the links on the page. <b>Fewest clicks wins.</b></p>
-        <div class="route-demo reveal" id="route-demo" style="--delay:240ms" aria-hidden="true"></div>
+      <header class="topbar rise" style="--i:0">
+        <div class="brand">
+          <h1 class="logo">WikiRacer</h1>
+          <p class="tagline">Click through Wikipedia from one article to another. Fewest clicks wins.</p>
+        </div>
+        <label class="name-field">
+          <span class="mono-label">Racing as</span>
+          <input id="name-input" maxlength="20" placeholder="your name" autocomplete="nickname">
+        </label>
       </header>
 
       <div id="challenge-banner" class="card challenge hidden"></div>
 
-      <label class="name-field reveal" style="--delay:300ms">
-        <span>Your name</span>
-        <input id="name-input" maxlength="20" placeholder="e.g. Juju" autocomplete="nickname">
-      </label>
-
-      <section class="card mp-hero glow reveal" style="--delay:360ms">
-        <div class="mp-main">
-          <div class="eyebrow"><span class="live-dot"></span> Multiplayer</div>
-          <h2 class="mp-title">Race your friends through Wikipedia</h2>
-          <p class="muted mp-sub">Same start, same target, up to 5 players. Watch everyone's clicks tick up live, then compare routes on the podium.</p>
-          <button class="btn primary big qm" id="quick-match"><span class="qm-label">⚡ Quick match</span><small>Jump into a public race with strangers</small></button>
-          <ul class="perks">
-            <li>👁 Spectate live</li>
-            <li>🏆 Podium &amp; route replays</li>
-            <li>🛡 Anti-cheat built in</li>
-          </ul>
-        </div>
-        <div class="mp-side">
-          <div class="or"><span>or play with friends</span></div>
-          <button class="btn wide" id="create-room">➕ Create a private room</button>
-          <form id="join-form" class="join-form">
-            <input id="join-code" maxlength="5" placeholder="Room code" autocomplete="off" spellcheck="false">
-            <button class="btn" type="submit">Join</button>
-          </form>
-          <p class="muted small-print">Share the room code or invite link. The host picks the difficulty.</p>
-        </div>
-      </section>
-
-      <div class="cards">
-        <div class="card glow reveal" style="--delay:440ms">
-          <h2>Solo</h2>
-          <p class="muted">Beat the clock and your personal best.</p>
-          <div class="diff-buttons">
-            <button class="btn diff easy" data-solo="easy">Easy<small>2:30</small></button>
-            <button class="btn diff medium" data-solo="medium">Medium<small>5:00</small></button>
-            <button class="btn diff hard" data-solo="hard">Hard<small>10:00</small></button>
+      <main class="home-grid">
+        <section class="panel-mp rise" style="--i:1" aria-labelledby="mp-title">
+          <div class="checker" aria-hidden="true"></div>
+          <div class="mp-body">
+            <div class="mono-label"><span class="rec-dot"></span> 01 / Multiplayer · live</div>
+            <h2 class="mp-title" id="mp-title">Race real people through Wikipedia.</h2>
+            <p class="mp-sub">Same start, same target, up to 5 racers. Watch the click counts climb, then compare every route at the finish.</p>
+            <div class="route-demo" id="route-demo" aria-hidden="true"></div>
+            <button class="btn qm" id="quick-match">
+              <span class="qm-main">Quick match <span class="qm-arrow">→</span></span>
+              <span class="qm-sub">Join a public race now</span>
+            </button>
           </div>
-          <div class="diff-buttons secondary">
-            <button class="btn ghost" data-solo="random">🎲 Random</button>
-            <button class="btn ghost" id="solo-custom-toggle">✏️ Custom</button>
+          <div class="friends">
+            <div class="friends-head">
+              <h3 class="friends-title">Play with friends</h3>
+              <span class="friends-note">Private room · you pick the difficulty</span>
+            </div>
+            <div class="friends-actions">
+              <button class="btn friends-create" id="create-room">Create a room</button>
+              <form id="join-form" class="join-form">
+                <input id="join-code" maxlength="5" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code">
+                <button class="btn friends-join" type="submit">Join</button>
+              </form>
+            </div>
           </div>
-          <form id="solo-custom" class="custom-form hidden">
-            <input name="start" list="suggest-start" placeholder="Start article" required>
-            <input name="end" list="suggest-end" placeholder="Target article" required>
-            <button class="btn primary" type="submit">Go</button>
-          </form>
+        </section>
+
+        <div class="side-col">
+          <div class="card daily rise" id="daily-card" style="--i:2"></div>
+
+          <section class="card solo rise" style="--i:3" aria-labelledby="solo-title">
+            <div class="mono-label">03 / Solo</div>
+            <h2 class="side-title" id="solo-title">Beat the clock</h2>
+            <p class="solo-sub">Practise on your own. Each race is a fresh pair from millions of possible routes, and your personal bests are saved on this device.</p>
+            <div class="solo-stats" id="solo-stats"></div>
+            <div class="diff-buttons">
+              <button class="btn diff easy" data-solo="easy">Easy<small>2:30</small></button>
+              <button class="btn diff medium" data-solo="medium">Medium<small>5:00</small></button>
+              <button class="btn diff hard" data-solo="hard">Hard<small>10:00</small></button>
+            </div>
+            <div class="diff-buttons secondary">
+              <button class="btn ghost" data-solo="random">Random articles</button>
+              <button class="btn ghost" id="solo-custom-toggle">Pick your own</button>
+            </div>
+            <form id="solo-custom" class="custom-form hidden">
+              <input name="start" list="suggest-start" placeholder="Start article" required>
+              <input name="end" list="suggest-end" placeholder="Target article" required>
+              <button class="btn primary" type="submit">Go</button>
+            </form>
+          </section>
         </div>
+      </main>
 
-        <div class="card daily glow reveal" id="daily-card" style="--delay:520ms"></div>
-      </div>
+      <footer class="home-foot rise" style="--i:4">
+        <button class="linkish" id="open-howto">How to play</button>
+        <span class="sep">·</span>
+        <span>Articles from <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer">Wikipedia</a>, CC BY-SA</span>
+      </footer>
+    </div>
+  </section>
 
-      <details class="card howto reveal" style="--delay:600ms">
-        <summary><h2>How to play</h2><span class="muted toggle-hint">tap to hide</span></summary>
+  <!-- HOW TO PLAY -->
+  <div id="howto" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="howto-title">
+    <div class="modal howto">
+      <div class="howto-head"><h2 id="howto-title">How to play</h2><button class="btn small" id="close-howto">Close</button></div>
         <ol class="steps">
           <li><span class="step-n">1</span><div><b>📍 Start</b><p>You land on a Wikipedia article.</p></div></li>
           <li><span class="step-n">2</span><div><b>🔗 Click links</b><p>Only links inside the article. No search bar.</p></div></li>
@@ -112,10 +128,8 @@
             </ul>
           </div>
         </div>
-      </details>
-      <p class="foot muted">Articles load live from <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer">Wikipedia</a> (CC BY-SA).</p>
     </div>
-  </section>
+  </div>
 
   <!-- LOBBY -->
   <section id="lobby" class="screen">
@@ -263,8 +277,10 @@
   <datalist id="suggest-end"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="pairs.js?v=12"></script>
-  <script src="flappy.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="pairs.js?v=15"></script>
+  <script src="bots.js?v=15"></script>
+  <script src="vital.js?v=15"></script>
+  <script src="flappy.js?v=15"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

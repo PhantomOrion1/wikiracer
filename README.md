@@ -18,6 +18,14 @@ Get from one Wikipedia article to another using only the links on the page. Fewe
 - **Anti-cheat**: leaving the tab costs +1 click after one warning. The host re-checks every route against Wikipedia's link data, and fake routes get flagged. Times and click counts are measured by the host, not trusted from players. Racers can't see each other's pages until they finish.
 - **Security**: strict Content-Security-Policy, Subresource Integrity on the CDN script, Wikipedia HTML stripped of scripts and event handlers, and peer messages validated and rate-limited.
 
+## Running it at scale
+
+- **`config.json`** holds live settings you can edit on GitHub without touching code (takes ~10 min to apply): fill-in racers (`bots.maxPerRoom: 0` turns them off), number of public rooms, and an optional self-hosted PeerJS server.
+- **Fill-in racers**: quick-match rooms that are short on people get up to 2 fill-ins (names in `bots.js`). They take real routes through Wikipedia's link graph, play at four skill levels, and always finish or give up within 75% of the time limit. They back off automatically once rooms have real players, or when other public rooms are already busy.
+- **Pairs**: `vital.js` is a snapshot of Wikipedia's Vital Articles (~4,500 articles, by subject), giving about 4 million start/target combinations. Each browser remembers the last 4,000 pairs it played and never repeats them.
+- **Wikipedia API**: responses are cached at Wikimedia's edge (`smaxage`), and failed requests retry with backoff.
+- **Names** are filtered for slurs and profanity.
+
 ## Modes
 
 - **Solo**: Easy / Medium / Hard curated pairs, random articles, or your own custom pair. Personal bests are saved in your browser.
