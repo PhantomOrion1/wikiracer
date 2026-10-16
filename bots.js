@@ -1,37 +1,48 @@
 // Names for quick-match fill-in racers.
-// Modelled on what people actually type into casual browser-game name boxes: mostly first names and
-// nicknames, often lowercase, a good share with numbers or an initial, a few handles, the odd ALL CAPS
-// or emoji. Deliberately avoided: anything themed on Wikipedia/racing (a giveaway), real full names,
-// celebrity names, staff-sounding names (admin, mod), numbers with bad connotations (14, 69, 88, 420,
-// 666) and birth years that would suggest a child. Mixed AU/UK/US/IE/NZ/South Asian/European/
-// East Asian/Middle Eastern/African names, matching the audience.
+//
+// How people actually name themselves in casual browser games (no account, one text box):
+//  - Most type their first name, usually lowercase, often with nothing else.            (~30%)
+//  - Many add numbers: lucky numbers, adult birth years, or a random 3-4 digit tail.     (~20%)
+//  - A good chunk type their real full name in lowercase, or first name + last initial. (~12%)
+//  - Social-media style: its/real/not prefixes, -y/-ie nicknames, doubled letters.      (~12%)
+//  - Short modern gamer tags (one word, no xX_Xx_ decoration).                         (~10%)
+//  - Lazy/joke entries: keyboard mash, "idk", "hi", "bruh".                              (~8%)
+//  - A few ALL CAPS, odd spacing, or a single emoji.                                    (~8%)
+// Avoided on purpose: anything themed on Wikipedia/racing (a giveaway), cute regional slang, email-
+// style handles, real public figures, staff-like names (admin/mod), bad-connotation numbers
+// (14, 69, 88, 420, 666) and birth years that would suggest a child. Surnames are only the most
+// common ones, so no name points at a real individual.
 window.BOT_NAMES = [
-  // plain first names / nicknames (mixed case)
-  'Sophie', 'liam', 'Mia', 'noah', 'Isla', 'jack', 'Chloe', 'oliver', 'Ruby', 'Harrison',
-  'Priya', 'lukas', 'Zara', 'Mateo', 'kirra', 'Hannah', 'ethan', 'tahlia', 'Riley', 'maddie',
-  'Kai', 'brodie', 'Freya', 'hugo', 'Layla', 'Archie', 'georgia', 'Sienna', 'aisha', 'Callum',
-  'Imogen', 'fletch', 'Lachlan', 'Poppy', 'rafa', 'Evie', 'kieran', 'Felix', 'Hamish', 'lottie',
-  'Ravi', 'Elena', 'Yuki', 'Tara', 'angus', 'Bianca', 'kenji', 'Phoebe', 'Nadia', 'jasper',
-  'Willow', 'Marta', 'caleb', 'Saanvi', 'Reuben', 'Esme', 'Arlo', 'Nora', 'Fergus', 'Quinn',
-  'Ingrid', 'Tariq', 'Leila', 'Ezra', 'Neve', 'Jai', 'Bonnie', 'Omar', 'Hazel', 'Lin',
-  // name + numbers
-  'liam07', 'zoe_23', 'jess99', 'mitch11', 'ollie22', 'Noah27', 'ava.31', 'sammo47', 'dan_r3',
-  'ben101', 'tom_2k', 'harv7', 'kyle_x7', 'ruby_17', 'luca21', 'meg32', 'josh__9', 'ari12',
-  'izzy24', 'alex_k9', 'leo555', 'max23', 'finn_03', 'hana7', 'sami_k1', 'jordo99', 'eden_8',
-  'cj22', 'em_25', 'rhys4', 'dev_19', 'priyanka8', 'kofi10', 'theo_77', 'nat29', 'georgie_5',
-  'arjun_2', 'lars9', 'mo_31', 'cam_x23', 'ellie26', 'jake_44', 'aimee03', 'tash12', 'ollie_b2',
-  // initials / surnames / separators
-  'Tom H', 'Josh B', 'Chloe W', 'Ava M', 'emily r', 'jack o', 'Daniel K', 'mia.k', 'ethan.r',
-  'joe.m', 'nick_t', 'chen.w', 'marcusp', 'alexk', 'thomasj', 'sam.k', 'hmurphy', 'jtaylor_',
-  'ellie_b', 'mattyb', 'lucy.w', 'b.nguyen', 'olivia p', 'r.singh',
-  // handles that real people use
-  'quietfox', 'spud', 'noodle', 'bear', 'big_sam', 'kiwi', 'pickle', 'moonpie', 'dino',
-  'sleepycat', 'gumboot', 'toastie', 'beans', 'koala_k', 'frosty', 'ziggy', 'pancake', 'pixel',
-  'sunny', 'wren', 'sky', 'birdie', 'chip', 'mango', 'pebble', 'otter_j', 'nugget', 'waffles',
-  // messy humans: short, doubled letters, caps, emoji
-  'ty', 'tj', 'jas', 'dyl', 'ned', 'kev', 'gus', 'jj', 'benjiii', 'sophiaaa', 'meggg',
-  'JACK', 'MAX', 'TOMMO', 'LUCY', 'mia 🌸', 'jake ⚽', 'zoe ✨', 'em :)', 'xander', 'kayy',
-  // more first names
-  'Amara', 'kiara', 'Dominic', 'yusuf', 'Clara', 'matteo_s', 'rosie_22', 'Indy', 'Mason', 'louie',
-  'Ana', 'bilal_9',
+  // first names, mostly lowercase
+  'jake', 'emma', 'liam', 'sophie', 'noah', 'mia', 'ethan', 'chloe', 'josh', 'ella', 'ryan', 'grace',
+  'tom', 'lily', 'ben', 'zoe', 'sam', 'hannah', 'luke', 'jess', 'dan', 'amy', 'max', 'olivia', 'alex',
+  'ruby', 'harry', 'isla', 'will', 'lucy', 'Jack', 'Emily', 'Ollie', 'Sarah', 'Matt', 'Priya', 'Leo',
+  'Aisha', 'Omar', 'Mateo', 'kenji', 'arjun', 'yusuf', 'fatima', 'lukas', 'elena', 'diego', 'nina',
+  'ravi', 'kofi', 'mei', 'ines', 'jonas', 'leila', 'ahmed', 'sofia', 'callum', 'Tyler', 'Kayla', 'Nathan',
+  // names with numbers
+  'jake2847', 'emma_04', 'liam23', 'sophie99', 'ethan_7', 'chloe2001', 'josh1203', 'mia_x3', 'tom0712',
+  'zoe28', 'max_917', 'dan3301', 'ella_02', 'ryan11', 'lily247', 'sam_09', 'ben_37', 'lucy4', 'will808',
+  'noah_1', 'alex2003', 'priya_21', 'omar7', 'kenji_5', 'mateo10', 'hannah_93', 'jess318', 'luke2k',
+  'amy_83', 'harry_19', 'isla5', 'ruby_00', 'nathan2900', 'ollie_65', 'grace_12', 'tyler_7', 'kayla01',
+  'diego23', 'aisha_99', 'ravi_404',
+  // real-name style
+  'emma wilson', 'jack brown', 'sarah lee', 'tom smith', 'chloe taylor', 'ryan jones', 'Mia Clarke',
+  'Daniel K', 'josh m', 'ella w', 'sam p', 'luke h', 'Hannah Scott', 'priya s', 'alex martin',
+  'jess thompson', 'ben walker', 'lucy white', 'noah green', 'matt hall', 'zoe king', 'liam wright',
+  'grace hill', 'omar k',
+  // social-media style
+  'itsjess', 'realtom', 'notsam', 'jakeyy', 'emmz', 'sophiee', 'lukeyboi', 'ollieee', 'its_ella',
+  'the_real_dan', 'maxie', 'livvy', 'benji', 'harrryy', 'chlo', 'jessie_b', 'tommo', 'kaybear',
+  'lil_luke', 'zozo',
+  // gamer tags
+  'nova', 'ghost', 'blaze', 'vortex', 'zenith', 'kairo', 'vexx', 'kyro', 'echo', 'frost', 'onyx',
+  'rogue', 'zyro', 'nyx', 'axel', 'kaze', 'riot', 'sable', 'jinx', 'pyro',
+  // lazy / joke
+  'asdf', 'idk', 'hi', 'bruh', 'qwerty', 'aaa', 'lol', 'me', 'hello', 'name', 'xd', 'ok',
+  'jjj', 'yo', 'nobody',
+  // caps, spacing, emoji
+  'JAKE', 'EMMA', 'MAX', 'LIAM', 'TOM H', 'big sam', 'little jess', 'mia :)', 'lucy 💀', 'zoe ✨',
+  'ben.', 'ryan!', 'sophie 🙂', 'dan x',
+  // a few more
+  'georgia', 'kai', 'ellie_17', 'finn', 'charlie b', 'tash', 'ivy03',
 ];

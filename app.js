@@ -553,7 +553,7 @@
 
   function sendProgress() {
     const g = game;
-    if (g && g.mode === 'duel') net.send({ type: 'progress', clicks: g.clicks, penalties: g.penalties, tabLeaves: g.tabLeaves, title: g.current });
+    if (g && g.mode === 'duel') net.send({ type: 'progress', clicks: g.clicks, penalties: g.penalties, tabLeaves: g.tabLeaves, title: g.current, path: g.path.slice(-60) });
   }
 
   async function goTo(title, { count = true, back = false, via = null } = {}) {
@@ -622,12 +622,44 @@
     goTo(game.stack[game.stack.length - 2], { back: true });
   }
 
-  function giveUp() {
+  // A themed yes/no dialog instead of the browser's confirm(). Resolves true/false.
+  function confirmDialog({ title, body, ok = 'Yes', cancel = 'Cancel', danger = false }) {
+    return new Promise((resolve) => {
+      const box = $('#confirm');
+      $('#confirm-title').textContent = title;
+      $('#confirm-body').textContent = body || '';
+      const okBtn = $('#confirm-ok'), noBtn = $('#confirm-cancel');
+      okBtn.textContent = ok;
+      noBtn.textContent = cancel;
+      okBtn.classList.toggle('danger-fill', danger);
+      box.classList.remove('hidden');
+      const done = (v) => {
+        box.classList.add('hidden');
+        okBtn.onclick = noBtn.onclick = box.onclick = null;
+        document.removeEventListener('keydown', onKey, true);
+        resolve(v);
+      };
+      const onKey = (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); done(false); }
+        if (e.key === 'Enter') { e.preventDefault(); done(true); }
+      };
+      okBtn.onclick = () => done(true);
+      noBtn.onclick = () => done(false);
+      box.onclick = (e) => { if (e.target === box) done(false); };
+      document.addEventListener('keydown', onKey, true);
+      setTimeout(() => noBtn.focus(), 30);
+    });
+  }
+
+  async function giveUp() {
     if (!game || game.finished) return;
-    game.suppressAway = true;
-    const ok = confirm('Give up this race?');
-    setTimeout(() => { if (game) game.suppressAway = false; }, 300);
-    if (ok) finishGame('gaveup');
+    const g = game;
+    const ok = await confirmDialog({
+      title: 'Give up this race?',
+      body: g.mode === 'daily' ? "This is your one go at today's daily. It'll count as a give-up." : "You'll see everyone's routes, but you won't place.",
+      ok: 'Give up', cancel: 'Keep racing', danger: true,
+    });
+    if (ok && game === g && !g.finished) finishGame('gaveup');
   }
 
   // Anti-cheat: leaving the tab (to search, open Wikipedia elsewhere, etc.) is tracked.
@@ -1359,9 +1391,12 @@
     const who = $('#spec-who');
     const status = p.status === 'playing' ? `${plural(p.clicks, 'click')}${p.penalties ? ` +${p.penalties}` : ''}` : p.status === 'finished' ? `finished in ${plural(score(p), 'click')} 🎉` : p.status;
     who.innerHTML = `${avatar(p)}<div><b>${esc(p.name)}</b><div class="muted">${esc(status)} · target <b>${esc(net.round ? net.round.end : '')}</b></div></div>`;
-    $('#spec-path').innerHTML = p.path && p.path.length
-      ? p.path.map((s, i) => `${i ? '<span class="edge"></span>' : ''}<span class="node ${s.back ? 'back' : ''}">${esc(s.t)}</span>`).join('')
+    // Their whole route so far, live, with the page they're on now highlighted.
+    const trail = p.path && p.path.length ? p.path : p.livePath || [];
+    $('#spec-path').innerHTML = trail.length
+      ? `<span class="spec-path-label">Route</span>` + trail.map((s, i) => `${i ? '<span class="edge"></span>' : ''}<span class="node ${s.back ? 'back' : ''}${i === trail.length - 1 ? ' cur' : ''}">${s.back ? '↩ ' : ''}${esc(s.t)}</span>`).join('')
       : `<span class="muted">Live: now on <b>${esc(p.title)}</b></span>`;
+    $('#spec-path').scrollLeft = 1e6;
     if (p.title && !spec.title) loadSpecArticle(p.title);
   }
 
@@ -1592,6 +1627,7 @@
           p.penalties = int(msg.penalties, 0, 999);
           p.tabLeaves = int(msg.tabLeaves, 0, 9999);
           p.title = normTitle(str(msg.title, 300));
+          p.livePath = cleanPath(msg.path).slice(-60); // only ever shown to people who are out of the race
         }
         break;
       case 'finish':
@@ -1665,7 +1701,7 @@
     const players = {};
     for (const [id, p] of Object.entries(net.players)) {
       const watchers = net.watchers.has(id) ? net.watchers.get(id).size : 0;
-      players[id] = racing && id !== viewerId ? { ...p, title: '', path: [], watchers } : { ...p, watchers };
+      players[id] = racing && id !== viewerId ? { ...p, title: '', path: [], livePath: [], watchers } : { ...p, watchers };
     }
     return {
       type: 'state', players, phase: net.phase, round: net.round, isPublic: net.isPublic,
@@ -1728,7 +1764,7 @@
       const round = { ...pair, difficulty: net.diff, n: net.roundNum, limit: limitFor(net.diff) };
       for (const [id, p] of Object.entries(net.players)) {
         if (!p.connected) { delete net.players[id]; continue; }
-        Object.assign(p, { status: 'playing', clicks: 0, penalties: 0, tabLeaves: 0, title: pair.start, time: 0, path: [], inRound: true, verify: null, flagReason: '' });
+        Object.assign(p, { status: 'playing', clicks: 0, penalties: 0, tabLeaves: 0, title: pair.start, time: 0, path: [], livePath: [{ t: pair.start, via: pair.start, back: false }], inRound: true, verify: null, flagReason: '' });
       }
       net.phase = 'playing';
       net.round = round;
@@ -2113,6 +2149,7 @@
         b.walk.push(s.step);
         p.clicks = b.walk.length - 1;
         p.title = s.step.t;
+        p.livePath = b.walk.slice(-60).map((x) => ({ ...x }));
         resetBotView(b);
         broadcast();
       });
