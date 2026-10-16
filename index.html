@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wikirace</title>
+  <meta name="description" content="Race through Wikipedia from one article to another in as few clicks as possible. Play solo or duel your friends live.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- HOME -->
+  <section id="home" class="screen active">
+    <div class="home-wrap">
+      <header class="hero">
+        <div class="logo">Wiki<span>race</span></div>
+        <p class="tagline">Get from one Wikipedia article to another using only the links on the page. Fewest clicks wins.</p>
+      </header>
+
+      <div id="challenge-banner" class="card challenge hidden"></div>
+
+      <label class="name-field">
+        <span>Your name</span>
+        <input id="name-input" maxlength="20" placeholder="e.g. Juju" autocomplete="nickname">
+      </label>
+
+      <div class="cards">
+        <div class="card">
+          <h2>Solo</h2>
+          <p class="muted">Pick a difficulty and beat your personal best.</p>
+          <div class="diff-buttons">
+            <button class="btn diff easy" data-solo="easy">Easy</button>
+            <button class="btn diff medium" data-solo="medium">Medium</button>
+            <button class="btn diff hard" data-solo="hard">Hard</button>
+          </div>
+          <div class="diff-buttons secondary">
+            <button class="btn ghost" data-solo="random">🎲 Random articles</button>
+            <button class="btn ghost" id="solo-custom-toggle">✏️ Custom</button>
+          </div>
+          <form id="solo-custom" class="custom-form hidden">
+            <input name="start" list="suggest-start" placeholder="Start article" required>
+            <input name="end" list="suggest-end" placeholder="Target article" required>
+            <button class="btn primary" type="submit">Go</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Duel</h2>
+          <p class="muted">Race friends live on the same start and target. Up to 8 players.</p>
+          <button class="btn primary wide" id="create-room">Create a room</button>
+          <form id="join-form" class="join-form">
+            <input id="join-code" maxlength="5" placeholder="Room code" autocomplete="off" spellcheck="false">
+            <button class="btn" type="submit">Join</button>
+          </form>
+        </div>
+      </div>
+
+      <details class="card rules">
+        <summary>How to play</summary>
+        <ul>
+          <li>You start on one article and need to reach the target article.</li>
+          <li>Only links inside the article count — no search bar, no external links, no category or file pages.</li>
+          <li>Every page change is one click, including the in-game <b>Back</b> button.</li>
+          <li>Lowest clicks wins. Ties are broken by time.</li>
+          <li>In a duel everyone gets the same pair and you can watch each other's progress live.</li>
+        </ul>
+      </details>
+      <p class="foot muted">Articles load live from <a href="https://en.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA).</p>
+    </div>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="lobby" class="screen">
+    <div class="home-wrap">
+      <div class="lobby-head">
+        <button class="btn ghost small" id="leave-lobby">← Leave</button>
+        <div class="logo small">Wiki<span>race</span></div>
+      </div>
+      <div class="card">
+        <div class="room-row">
+          <div>
+            <div class="muted label">Room code</div>
+            <div class="room-code" id="room-code">·····</div>
+          </div>
+          <div class="invite">
+            <input id="invite-link" readonly>
+            <button class="btn" id="copy-invite">Copy invite link</button>
+          </div>
+        </div>
+        <p class="muted" id="lobby-status">Connecting…</p>
+      </div>
+
+      <div class="card">
+        <h2>Players</h2>
+        <ul id="lobby-players" class="player-list"></ul>
+      </div>
+
+      <div class="card" id="host-controls">
+        <h2>Next race</h2>
+        <div class="diff-buttons" id="room-diff">
+          <button class="btn diff easy selected" data-diff="easy">Easy</button>
+          <button class="btn diff medium" data-diff="medium">Medium</button>
+          <button class="btn diff hard" data-diff="hard">Hard</button>
+          <button class="btn ghost" data-diff="random">🎲 Random</button>
+          <button class="btn ghost" data-diff="custom">✏️ Custom</button>
+        </div>
+        <div id="room-custom" class="custom-form hidden">
+          <input id="room-start" list="suggest-start" placeholder="Start article">
+          <input id="room-end" list="suggest-end" placeholder="Target article">
+        </div>
+        <button class="btn primary wide" id="start-race">Start race</button>
+      </div>
+      <div class="card hidden" id="guest-wait">
+        <p class="muted center">Waiting for the host to start the race…</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="screen">
+    <header class="hud">
+      <div class="hud-left">
+        <div class="logo tiny">W<span>r</span></div>
+        <div class="route">
+          <span class="muted">Target</span>
+          <strong id="hud-target">—</strong>
+        </div>
+      </div>
+      <div class="hud-stats">
+        <div class="stat"><span id="hud-clicks">0</span><small>clicks</small></div>
+        <div class="stat"><span id="hud-time">0:00</span><small>time</small></div>
+      </div>
+      <div class="hud-actions">
+        <button class="btn small" id="btn-back" title="Go back (costs a click)">← Back</button>
+        <button class="btn small ghost" id="btn-panel">Info</button>
+        <button class="btn small danger" id="btn-giveup">Give up</button>
+      </div>
+      <div id="racers-strip" class="racers-strip hidden"></div>
+    </header>
+    <div class="game-body">
+      <main class="article-wrap">
+        <div id="loading" class="loading hidden"><div class="spinner"></div></div>
+        <h1 id="article-title" class="article-title"></h1>
+        <article id="article" class="article"></article>
+      </main>
+      <aside id="panel" class="panel">
+        <div class="panel-section target-card" id="target-card"></div>
+        <div class="panel-section" id="racers-section">
+          <h3>Racers</h3>
+          <ul id="racers" class="player-list compact"></ul>
+        </div>
+        <div class="panel-section">
+          <h3>Your path</h3>
+          <ol id="path" class="path"></ol>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- COUNTDOWN -->
+  <div id="countdown" class="overlay hidden">
+    <div class="countdown-box">
+      <div class="cd-route" id="cd-route"></div>
+      <div class="cd-num" id="cd-num">3</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="overlay hidden">
+    <div class="modal">
+      <div id="results-body"></div>
+      <div class="modal-actions" id="results-actions"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <datalist id="suggest-start"></datalist>
+  <datalist id="suggest-end"></datalist>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+  <script src="pairs.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
