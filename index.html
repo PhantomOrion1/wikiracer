@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Bungee&family=JetBrains+Mono:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=36">
+  <link rel="stylesheet" href="styles.css?v=38">
 </head>
 <body>
   <!-- HOME -->
@@ -203,9 +203,7 @@
         <div class="stat" id="stat-time"><span id="hud-time">0:00</span><small>left</small></div>
       </div>
       <div class="hud-actions">
-        <button class="btn small" id="btn-back" title="Go back (costs a click)">← Back</button>
         <button class="btn small ghost" id="btn-panel">Info</button>
-        <button class="btn small danger" id="btn-giveup">Give up</button>
       </div>
       <div id="racers-strip" class="racers-strip hidden"></div>
     </header>
@@ -215,6 +213,10 @@
         <h1 id="article-title" class="article-title"></h1>
         <article id="article" class="article"></article>
       </main>
+      <div class="race-controls" role="group" aria-label="Race controls">
+        <button class="btn" id="btn-back" title="Go back to the previous page (costs a click)">Go Back</button>
+        <button class="btn danger" id="btn-giveup">Give up</button>
+      </div>
       <aside id="panel" class="panel">
         <div class="panel-section target-card" id="target-card"></div>
         <div class="panel-section" id="racers-section">
@@ -284,10 +286,10 @@
   <datalist id="suggest-end"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="pairs.js?v=36"></script>
-  <script src="bots.js?v=36"></script>
-  <script src="vital.js?v=36"></script>
-  <script src="minigame.js?v=36"></script>
-  <script src="app.js?v=36"></script>
+  <script src="pairs.js?v=38"></script>
+  <script src="bots.js?v=38"></script>
+  <script src="vital.js?v=38"></script>
+  <script src="minigame.js?v=38"></script>
+  <script src="app.js?v=38"></script>
 </body>
 </html>

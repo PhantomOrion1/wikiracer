@@ -1241,6 +1241,7 @@
   }
 
   function closeSpectate() {
+    spec.leaving = false;
     if (spec.id) net.send({ type: 'spectate', id: null });
     spec.id = null;
     spec.title = null;
@@ -1333,6 +1334,13 @@
     if (!spec.id) return;
     const p = net.players[spec.id];
     if (!p) { closeSpectate(); return; }
+    // Nothing left to watch: the round is over, or they've crossed the line. Back to results.
+    if (net.phase !== 'playing') { closeSpectate(); return; }
+    if (p.status !== 'playing' && !spec.leaving) {
+      spec.leaving = true;
+      const id = spec.id;
+      setTimeout(() => { if (spec.id === id) closeSpectate(); }, 2200);
+    }
     const who = $('#spec-who');
     const status = p.status === 'playing' ? `${plural(p.clicks, 'click')}${p.penalties ? ` +${p.penalties}` : ''}` : p.status === 'finished' ? `finished in ${plural(score(p), 'click')} 🎉` : p.status;
     who.innerHTML = `${avatar(p)}<div><b>${esc(p.name)}</b><div class="muted">${esc(status)} · target <b>${esc(net.round ? net.round.end : '')}</b></div></div>`;
@@ -1799,9 +1807,11 @@
   const isBot = (id) => net.bots && net.bots.has(id);
   const humanCount = () => Object.entries(net.players).filter(([id, p]) => p.connected && !isBot(id)).length;
 
+  // Compare names by their letters only, so "liam" and "liam07" never end up in the same room.
+  const nameBase = (n) => String(n).toLowerCase().replace(/[^a-z]/g, '');
   function botName() {
-    const taken = new Set(Object.values(net.players).map((p) => p.name.toLowerCase()));
-    const pool = (window.BOT_NAMES || []).filter((n) => !taken.has(n.toLowerCase()) && !recentBotNames.includes(n));
+    const taken = new Set(Object.values(net.players).map((p) => nameBase(p.name)));
+    const pool = (window.BOT_NAMES || []).filter((n) => !taken.has(nameBase(n)) && !recentBotNames.includes(n));
     const name = pool.length ? pool[Math.floor(Math.random() * pool.length)] : `racer${randInt(10, 99)}`;
     recentBotNames.push(name);
     if (recentBotNames.length > 40) recentBotNames.shift();
