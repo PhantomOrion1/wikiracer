@@ -674,3 +674,6 @@ input { border-radius: 0; font-family: var(--sans); }
 .board.done #board-target .tv::after { content: " ✓"; }
 .dl.tgt { color: #fff; background: rgba(255,68,51,.22); text-decoration: underline 2px var(--accent); padding: 0 3px; }
 .dl.tgt::before { content: "🏁 "; font-size: .8em; }
+.lobby-flappy { display: flex; justify-content: center; margin-top: 12px; }
+.lobby-flappy .flappy-box { box-shadow: none; border: 2px solid var(--ink-line); }
+.lobby-flappy #flappy-canvas { max-height: 60vh; }

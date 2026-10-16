@@ -171,7 +171,7 @@ window.Flappy = (() => {
   }
 
   function onKey(e) {
-    if (!open) return;
+    if (!open || /INPUT|TEXTAREA/.test((e.target && e.target.tagName) || '')) return;
     if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); flap(); }
     if (e.key === 'Escape') close();
   }
@@ -189,9 +189,23 @@ window.Flappy = (() => {
     document.addEventListener('visibilitychange', () => { if (document.hidden && s && s.mode === 'play') die(); });
   }
 
-  function show() {
+  // show(slot): with a slot element the game plays inline inside it (e.g. the lobby, so you can still
+  // see who joins); without one it opens as a pop-up overlay.
+  let slot = null;
+  function show(target) {
     if (!canvas) init();
-    document.getElementById('flappy').classList.remove('hidden');
+    const box = document.querySelector('.flappy-box');
+    const overlay = document.getElementById('flappy');
+    if (target) {
+      target.appendChild(box);
+      target.classList.remove('hidden');
+      overlay.classList.add('hidden');
+      slot = target;
+    } else {
+      overlay.appendChild(box);
+      overlay.classList.remove('hidden');
+      slot = null;
+    }
     open = true;
     reset();
     updateBest();
@@ -203,9 +217,12 @@ window.Flappy = (() => {
   function close() {
     open = false;
     cancelAnimationFrame(raf);
-    const el = document.getElementById('flappy');
-    if (el) el.classList.add('hidden');
+    const overlay = document.getElementById('flappy');
+    const box = document.querySelector('.flappy-box');
+    if (slot) { slot.classList.add('hidden'); if (overlay && box) overlay.appendChild(box); slot = null; }
+    if (overlay) overlay.classList.add('hidden');
+    dispatchEvent(new Event('flappy-close'));
   }
 
-  return { open: show, close, isOpen: () => open };
+  return { open: show, close, isOpen: () => open, isInline: () => !!slot };
 })();

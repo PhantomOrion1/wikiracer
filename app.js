@@ -9,9 +9,10 @@
     publicSlots: 12,
     bots: {
       enabled: true, maxPerRoom: 2, maxHumans: 2, secondChance: 0.5,
-      firstDelayMs: [4000, 11000], secondDelayMs: [7000, 18000], leaveChance: 0.2,
+      firstDelayMs: [12000, 20000], secondDelayMs: [6000, 14000], leaveChance: 0.2,
       busyRoomsHalf: 3, busyRoomsOff: 6,
     },
+    lobby: { soloWaitMs: 45000, groupWaitMs: 20000, minAfterJoinMs: 10000 },
     peer: null,
     analytics: { posthogKey: '', posthogHost: 'https://us.i.posthog.com' },
   };
@@ -22,6 +23,7 @@
       const j = await r.json();
       if (typeof j.publicSlots === 'number') CONFIG.publicSlots = Math.max(1, Math.min(30, j.publicSlots));
       if (j.bots && typeof j.bots === 'object') Object.assign(CONFIG.bots, j.bots);
+      if (j.lobby && typeof j.lobby === 'object') Object.assign(CONFIG.lobby, j.lobby);
       if (j.peer && typeof j.peer === 'object') CONFIG.peer = j.peer;
       if (j.analytics && typeof j.analytics === 'object') Object.assign(CONFIG.analytics, j.analytics);
     } catch {}
@@ -72,7 +74,9 @@
   addEventListener('error', (e) => track('client_error', { message: String(e.message || '').slice(0, 200), source: String(e.filename || '').split('/').pop(), line: e.lineno }));
   addEventListener('unhandledrejection', (e) => track('client_error', { message: String((e.reason && e.reason.message) || e.reason || '').slice(0, 200), kind: 'promise' }));
   const peerOpts = () => ({ debug: 0, ...(CONFIG.peer || {}) });
-  const publicPeerId = (i) => `${PEER_PREFIX}public-${i}`;
+  // ?debug uses a separate set of public rooms so testing never lands in real players' races.
+  const PUBLIC_NS = /[?&]debug\b/.test(location.search) ? 'test-public-' : 'public-';
+  const publicPeerId = (i) => `${PEER_PREFIX}${PUBLIC_NS}${i}`;
   const MAX_PLAYERS = 8;
   const COUNTDOWN_MS = 3300;
   const GRACE_MS = 4000;
@@ -1515,7 +1519,7 @@
         }
         net.players[id] = newPlayer(cleanName(msg.name), nextColor());
         toast(`${net.players[id].name} joined`);
-        scheduleAutoStart();
+        scheduleAutoStart(true);
         botPolicy();
         break;
       }
@@ -1635,16 +1639,22 @@
     renderNet();
   }
 
-  function scheduleAutoStart() {
+  // Public rooms start themselves. A lone real player (with fill-ins) waits longer so anyone else
+  // searching right now lands in this room first; once 2+ real people are in, it starts sooner.
+  // Whenever someone joins, the countdown never has less than minAfterJoinMs left.
+  function scheduleAutoStart(joined = false) {
     if (!net.isHost || !net.isPublic) return;
     clearTimeout(net.timers.auto);
     if (net.phase !== 'lobby' || activeCount() < 2) {
       net.autoStartAt = 0;
       return;
     }
-    const delay = activeCount() >= MAX_PLAYERS ? 4000 : 20000;
-    const at = Date.now() + delay;
-    if (!net.autoStartAt || at < net.autoStartAt) net.autoStartAt = at;
+    const cfg = CONFIG.lobby;
+    const delay = activeCount() >= MAX_PLAYERS ? 5000 : humanCount() >= 2 ? cfg.groupWaitMs : cfg.soloWaitMs;
+    let at = Date.now() + delay;
+    if (net.autoStartAt) at = Math.min(at, net.autoStartAt);
+    if (joined) at = Math.max(at, Date.now() + cfg.minAfterJoinMs);
+    net.autoStartAt = at;
     net.timers.auto = setTimeout(() => {
       net.autoStartAt = 0;
       if (net.phase === 'lobby' && activeCount() >= 2) hostStartRace();
@@ -1770,7 +1780,7 @@
     net.players[id] = newPlayer(botName(), nextColor());
     net.bots.set(id, { tier: pickWeighted(BOT_TIERS), timers: [], view: { b: 0, p: 0 } });
     toast(`${net.players[id].name} joined`);
-    scheduleAutoStart();
+    scheduleAutoStart(true);
     broadcast();
   }
 
@@ -1799,7 +1809,7 @@
     if (!cfg.enabled || !net.isHost || !net.isPublic) return 0;
     const humans = humanCount();
     if (humans === 0 || humans > cfg.maxHumans) return 0;
-    let max = Math.min(cfg.maxPerRoom, 2);
+    let max = Math.min(cfg.maxPerRoom, 2, cfg.maxHumans + 1 - humans);
     // Other public rooms already busy means real players are around: lean on them instead.
     if (net.busyRooms >= cfg.busyRoomsOff) max = 0;
     else if (net.busyRooms >= cfg.busyRoomsHalf) max = Math.min(max, 1);
@@ -2548,7 +2558,7 @@
     else if (net.phase === 'playing') wait = "A race is in progress. You'll be in the next one. Spectate someone or play Flappy meanwhile.";
     else if (net.phase === 'results') wait = 'Round just finished. Next one coming up…';
     else if (pub && count < 2) wait = 'Waiting for at least one more racer to join…';
-    else if (pub && net.autoStartAt) wait = `Race starts in <b data-autostart>${Math.ceil((net.autoStartAt - Date.now()) / 1000)}</b>s (random difficulty)`;
+    else if (pub && net.autoStartAt) wait = `Race starts in <b data-autostart>${Math.ceil((net.autoStartAt - Date.now()) / 1000)}</b>s · random difficulty · others can still join`;
     else wait = 'Waiting for the host to start the race…';
     $('#wait-text').innerHTML = wait;
 
@@ -2749,6 +2759,11 @@
       const k = e.target.closest('[data-kick]');
       if (k) kick(k.dataset.kick);
       if (e.target.closest('[data-flappy]')) window.Flappy.open();
+      if (e.target.closest('#lobby-flappy-btn')) {
+        if (window.Flappy.isOpen() && window.Flappy.isInline()) window.Flappy.close();
+        else { window.Flappy.open($('#lobby-flappy')); $('#lobby-flappy').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        $('#lobby-flappy-btn').textContent = window.Flappy.isOpen() ? 'Hide Flappy Wiki' : '🐦 Play Flappy Wiki while you wait';
+      }
     });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
@@ -2826,5 +2841,6 @@
     });
   }
   addEventListener('flappy-score', (e) => track('flappy_game', { score: e.detail }));
+  addEventListener('flappy-close', () => { const b = $('#lobby-flappy-btn'); if (b) b.textContent = '🐦 Play Flappy Wiki while you wait'; });
   if (/[?&]debug\b/.test(location.search)) window.__wr = { planRoute, shortestRoute, pickPair };
 })();

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Bungee&family=JetBrains+Mono:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=26">
+  <link rel="stylesheet" href="styles.css?v=29">
 </head>
 <body>
   <!-- HOME -->
@@ -164,7 +164,8 @@
       <div class="card hidden" id="guest-wait">
         <p class="center wait-text" id="wait-text">Waiting for the host to start the race…</p>
       </div>
-      <button class="btn wide ghost flappy-btn" data-flappy>🐦 Play Flappy Wiki while you wait</button>
+      <button class="btn wide ghost flappy-btn" id="lobby-flappy-btn">🐦 Play Flappy Wiki while you wait</button>
+      <div class="lobby-flappy hidden" id="lobby-flappy"></div>
     </div>
   </section>
 
@@ -265,10 +266,10 @@
   <datalist id="suggest-end"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="pairs.js?v=26"></script>
-  <script src="bots.js?v=26"></script>
-  <script src="vital.js?v=26"></script>
-  <script src="flappy.js?v=26"></script>
-  <script src="app.js?v=26"></script>
+  <script src="pairs.js?v=29"></script>
+  <script src="bots.js?v=29"></script>
+  <script src="vital.js?v=29"></script>
+  <script src="flappy.js?v=29"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>

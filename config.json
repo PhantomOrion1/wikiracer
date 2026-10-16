@@ -1,5 +1,5 @@
 {
-  "_readme": "Live settings, edit on GitHub to change behaviour without touching code (takes up to ~10 min to apply). bots.maxPerRoom: 0 turns fill-in racers off. busyRoomsHalf/busyRoomsOff: how many other busy public rooms before bots drop to 1 / 0. publicSlots: number of public quick-match rooms. peer: optional self-hosted PeerJS server, e.g. {\"host\": \"peer.example.com\", \"port\": 443, \"path\": \"/\", \"secure\": true} (also add it to the CSP in index.html). analytics.posthogKey: paste your PostHog project API key (phc_...) to switch on anonymous analytics; use https://eu.i.posthog.com as posthogHost for an EU project.",
+  "_readme": "Live settings, edit on GitHub to change behaviour without touching code (takes up to ~10 min to apply). bots.maxPerRoom: 0 turns fill-in racers off. busyRoomsHalf/busyRoomsOff: how many other busy public rooms before bots drop to 1 / 0. publicSlots: number of public quick-match rooms. peer: optional self-hosted PeerJS server, e.g. {\"host\": \"peer.example.com\", \"port\": 443, \"path\": \"/\", \"secure\": true} (also add it to the CSP in index.html). analytics.posthogKey: paste your PostHog project API key (phc_...) to switch on anonymous analytics; use https://eu.i.posthog.com as posthogHost for an EU project. lobby.soloWaitMs: how long a public room with one real player (plus fill-ins) waits before starting; groupWaitMs: once 2+ real players are in; minAfterJoinMs: time left on the clock whenever someone joins.",
   "publicSlots": 12,
   "bots": {
     "enabled": true,
@@ -7,12 +7,12 @@
     "maxHumans": 2,
     "secondChance": 0.5,
     "firstDelayMs": [
-      4000,
-      11000
+      12000,
+      20000
     ],
     "secondDelayMs": [
-      7000,
-      18000
+      6000,
+      14000
     ],
     "leaveChance": 0.2,
     "busyRoomsHalf": 3,
@@ -21,5 +21,10 @@
   "analytics": {
     "posthogKey": "phc_nsR3ocmkkWPf7gywDHjyZyNRx8nb5AGwhMobXZgJd8Vr",
     "posthogHost": "https://us.i.posthog.com"
+  },
+  "lobby": {
+    "soloWaitMs": 45000,
+    "groupWaitMs": 20000,
+    "minAfterJoinMs": 10000
   }
 }
