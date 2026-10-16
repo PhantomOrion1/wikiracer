@@ -834,3 +834,11 @@ h3.sec { font-size: 18px; color: var(--text); }
 #flappy-canvas { aspect-ratio: 640 / 252; }
 .flappy-box { padding: 10px; }
 .flappy-head { margin-bottom: 8px; }
+/* demo: highlight without changing layout, keep the trail on one line so nothing jumps */
+.dl.hit { padding: 0; background: var(--accent); color: #fff; box-shadow: 0 0 0 3px var(--accent); text-decoration: none; }
+.dl.tgt { padding: 0; box-shadow: 0 0 0 2px rgba(255,68,51,.25); }
+.demo-foot { flex-wrap: nowrap; }
+.demo-trail { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; min-width: 0; flex: 1; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px); mask-image: linear-gradient(90deg, transparent 0, #000 18px); justify-content: flex-start; }
+.demo-trail span, .demo-trail i { flex-shrink: 0; }
+.demo-clicks { flex-shrink: 0; }
+.demo-cursor.press { scale: .85; transition: transform .62s cubic-bezier(.45,.05,.25,1), scale .1s; }

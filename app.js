@@ -1269,8 +1269,16 @@
     return me ? me.status : 'lobby';
   }
 
+  // You can only watch others once you've raced this round and are out of it (finished, gave up or out
+  // of time). Not from the lobby, not while racing, not if you joined mid-round.
+  const DONE = ['finished', 'gaveup', 'timeout'];
+  function iAmDoneThisRound() {
+    const me = net.players[net.myId];
+    if (game && !game.finished) return false;
+    return !!(me && me.inRound && DONE.includes(me.status));
+  }
   function canSpectate(p) {
-    return p && p.status === 'playing' && p.id !== net.myId && !!p.title && myStatus() !== 'playing';
+    return !!p && net.phase === 'playing' && p.status === 'playing' && p.id !== net.myId && !!p.title && iAmDoneThisRound();
   }
 
   function openSpectate(id) {
@@ -1596,7 +1604,7 @@
       case 'spectate': {
         for (const set of net.watchers.values()) set.delete(id);
         const target = str(msg.id, 200);
-        if (target && net.players[target] && target !== id && (!p || p.status !== 'playing')) {
+        if (target && net.players[target] && target !== id && p && p.inRound && DONE.includes(p.status)) {
           if (!net.watchers.has(target)) net.watchers.set(target, new Set());
           net.watchers.get(target).add(id);
         }
@@ -1697,7 +1705,8 @@
   // anyone else is or which route they took.
   function stateFor(viewerId) {
     const viewer = net.players[viewerId];
-    const racing = viewer && viewer.status === 'playing';
+    // Pages and routes of people still racing only go to those who raced this round and are done.
+    const racing = net.phase === 'playing' && !(viewer && viewer.inRound && DONE.includes(viewer.status));
     const players = {};
     for (const [id, p] of Object.entries(net.players)) {
       const watchers = net.watchers.has(id) ? net.watchers.get(id).size : 0;
@@ -2234,7 +2243,7 @@
     if (!set) return;
     for (const w of set) {
       const viewer = net.players[w];
-      if (!viewer || viewer.status === 'playing') continue;
+      if (!viewer || !viewer.inRound || !DONE.includes(viewer.status)) continue;
       if (w === 'host') onView(out);
       else {
         const c = net.conns.get(w);
@@ -2799,7 +2808,7 @@
     $('#wait-text').innerHTML = wait;
 
     $('#player-count').textContent = count ? `${count}/${MAX_PLAYERS}` : '';
-    const entries = Object.entries(net.players);
+    const entries = Object.entries(net.players).filter(([, p]) => p.connected !== false || p.awaiting);
     $('#lobby-players').innerHTML = entries.length ? entries.map(([id, p]) => {
       const pl = { ...p, id };
       let meta = '';
@@ -2922,6 +2931,7 @@
       trail.innerHTML = names.slice(0, upto + 1).map((n, j) =>
         `${j ? '<i>›</i>' : ''}<span class="${j === upto ? 'cur' : ''}${pop && j === upto ? ' pop' : ''}">${esc(n)}</span>`).join('');
       clicks.textContent = upto;
+      trail.scrollLeft = trail.scrollWidth; // newest step always in view, no wrapping
       if (pop) { clicks.classList.remove('bump'); void clicks.offsetWidth; clicks.classList.add('bump'); }
     };
     async function play() {
