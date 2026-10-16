@@ -701,7 +701,7 @@
     const name = $('#name-input').value.trim();
     if (name) params.set('by', cleanName(name));
     const url = `${baseUrl()}?${params}`;
-    const text = `🏁 I got from ${g.start} to ${g.end} in ${plural(score(g), 'click')} on Wikirace. Can you beat me?\n${url}`;
+    const text = `🏁 I got from ${g.start} to ${g.end} in ${plural(score(g), 'click')} on WikiRacer. Can you beat me?\n${url}`;
     if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
     else copyText(text);
   }
@@ -765,7 +765,7 @@
     return { start, end, n, key };
   }
 
-  // Model of how everyone else did today. Calibrated to typical hard Wikirace play: the shortest
+  // Model of how everyone else did today. Calibrated to typical hard WikiRacer play: the shortest
   // route is 3–4 clicks, most finishers take 2–3 more than that (median ~6), a long tail wanders
   // past 12, and 14–26% run out of time or give up. Times scale with clicks (~25s per page + reading).
   function dailyStats(key) {
@@ -845,15 +845,16 @@
         <div class="daily-route">${esc(d.start)} <span class="arrow">→</span> <span class="tgt">${esc(d.end)}</span></div>
         <div class="daily-done">${rec.result === 'finished'
           ? `✅ Done in <b>${plural(rec.score, 'click')}</b> · <b>${fmtTime(rec.time)}</b> · <b class="top">${topLabel(beat)}</b>`
-          : `${rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up'} today. Try again tomorrow!`}</div>
+          : `${rec.result === 'timeout' ? '⏰ Ran out of time' : rec.abandoned ? '🚪 Left mid-challenge' : '🏳️ Gave up'} today. Try again tomorrow!`}</div>
         <div class="daily-actions"><button class="btn primary" id="daily-results">See how you compare</button>
         <span class="muted">Next daily in <b data-next-daily>${nextDailyIn()}</b></span></div>`;
       $('#daily-results').onclick = () => showDailyResults(key);
     } else {
       card.innerHTML = `${head}
-        <div class="daily-route">${esc(d.start)} <span class="arrow">→</span> <span class="tgt">${esc(d.end)}</span></div>
-        <p class="muted daily-sub">One attempt. Fewest clicks wins, then fastest time. See how you rank against everyone else.</p>
-        <div class="daily-actions"><button class="btn primary big-ish" id="daily-play">▶ Play today's challenge</button>
+        <div class="daily-route mystery"><span class="q">? ? ?</span> <span class="arrow">→</span> <span class="q tgt">? ? ?</span></div>
+        <p class="muted daily-sub">The articles stay secret until you hit start, then you get a 3-second look before the clock runs.
+          <b>One attempt</b>: fewest clicks wins, then fastest time.</p>
+        <div class="daily-actions"><button class="btn primary big-ish" id="daily-play">▶ Start today's challenge</button>
         <span class="muted">Resets in <b data-next-daily>${nextDailyIn()}</b></span></div>`;
       $('#daily-play').onclick = startDaily;
     }
@@ -863,13 +864,34 @@
     const key = dateKey();
     if (dailyRecord(key)) return showDailyResults(key);
     const d = dailyPair(key);
-    toast('Loading the daily challenge…', 1500);
+    const btn = $('#daily-play');
+    if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+    let pair;
     try {
-      const pair = await validatePair(d.start, d.end);
-      startGame({ ...pair, difficulty: 'hard', limit: LIMITS.hard }, 'daily', { dailyKey: key, dailyN: d.n });
+      pair = await validatePair(d.start, d.end);
     } catch (e) {
       toast(e.message);
+      if (btn) { btn.disabled = false; btn.textContent = "▶ Start today's challenge"; }
+      return;
     }
+    // The attempt is locked in the moment the pair is revealed: refreshing or leaving counts as giving up.
+    const placeholder = { n: d.n, start: pair.start, end: pair.end, result: 'gaveup', abandoned: true, clicks: 0, penalties: 0, score: 0, time: 0, path: [] };
+    store.set(`wr-daily:${key}`, placeholder);
+    bumpStreak(key);
+    const round = { ...pair, difficulty: 'hard', limit: LIMITS.hard };
+    await runCountdown(round, `📅 Daily #${d.n} · Hard · ${fmtTime(LIMITS.hard)} on the clock`);
+    startGame(round, 'daily', { dailyKey: key, dailyN: d.n });
+  }
+
+  function bumpStreak(key) {
+    const s = store.get('wr-daily-streak') || { last: null, count: 0, best: 0 };
+    if (s.last === key) return;
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    s.count = s.last === dateKey(y) ? s.count + 1 : 1;
+    s.last = key;
+    s.best = Math.max(s.best || 0, s.count);
+    store.set('wr-daily-streak', s);
   }
 
   function saveDaily(g) {
@@ -878,14 +900,7 @@
       score: score(g), time: g.elapsed, path: g.path,
     };
     store.set(`wr-daily:${g.dailyKey}`, rec);
-    const s = store.get('wr-daily-streak') || { last: null, count: 0, best: 0 };
-    if (s.last !== g.dailyKey) {
-      const y = new Date(); y.setDate(y.getDate() - 1);
-      s.count = s.last === dateKey(y) ? s.count + 1 : 1;
-      s.last = g.dailyKey;
-      s.best = Math.max(s.best || 0, s.count);
-      store.set('wr-daily-streak', s);
-    }
+    bumpStreak(g.dailyKey);
     return rec;
   }
 
@@ -910,7 +925,7 @@
     const line = rec.result === 'finished'
       ? `🖱 ${plural(rec.score, 'click')} · ⏱ ${fmtTime(rec.time)} · ${topLabel(beat)}`
       : rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up';
-    const text = `Wikirace Daily #${rec.n} 🏁\n${rec.start} → ${rec.end}\n${line}\n${squares}\n${baseUrl()}`;
+    const text = `WikiRacer Daily #${rec.n} 🏁\n${rec.start} → ${rec.end}\n${line}\n${squares}\n${baseUrl()}`;
     if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
     else copyText(text);
   }
@@ -931,7 +946,7 @@
 
     $('#results-body').innerHTML = `<div class="res-head">
         <div class="res-kicker">Daily #${rec.n} · Hard · ${esc(rec.start)} → ${esc(rec.end)}</div>
-        <h2>${finished ? '🎉 Daily complete!' : rec.result === 'timeout' ? "⏰ Time's up!" : '🏳️ You gave up'}</h2></div>
+        <h2>${finished ? '🎉 Daily complete!' : rec.result === 'timeout' ? "⏰ Time's up!" : rec.abandoned ? '🚪 You left mid-challenge' : '🏳️ You gave up'}</h2></div>
       <div class="big-stats">
         <div><b>${finished ? rec.score : '—'}</b><small>clicks${rec.penalties ? ` (incl. +${rec.penalties})` : ''}</small></div>
         <div><b>${fmtTime(rec.time)}</b><small>time</small></div>
@@ -1850,32 +1865,41 @@
     renderLobby();
   }
 
-  function beginRound(round) {
+  // 3-2-1 overlay that reveals the start and target; resolves on "Go!".
+  function runCountdown(round, kicker) {
     fetchArticle(round.start).catch(() => {});
     fetchInfo(round.end).catch(() => {});
     closeResults();
     closeSpectate();
     window.Flappy.close();
     const overlay = $('#countdown');
-    $('#cd-diff').textContent = `${DIFF_LABEL[round.difficulty] || ''} · ${fmtTime(round.limit)} on the clock`;
+    $('#cd-diff').textContent = kicker || `${DIFF_LABEL[round.difficulty] || ''} · ${fmtTime(round.limit)} on the clock`;
     $('#cd-route').innerHTML = `${esc(round.start)} → <b>${esc(round.end)}</b>`;
     overlay.classList.remove('hidden');
-    let n = 3;
-    const step = () => {
-      const num = $('#cd-num');
-      num.textContent = n > 0 ? n : 'Go!';
-      num.style.animation = 'none';
-      void num.offsetWidth;
-      num.style.animation = '';
-      if (n < 0) {
-        overlay.classList.add('hidden');
-        if (net.round && net.round.n === round.n && net.phase === 'playing') startGame(round, 'duel');
-        return;
-      }
-      n--;
-      setTimeout(step, n < 0 ? 600 : 900);
-    };
-    step();
+    return new Promise((resolve) => {
+      let n = 3;
+      const step = () => {
+        const num = $('#cd-num');
+        num.textContent = n > 0 ? n : 'Go!';
+        num.style.animation = 'none';
+        void num.offsetWidth;
+        num.style.animation = '';
+        if (n < 0) {
+          overlay.classList.add('hidden');
+          resolve();
+          return;
+        }
+        n--;
+        setTimeout(step, n < 0 ? 600 : 900);
+      };
+      step();
+    });
+  }
+
+  function beginRound(round) {
+    runCountdown(round).then(() => {
+      if (net.round && net.round.n === round.n && net.phase === 'playing') startGame(round, 'duel');
+    });
   }
 
   function leaveRoom() {

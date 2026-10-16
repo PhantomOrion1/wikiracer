@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src https://*.wikipedia.org https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Wikirace</title>
+  <title>WikiRacer</title>
   <meta name="description" content="Race through Wikipedia from one article to another in as few clicks as possible. Play solo, quick match strangers, or duel your friends live.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
   <!-- HOME -->
   <section id="home" class="screen active">
     <div class="home-wrap">
       <header class="hero">
-        <div class="logo">Wiki<span>race</span></div>
+        <div class="logo">Wiki<span>Racer</span></div>
         <p class="tagline">Get from one Wikipedia article to another using only the links on the page. Fewest clicks wins.</p>
       </header>
 
@@ -64,7 +64,7 @@
         </div>
       </div>
 
-      <details class="card howto" open>
+      <details class="card howto">
         <summary><h2>How to play</h2><span class="muted toggle-hint">tap to hide</span></summary>
         <ol class="steps">
           <li><span class="step-n">1</span><div><b>📍 Start</b><p>You land on a Wikipedia article.</p></div></li>
@@ -108,7 +108,7 @@
     <div class="home-wrap">
       <div class="lobby-head">
         <button class="btn ghost small" id="leave-lobby">← Leave</button>
-        <div class="logo small">Wiki<span>race</span></div>
+        <div class="logo small">Wiki<span>Racer</span></div>
       </div>
       <div class="card">
         <div class="room-row">
@@ -156,7 +156,7 @@
   <section id="game" class="screen">
     <header class="hud">
       <div class="hud-left">
-        <div class="logo tiny">W<span>r</span></div>
+        <div class="logo tiny">W<span>R</span></div>
         <div class="route">
           <span class="muted">Target</span>
           <strong id="hud-target">—</strong>
@@ -249,8 +249,8 @@
   <datalist id="suggest-end"></datalist>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="pairs.js?v=5"></script>
-  <script src="flappy.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="pairs.js?v=9"></script>
+  <script src="flappy.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

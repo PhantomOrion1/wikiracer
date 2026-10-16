@@ -457,3 +457,5 @@ h3.sec { margin: 20px 0 10px; display: flex; align-items: center; gap: 10px; fle
 .daily-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 13px; margin-top: 14px; background: var(--surface-2); border-radius: 12px; padding: 10px 14px; }
 .next-daily { margin: 14px 0 0; font-size: 13px; }
 @media (max-width: 640px) { .daily-facts { grid-template-columns: 1fr; } .daily-route { font-size: 18px; } .histo { gap: 3px; } .hpct { font-size: 9px; } }
+.daily-route.mystery .q { letter-spacing: .15em; filter: blur(.4px); opacity: .75; }
+.cards { margin-bottom: 16px; }

@@ -1,4 +1,4 @@
-# 🏁 Wikirace
+# 🏁 WikiRacer
 
 Get from one Wikipedia article to another using only the links on the page. Fewest clicks wins.
 
