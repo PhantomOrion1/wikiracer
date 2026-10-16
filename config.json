@@ -23,8 +23,8 @@
     "posthogHost": "https://us.i.posthog.com"
   },
   "lobby": {
-    "soloWaitMs": 75000,
-    "groupWaitMs": 60000,
+    "soloWaitMs": 35000,
+    "groupWaitMs": 30000,
     "readyGoMs": 5000,
     "minAfterJoinMs": 8000,
     "resultsMs": 15000

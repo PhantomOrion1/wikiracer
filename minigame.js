@@ -1,12 +1,13 @@
 // Lane Rush: a tiny top-down racing game to play while you wait.
-// Three lanes; tap the left/right side (or ← →, A/D) to change lanes. Dodge traffic and cones,
+// Three lanes, driving left → right; tap the top/bottom half (or ↑ ↓, W/S) to change lanes. Dodge traffic and cones,
 // grab checkered flags for bonus points. It speeds up the longer you last.
 window.MiniGame = (() => {
   'use strict';
-  const W = 360, H = 520;
-  const LANES = 3, ROAD_X = 40, ROAD_W = W - 80, LANE_W = ROAD_W / LANES;
-  const CAR_W = 46, CAR_H = 78, CAR_Y = H - 110;
-  const laneX = (l) => ROAD_X + LANE_W * l + LANE_W / 2;
+  // Landscape: the car drives left → right across three horizontal lanes.
+  const W = 640, H = 300;
+  const LANES = 3, ROAD_Y = 34, ROAD_H = H - 68, LANE_H = ROAD_H / LANES;
+  const CAR_L = 78, CAR_W = 42, CAR_X = 70;
+  const laneY = (l) => ROAD_Y + LANE_H * l + LANE_H / 2;
   let canvas, ctx, raf = 0, last = 0, s = null, open = false, slot = null;
   let best = 0;
   try { best = parseInt(localStorage.getItem('wr-lanerush-best'), 10) || 0; } catch {}
@@ -15,7 +16,7 @@ window.MiniGame = (() => {
 
   function reset() {
     s = {
-      mode: 'ready', t: 0, lane: 1, x: laneX(1), speed: 260, dist: 0, bonus: 0, things: [], spawn: 0.4,
+      mode: 'ready', t: 0, lane: 1, y: laneY(1), speed: 300, dist: 0, bonus: 0, things: [], spawn: 0.4,
       stripe: 0, crashAt: 0, flash: 0, pops: [],
     };
   }
@@ -45,94 +46,96 @@ window.MiniGame = (() => {
     const blocked = Math.random() < 0.35 ? 2 : 1;
     const lanes = [0, 1, 2].sort(() => Math.random() - 0.5);
     for (let i = 0; i < blocked; i++) {
-      s.things.push({ kind: Math.random() < 0.3 ? 'cone' : 'car', lane: lanes[i], y: -CAR_H, hue: Math.random() < 0.5 ? 0 : 1 });
+      s.things.push({ kind: Math.random() < 0.3 ? 'cone' : 'car', lane: lanes[i], x: W + CAR_L, hue: Math.random() < 0.5 ? 0 : 1 });
     }
-    if (Math.random() < 0.35) s.things.push({ kind: 'flag', lane: lanes[blocked], y: -CAR_H - 40 });
+    if (Math.random() < 0.35) s.things.push({ kind: 'flag', lane: lanes[blocked], x: W + CAR_L + 50 });
   }
 
   function update(dt) {
     s.t += dt;
     s.flash = Math.max(0, s.flash - dt * 3);
-    s.x += (laneX(s.lane) - s.x) * Math.min(1, dt * 14);
+    s.y += (laneY(s.lane) - s.y) * Math.min(1, dt * 14);
     s.pops = s.pops.filter((p) => (p.life -= dt) > 0);
     if (s.mode !== 'play') return;
-    s.speed = Math.min(720, 260 + s.t * 9);
+    s.speed = Math.min(820, 300 + s.t * 10);
     s.dist += s.speed * dt;
     s.stripe = (s.stripe + s.speed * dt) % 60;
     s.spawn -= dt;
     if (s.spawn <= 0) {
       spawnRow();
-      s.spawn = Math.max(0.42, 1.05 - s.t * 0.012) * (300 / s.speed) * 1.6;
+      s.spawn = Math.max(0.5, 1.15 - s.t * 0.012) * (340 / s.speed) * 1.7;
     }
     for (const o of s.things) {
-      o.y += (o.kind === 'car' ? s.speed * 0.55 : s.speed) * dt;
-      const hitY = o.y + (o.kind === 'cone' ? 26 : o.kind === 'flag' ? 30 : CAR_H) > CAR_Y + 8 && o.y < CAR_Y + CAR_H - 8;
-      const sameLane = Math.abs(laneX(o.lane) - s.x) < LANE_W * 0.55;
-      if (hitY && sameLane && !o.gone) {
-        if (o.kind === 'flag') { o.gone = true; s.bonus += 25; s.pops.push({ x: laneX(o.lane), y: CAR_Y - 10, life: 0.7 }); }
+      o.x -= (o.kind === 'car' ? s.speed * 0.55 : s.speed) * dt;
+      const len = o.kind === 'cone' ? 28 : o.kind === 'flag' ? 30 : CAR_L;
+      const hitX = o.x < CAR_X + CAR_L - 8 && o.x + len > CAR_X + 8;
+      const sameLane = Math.abs(laneY(o.lane) - s.y) < LANE_H * 0.55;
+      if (hitX && sameLane && !o.gone) {
+        if (o.kind === 'flag') { o.gone = true; s.bonus += 25; s.pops.push({ x: CAR_X + CAR_L / 2, y: laneY(o.lane) - 24, life: 0.7 }); }
         else { crash(); return; }
       }
     }
-    s.things = s.things.filter((o) => o.y < H + 40 && !o.gone);
+    s.things = s.things.filter((o) => o.x > -CAR_L - 40 && !o.gone);
   }
 
   function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
 
-  function drawCar(cx, y, body, stripe) {
-    const x = cx - CAR_W / 2;
-    rect(x - 5, y + 10, 7, 18, '#111'); rect(x + CAR_W - 2, y + 10, 7, 18, '#111');
-    rect(x - 5, y + CAR_H - 26, 7, 18, '#111'); rect(x + CAR_W - 2, y + CAR_H - 26, 7, 18, '#111');
-    rect(x, y, CAR_W, CAR_H, body);
-    rect(cx - 5, y, 10, CAR_H, stripe);
-    rect(x + 7, y + 20, CAR_W - 14, 16, 'rgba(0,0,0,.65)');
-    rect(x - 2, y - 3, CAR_W + 4, 7, body);
-    rect(x - 2, y + CAR_H - 5, CAR_W + 4, 7, '#111');
+  // A top-down car pointing right: wheels, body, racing stripe, windscreen.
+  function drawCar(x, cy, body, stripe) {
+    const y = cy - CAR_W / 2;
+    rect(x + 10, y - 5, 18, 7, '#111'); rect(x + 10, y + CAR_W - 2, 18, 7, '#111');
+    rect(x + CAR_L - 26, y - 5, 18, 7, '#111'); rect(x + CAR_L - 26, y + CAR_W - 2, 18, 7, '#111');
+    rect(x, y, CAR_L, CAR_W, body);
+    rect(x, cy - 5, CAR_L, 10, stripe);
+    rect(x + CAR_L - 36, y + 7, 16, CAR_W - 14, 'rgba(0,0,0,.65)');
+    rect(x + CAR_L - 4, y - 2, 7, CAR_W + 4, body);
+    rect(x - 3, y - 2, 7, CAR_W + 4, '#111');
   }
 
   function draw() {
     const red = css('--accent', '#e63323');
-    // grass + kerbs + road
     rect(0, 0, W, H, '#1c1c1c');
-    for (let y = -60 + s.stripe; y < H; y += 30) {
-      const on = Math.floor((y - s.stripe) / 30) % 2 === 0;
-      rect(ROAD_X - 14, y, 14, 30, on ? red : '#f4f2ed');
-      rect(ROAD_X + ROAD_W, y, 14, 30, on ? red : '#f4f2ed');
+    // kerbs top and bottom, scrolling left
+    for (let x = -60 - (s.stripe % 60); x < W + 60; x += 30) {
+      const on = Math.floor((x + s.stripe) / 30) % 2 === 0;
+      rect(x, ROAD_Y - 14, 30, 14, on ? red : '#f4f2ed');
+      rect(x, ROAD_Y + ROAD_H, 30, 14, on ? red : '#f4f2ed');
     }
-    rect(ROAD_X, 0, ROAD_W, H, '#2a2a2a');
-    for (let l = 1; l < LANES; l++) for (let y = -60 + s.stripe; y < H; y += 60) rect(ROAD_X + LANE_W * l - 2, y, 4, 30, 'rgba(244,242,237,.55)');
-    // start line on the ready screen
-    if (s.mode === 'ready') for (let i = 0; i < ROAD_W / 14; i++) for (let j = 0; j < 2; j++) rect(ROAD_X + i * 14, CAR_Y - 40 + j * 14, 14, 14, (i + j) % 2 ? '#f4f2ed' : '#111');
+    rect(0, ROAD_Y, W, ROAD_H, '#2a2a2a');
+    for (let l = 1; l < LANES; l++) for (let x = -60 - (s.stripe % 60); x < W + 60; x += 60) rect(x, ROAD_Y + LANE_H * l - 2, 30, 4, 'rgba(244,242,237,.55)');
+    if (s.mode === 'ready') for (let j = 0; j < ROAD_H / 14; j++) for (let i = 0; i < 2; i++) rect(CAR_X + CAR_L + 30 + i * 14, ROAD_Y + j * 14, 14, 14, (i + j) % 2 ? '#f4f2ed' : '#111');
 
     for (const o of s.things) {
-      const cx = laneX(o.lane);
-      if (o.kind === 'car') drawCar(cx, o.y, o.hue ? '#f4f2ed' : '#555', o.hue ? '#111' : '#f4f2ed');
+      const cy = laneY(o.lane);
+      if (o.kind === 'car') drawCar(o.x, cy, o.hue ? '#f4f2ed' : '#555', o.hue ? '#111' : '#f4f2ed');
       else if (o.kind === 'cone') {
-        ctx.fillStyle = '#ff8a1f'; ctx.beginPath(); ctx.moveTo(cx, o.y); ctx.lineTo(cx + 15, o.y + 28); ctx.lineTo(cx - 15, o.y + 28); ctx.fill();
-        rect(cx - 9, o.y + 13, 18, 5, '#f4f2ed'); rect(cx - 18, o.y + 27, 36, 5, '#111');
+        ctx.fillStyle = '#ff8a1f'; ctx.beginPath(); ctx.moveTo(o.x, cy); ctx.lineTo(o.x + 28, cy - 15); ctx.lineTo(o.x + 28, cy + 15); ctx.fill();
+        rect(o.x + 12, cy - 8, 5, 16, '#f4f2ed'); rect(o.x + 27, cy - 18, 5, 36, '#111');
       } else {
-        rect(cx - 1, o.y, 3, 34, '#f4f2ed');
-        for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) rect(cx + 2 + i * 6, o.y + j * 6, 6, 6, (i + j) % 2 ? '#111' : '#f4f2ed');
+        rect(o.x, cy - 17, 3, 34, '#f4f2ed');
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) rect(o.x + 3 + i * 6, cy - 17 + j * 6, 6, 6, (i + j) % 2 ? '#111' : '#f4f2ed');
       }
     }
-    drawCar(s.x, CAR_Y, red, '#f4f2ed');
+    drawCar(CAR_X, s.y, red, '#f4f2ed');
 
-    // score
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'right';
     ctx.fillStyle = '#f4f2ed';
-    ctx.font = '400 40px Bungee, Archivo, sans-serif';
-    if (s.mode !== 'ready') ctx.fillText(score(), W / 2, 58);
-    for (const p of s.pops) { ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = red; ctx.font = '400 20px Bungee, sans-serif'; ctx.fillText('+25', p.x, p.y - (0.7 - p.life) * 60); ctx.globalAlpha = 1; }
+    ctx.font = '400 30px Bungee, Archivo, sans-serif';
+    if (s.mode !== 'ready') ctx.fillText(score(), W - 18, ROAD_Y + 36);
+    ctx.textAlign = 'center';
+    for (const p of s.pops) { ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = red; ctx.font = '400 20px Bungee, sans-serif'; ctx.fillText('+25', p.x, p.y - (0.7 - p.life) * 50); ctx.globalAlpha = 1; }
     if (s.flash) { ctx.globalAlpha = s.flash * 0.5; rect(0, 0, W, H, red); ctx.globalAlpha = 1; }
-    if (s.mode === 'ready') banner('Lane Rush', 'Tap left / right (or ← →) to change lanes');
+    if (s.mode === 'ready') banner('Lane Rush', 'Tap the top or bottom half (or ↑ ↓) to change lanes');
     if (s.mode === 'dead') banner('Crashed!', `Score ${score()} · Best ${best} · tap to go again`);
   }
 
   function banner(title, sub) {
-    rect(24, H / 2 - 74, W - 48, 100, '#111');
-    ctx.strokeStyle = css('--accent', '#e63323'); ctx.lineWidth = 3; ctx.strokeRect(24, H / 2 - 74, W - 48, 100);
+    const bw = 420, bh = 96, bx = (W - bw) / 2, by = (H - bh) / 2;
+    rect(bx, by, bw, bh, '#111');
+    ctx.strokeStyle = css('--accent', '#e63323'); ctx.lineWidth = 3; ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = '#f4f2ed'; ctx.textAlign = 'center';
-    ctx.font = '400 30px Bungee, Archivo, sans-serif'; ctx.fillText(title.toUpperCase(), W / 2, H / 2 - 30);
-    ctx.font = '600 13px Archivo, sans-serif'; ctx.fillText(sub, W / 2, H / 2 + 2);
+    ctx.font = '400 30px Bungee, Archivo, sans-serif'; ctx.fillText(title.toUpperCase(), W / 2, by + 44);
+    ctx.font = '600 13px Archivo, sans-serif'; ctx.fillText(sub, W / 2, by + 74);
   }
 
   function loop(now) {
@@ -151,8 +154,8 @@ window.MiniGame = (() => {
 
   function onKey(e) {
     if (!open || /INPUT|TEXTAREA/.test((e.target && e.target.tagName) || '')) return;
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { e.preventDefault(); steer(-1); }
-    else if (e.code === 'ArrowRight' || e.code === 'KeyD') { e.preventDefault(); steer(1); }
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'ArrowLeft') { e.preventDefault(); steer(-1); }
+    else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'ArrowRight') { e.preventDefault(); steer(1); }
     else if (e.code === 'Space') { e.preventDefault(); steer(0); }
     if (e.key === 'Escape' && !slot) close();
   }
@@ -167,7 +170,7 @@ window.MiniGame = (() => {
     canvas.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       const r = canvas.getBoundingClientRect();
-      steer(e.clientX - r.left < r.width / 2 ? -1 : 1);
+      steer(e.clientY - r.top < r.height / 2 ? -1 : 1);
     });
     document.getElementById('flappy-close').addEventListener('click', close);
     document.addEventListener('keydown', onKey);

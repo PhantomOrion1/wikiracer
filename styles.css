@@ -794,11 +794,16 @@ h3.sec { font-size: 18px; color: var(--text); }
 .hud-diff { font: 800 13px var(--display); font-stretch: 85%; text-transform: uppercase; letter-spacing: .04em; padding: 5px 9px; color: #fff; background: var(--text); white-space: nowrap; align-self: center; }
 .hud-diff.easy { background: var(--easy); } .hud-diff.medium { background: var(--medium); } .hud-diff.hard, .hud-diff.daily { background: var(--hard); }
 .hud-diff:empty { display: none; }
-/* race controls: bottom-left, out of the way of the article */
-.race-controls { position: fixed; left: 16px; bottom: 16px; z-index: 25; display: flex; gap: 8px; }
+/* race controls: bottom-right, out of the way of the article */
+.race-controls { position: fixed; right: 16px; bottom: 16px; z-index: 25; display: flex; gap: 8px; }
 .race-controls .btn { padding: 10px 16px; font-size: 15px; background: var(--surface); box-shadow: 4px 4px 0 var(--ink-line); }
 .race-controls .btn:hover:not(:disabled) { background: var(--ink-line); color: var(--bg); }
 .race-controls .btn.danger { color: var(--accent); border-color: var(--accent); box-shadow: 4px 4px 0 var(--accent); }
 .race-controls .btn.danger:hover:not(:disabled) { background: var(--accent); color: #fff; }
 .race-controls .btn:disabled { opacity: .45; box-shadow: none; }
-@media (max-width: 760px) { .race-controls { left: 10px; bottom: 10px; } .race-controls .btn { padding: 8px 12px; font-size: 14px; } }
+@media (max-width: 760px) { .race-controls { right: 10px; bottom: 10px; } .race-controls .btn { padding: 8px 12px; font-size: 14px; } }
+/* Lane Rush is landscape */
+.flappy-box { width: min(672px, 100%); }
+#flappy-canvas { aspect-ratio: 640 / 300; max-height: none; height: auto; }
+.lobby-flappy #flappy-canvas { max-height: none; }
+#room-diff .btn { border: 2px solid var(--ink-line); }

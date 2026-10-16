@@ -12,7 +12,7 @@
       firstDelayMs: [12000, 20000], secondDelayMs: [6000, 14000], leaveChance: 0.2,
       busyRoomsHalf: 3, busyRoomsOff: 6,
     },
-    lobby: { soloWaitMs: 75000, groupWaitMs: 60000, readyGoMs: 5000, minAfterJoinMs: 8000, resultsMs: 15000 },
+    lobby: { soloWaitMs: 35000, groupWaitMs: 30000, readyGoMs: 5000, minAfterJoinMs: 8000, resultsMs: 15000 },
     peer: null,
     analytics: { posthogKey: '', posthogHost: 'https://us.i.posthog.com' },
   };
@@ -78,8 +78,24 @@
   const PUBLIC_NS = /[?&]debug\b/.test(location.search) ? 'test-public-' : 'public-';
   const publicPeerId = (i) => `${PEER_PREFIX}${PUBLIC_NS}${i}`;
   // Public rooms have codes too (PUB01, PUB02…) so friends can jump into the same one.
-  const pubCode = (slot) => `PUB${String(slot + 1).padStart(2, '0')}`;
-  const pubSlotFromCode = (code) => (/^PUB\d\d$/.test(code) ? parseInt(code.slice(3), 10) - 1 : null);
+  // They look like any other room code and change daily (UTC, so every player agrees).
+  const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const utcDay = (offset = 0) => new Date(Date.now() + offset * 864e5).toISOString().slice(0, 10);
+  function codeFor(slot, day) {
+    let h = 2166136261;
+    const seed = `${PUBLIC_NS}${slot}:${day}`;
+    for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+    let out = '';
+    for (let i = 0; i < 5; i++) { h = Math.imul(h ^ (h >>> 13), 2246822507) >>> 0; out += CODE_ALPHABET[h % CODE_ALPHABET.length]; }
+    return out;
+  }
+  const pubCode = (slot) => codeFor(slot, utcDay());
+  function pubSlotFromCode(code) {
+    for (const day of [utcDay(), utcDay(-1)]) {
+      for (let i = 0; i < 30; i++) if (codeFor(i, day) === code) return i;
+    }
+    return null;
+  }
   const MAX_PLAYERS = 8;
   const COUNTDOWN_MS = 3300;
   const GRACE_MS = 4000;
@@ -335,38 +351,31 @@
   // Tiers of how recognisable an article is (vital.js):
   //   familiar = hand-picked topics almost anyone knows; ranked = core articles by real daily readers.
   const POOL = window.POOL || { familiar: [], ranked: [], subjects: [] };
-  const tierPool = (n) => [
-    ...POOL.familiar.map(([t, g]) => ({ t, s: `f:${g}` })),
-    ...POOL.ranked.slice(0, n).map(([t, si]) => ({ t, s: `r:${si}` })),
-  ];
-  const EASY_POOL = tierPool(150);
-  const MEDIUM_POOL = tierPool(800);
-  const HARD_TARGETS = tierPool(600);
-  const HARD_STARTS = POOL.ranked.slice(150, 3000).map(([t, si]) => ({ t, s: `r:${si}` }));
+  // Every pair is built from topics almost anyone knows; difficulty comes from how far apart they are,
+  // not how obscure they are. Easy = a confirmed 2-click route, medium = different areas and not
+  // directly linked, hard = no route shorter than 3 clicks.
+  const FAMILIAR = POOL.familiar.map(([t, g]) => ({ t, s: g }));
+  const EASY_POOL = FAMILIAR;
 
   function generatedCandidate(diff) {
-    if (!EASY_POOL.length) return null;
-    if (diff === 'easy') {
-      const a = anyOf(EASY_POOL);
-      return [a.t, anyOf(EASY_POOL).t];
-    }
-    if (diff === 'medium') {
-      const a = anyOf(MEDIUM_POOL);
-      let b = anyOf(MEDIUM_POOL);
-      for (let i = 0; i < 5 && b.s === a.s; i++) b = anyOf(MEDIUM_POOL);
-      return [a.t, b.t];
-    }
-    const a = Math.random() < 0.25 ? anyOf(MEDIUM_POOL) : anyOf(HARD_STARTS);
-    let b = anyOf(HARD_TARGETS);
-    for (let i = 0; i < 5 && b.s === a.s; i++) b = anyOf(HARD_TARGETS);
+    if (!FAMILIAR.length) return null;
+    const a = anyOf(FAMILIAR);
+    let b = anyOf(FAMILIAR);
+    if (diff !== 'easy') for (let i = 0; i < 6 && b.s === a.s; i++) b = anyOf(FAMILIAR);
     return [a.t, b.t];
   }
 
-  // A 2-click route (start → X → end) if one exists among the pages' first 500 links each way.
-  async function twoClickRoute(start, end) {
-    const [S, T] = await Promise.all([linksOfPage(start), pagesLinkingTo(end)]);
+  // How connected two articles are: the pages that sit between them (start → X → end), using each
+  // page's first 500 links. Link lists are cached so repeat lookups cost nothing.
+  const linkMemo = new Map();
+  const memo = (key, fn) => { if (!linkMemo.has(key)) { const p = fn(); linkMemo.set(key, p); p.catch(() => linkMemo.delete(key)); } return linkMemo.get(key); };
+  async function middles(start, end) {
+    const [S, T] = await Promise.all([memo(`out:${start}`, () => linksOfPage(start)), memo(`in:${end}`, () => pagesLinkingTo(end))]);
     const tset = new Set(T.map((x) => normTitle(x.t)));
-    const mids = S.filter((x) => tset.has(normTitle(x.t)) && !sameTitle(x.t, end)).sort(byLen);
+    return S.filter((x) => tset.has(normTitle(x.t)) && !sameTitle(x.t, end)).sort(byLen);
+  }
+  async function twoClickRoute(start, end) {
+    const mids = await middles(start, end);
     return mids.length ? [start, mids[0].t, end] : null;
   }
 
@@ -387,21 +396,28 @@
     const recent = recentTitles();
     const fresh = ([s, e]) => !played.has(pairKey(s, e)) && !recent.has(normTitle(s)) && !recent.has(normTitle(e));
     const curated = (window.PAIRS[diff] || []).filter(fresh);
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const cand = curated.length && (Math.random() < 0.2 || !EASY_POOL.length) ? curated.splice(Math.floor(Math.random() * curated.length), 1)[0] : generatedCandidate(diff);
+    let bestHard = null;
+    for (let attempt = 0; attempt < (diff === 'hard' ? 4 : 8); attempt++) {
+      const useCurated = curated.length && (Math.random() < 0.15 || !FAMILIAR.length);
+      const cand = useCurated ? curated.splice(Math.floor(Math.random() * curated.length), 1)[0] : generatedCandidate(diff);
       if (!cand || !fresh(cand) || sameTitle(cand[0], cand[1])) continue;
       try {
-        const [pair, direct] = await Promise.all([validatePair(cand[0], cand[1]), linksDirectly(cand[0], cand[1])]);
-        if (direct || played.has(pairKey(pair.start, pair.end))) continue;
-        // Easy has to be genuinely easy: there must be a 2-click route.
+        // Familiar titles are already known-good; only hand-picked pairs need checking.
+        const pair = useCurated ? await validatePair(cand[0], cand[1]) : { start: cand[0], end: cand[1] };
+        if (played.has(pairKey(pair.start, pair.end)) || await linksDirectly(pair.start, pair.end)) continue;
+        if (diff === 'medium') return pair;
+        const mids = await middles(pair.start, pair.end).catch(() => null);
+        if (!mids) continue;
         if (diff === 'easy') {
-          const route = await twoClickRoute(pair.start, pair.end).catch(() => null);
-          if (!route) continue;
-          pair.route = route;
+          if (!mids.length) continue;
+          return { ...pair, route: [pair.start, mids[0].t, pair.end] };
         }
-        return pair;
+        // Hard: the fewer pages in between, the harder. None at all is ideal.
+        if (!mids.length) return pair;
+        if (!bestHard || mids.length < bestHard.n) bestHard = { pair: { ...pair, route: [pair.start, mids[0].t, pair.end] }, n: mids.length };
       } catch {}
     }
+    if (bestHard) return bestHard.pair;
     const p = anyOf(window.PAIRS[diff]);
     return validatePair(p[0], p[1]);
   }
@@ -974,13 +990,12 @@
     const n = dailyNumber(key);
     // After the hand-picked run, every day is generated from the Vital Articles snapshot with a
     // date-seeded RNG: a lesser-known start and a core target from a different subject.
-    if (n > pool.length && POOL.ranked.length) {
+    if (n > pool.length && POOL.familiar.length) {
       const rnd = seeded(hashStr(`daily-${key}`));
-      const starts = POOL.ranked.slice(100, 1500);
-      const ends = [...POOL.familiar.map(([t, g]) => [t, `f:${g}`]), ...POOL.ranked.slice(0, 500).map(([t, si]) => [t, `r:${si}`])];
-      const [start, ss] = starts[Math.floor(rnd() * starts.length)];
-      let end = ends[Math.floor(rnd() * ends.length)];
-      for (let k = 0; k < 6 && end[1] === `r:${ss}`; k++) end = ends[Math.floor(rnd() * ends.length)];
+      const F = POOL.familiar;
+      const [start, g1] = F[Math.floor(rnd() * F.length)];
+      let end = F[Math.floor(rnd() * F.length)];
+      for (let k = 0; k < 8 && (end[1] === g1 || end[0] === start); k++) end = F[Math.floor(rnd() * F.length)];
       return { start, end: end[0], n, key };
     }
     const i = (((n - 1) % pool.length) + pool.length) % pool.length;
@@ -1375,7 +1390,8 @@
     const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const buf = new Uint32Array(5);
     crypto.getRandomValues(buf);
-    return [...buf].map((n) => a[n % a.length]).join('');
+    const code = [...buf].map((n) => a[n % a.length]).join('');
+    return pubSlotFromCode(code) != null ? makeCode() : code;
   };
   const inviteLink = () => `${baseUrl()}?room=${net.code}`;
   const validFinish = (p) => p.status === 'finished' && p.verify !== 'failed';
@@ -1685,7 +1701,7 @@
     const cfg = CONFIG.lobby;
     if (!net.fallbackAt) net.fallbackAt = Date.now() + (humanCount() >= 2 ? cfg.groupWaitMs : cfg.soloWaitMs);
     if (humanCount() >= 2) net.fallbackAt = Math.min(net.fallbackAt, Date.now() + cfg.groupWaitMs);
-    const majority = readyCount() * 2 > total;
+    const majority = readyCount() * 2 >= total; // half the room ready is enough
     let at = net.fallbackAt;
     if (total >= MAX_PLAYERS) at = Math.min(at, Date.now() + cfg.readyGoMs * 2);
     if (majority) at = Math.min(at, net.readyGo && net.autoStartAt ? net.autoStartAt : Date.now() + cfg.readyGoMs);
@@ -2708,7 +2724,7 @@
     $('#room-label').textContent = pub ? 'Public Room' : 'Private Room';
     $('#room-code').textContent = net.matching ? 'Searching…' : code || '·····';
     $('#room-code').classList.toggle('pub', !!net.matching);
-    $('#invite').classList.toggle('hidden', !code || net.matching);
+    $('#invite').classList.toggle('hidden', !code || net.matching || pub);
     $('#invite-link').value = code ? `${baseUrl()}?room=${code}` : '';
     $('#skip-room').classList.toggle('hidden', !pub || net.matching || !!net.publicFromPrivate);
     const tp = $('#toggle-public');
@@ -2729,11 +2745,10 @@
       });
       const total = activeCount();
       const readyN = Object.values(net.players).filter((p) => p.connected && p.ready).length;
-      const need = Math.floor(total / 2) + 1;
       $('#ready-btn').textContent = me.ready ? 'Ready ✓' : "I'm ready";
       $('#ready-btn').classList.toggle('on', !!me.ready);
       $('#ready-text').innerHTML = total < 2 ? 'Waiting for someone to join…'
-        : `<b>${readyN}/${total}</b> ready · starts when ${need} are`;
+        : `<b>${readyN}/${total}</b> ready · race starts when 50% are ready`;
     }
 
     const count = activeCount();
