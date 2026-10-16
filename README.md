@@ -2,7 +2,7 @@
 
 Get from one Wikipedia article to another using only the links on the page. Fewest clicks wins.
 
-**Play:** https://phantomorion1.github.io/wikirace/
+**Play:** https://phantomorion1.github.io/wikiracer/
 
 ## Features
 
