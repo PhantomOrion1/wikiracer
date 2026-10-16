@@ -325,22 +325,42 @@
   }
 
   const anyOf = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  function subjectBySize(level) {
-    const subjects = Object.keys(level).filter((c) => level[c].length);
-    const total = subjects.reduce((n, c) => n + level[c].length, 0);
-    let r = Math.random() * total;
-    for (const c of subjects) { r -= level[c].length; if (r <= 0) return c; }
-    return subjects[0];
-  }
+  // Tiers of how recognisable an article is (vital.js):
+  //   familiar = hand-picked topics almost anyone knows; ranked = core articles by real daily readers.
+  const POOL = window.POOL || { familiar: [], ranked: [], subjects: [] };
+  const tierPool = (n) => [
+    ...POOL.familiar.map(([t, g]) => ({ t, s: `f:${g}` })),
+    ...POOL.ranked.slice(0, n).map(([t, si]) => ({ t, s: `r:${si}` })),
+  ];
+  const EASY_POOL = tierPool(150);
+  const MEDIUM_POOL = tierPool(800);
+  const HARD_TARGETS = tierPool(600);
+  const HARD_STARTS = POOL.ranked.slice(150, 3000).map(([t, si]) => ({ t, s: `r:${si}` }));
+
   function generatedCandidate(diff) {
-    const V = window.VITAL;
-    if (!V) return null;
-    const c1 = subjectBySize(V.l3);
-    let c2 = c1;
-    if (diff !== 'easy') while (c2 === c1) c2 = subjectBySize(V.l3);
-    const start = diff === 'hard' ? anyOf(V.l4[c1] || V.l3[c1]) : anyOf(V.l3[c1]);
-    const end = anyOf(V.l3[c2]);
-    return [start, end];
+    if (!EASY_POOL.length) return null;
+    if (diff === 'easy') {
+      const a = anyOf(EASY_POOL);
+      return [a.t, anyOf(EASY_POOL).t];
+    }
+    if (diff === 'medium') {
+      const a = anyOf(MEDIUM_POOL);
+      let b = anyOf(MEDIUM_POOL);
+      for (let i = 0; i < 5 && b.s === a.s; i++) b = anyOf(MEDIUM_POOL);
+      return [a.t, b.t];
+    }
+    const a = Math.random() < 0.25 ? anyOf(MEDIUM_POOL) : anyOf(HARD_STARTS);
+    let b = anyOf(HARD_TARGETS);
+    for (let i = 0; i < 5 && b.s === a.s; i++) b = anyOf(HARD_TARGETS);
+    return [a.t, b.t];
+  }
+
+  // A 2-click route (start → X → end) if one exists among the pages' first 500 links each way.
+  async function twoClickRoute(start, end) {
+    const [S, T] = await Promise.all([linksOfPage(start), pagesLinkingTo(end)]);
+    const tset = new Set(T.map((x) => normTitle(x.t)));
+    const mids = S.filter((x) => tset.has(normTitle(x.t)) && !sameTitle(x.t, end)).sort(byLen);
+    return mids.length ? [start, mids[0].t, end] : null;
   }
 
   async function pickPair(diff, custom = []) {
@@ -361,15 +381,20 @@
     const fresh = ([s, e]) => !played.has(pairKey(s, e)) && !recent.has(normTitle(s)) && !recent.has(normTitle(e));
     const curated = (window.PAIRS[diff] || []).filter(fresh);
     for (let attempt = 0; attempt < 10; attempt++) {
-      const cand = curated.length && (Math.random() < 0.25 || !window.VITAL) ? curated.splice(Math.floor(Math.random() * curated.length), 1)[0] : generatedCandidate(diff);
+      const cand = curated.length && (Math.random() < 0.2 || !EASY_POOL.length) ? curated.splice(Math.floor(Math.random() * curated.length), 1)[0] : generatedCandidate(diff);
       if (!cand || !fresh(cand) || sameTitle(cand[0], cand[1])) continue;
       try {
         const [pair, direct] = await Promise.all([validatePair(cand[0], cand[1]), linksDirectly(cand[0], cand[1])]);
         if (direct || played.has(pairKey(pair.start, pair.end))) continue;
+        // Easy has to be genuinely easy: there must be a 2-click route.
+        if (diff === 'easy') {
+          const route = await twoClickRoute(pair.start, pair.end).catch(() => null);
+          if (!route) continue;
+          pair.route = route;
+        }
         return pair;
       } catch {}
     }
-    // Everything's been played (or Wikipedia is unreachable): fall back to any curated pair.
     const p = anyOf(window.PAIRS[diff]);
     return validatePair(p[0], p[1]);
   }
@@ -633,7 +658,11 @@
     if (result === 'timeout') toast("⏰ Time's up!", 3000);
     renderPath();
     renderRacers();
+    if (g.mode === 'solo' || g.mode === 'challenge') {
+      shortestRoute(g.start, g.end).then((r) => { if (!r) g.noRoute = true; if (game === g) renderResults(); });
+    }
     if (g.mode === 'daily') {
+      shortestRoute(g.start, g.end).then(() => { if (!$('#results').classList.contains('hidden')) showDailyResults(g.dailyKey); });
       const rec = saveDaily(g);
       track('daily_end', { n: g.dailyN, result, score: rec.score, time_ms: rec.time, beat_pct: Math.round(dailyBeat(dailyStats(g.dailyKey), rec) * 100) });
       showDailyResults(g.dailyKey);
@@ -824,6 +853,9 @@
         html += `<p><b>${verdict}</b> <span class="muted">${esc(c.by)} took ${plural(c.clicks, 'click')}.</span></p>`;
       }
       html += `<h3 class="sec">Your route</h3><div class="lanes">${laneHtml(me, `solo:${g.startTime}`, new Set(), round, '')}</div>`;
+      const best = store.get(`wr-route:${pairKey(g.start, g.end)}`);
+      if (best) html += `<h3 class="sec">Shortest route we found (${best.length - 1} clicks)</h3>${routeHtml(best)}`;
+      else if (!g.noRoute) html += '<p class="muted small-print">Looking up the shortest route…</p>';
     }
     body.innerHTML = html;
 
@@ -864,11 +896,35 @@
     toast('Picking articles…', 1500);
     try {
       const pair = await pickPair(diff, custom);
-      startGame({ ...pair, difficulty: diff, limit: limitFor(diff) }, 'solo');
+      const round = { ...pair, difficulty: diff, limit: limitFor(diff) };
+      if (pair.route) store.set(`wr-route:${pairKey(pair.start, pair.end)}`, pair.route);
+      await runCountdown(round);
+      startGame(round, 'solo');
     } catch (e) {
       toast(e.message);
     }
   }
+
+  // ---------- shortest known route ----------
+  // Looks up a real short route through the link graph (same search the fill-in racers use) and caches it,
+  // so results can show "how it could have been done" and the daily's stats are anchored to reality.
+  const routeCache = new Map();
+  function shortestRoute(start, end) {
+    const key = pairKey(start, end);
+    const saved = store.get(`wr-route:${key}`);
+    if (saved) return Promise.resolve(saved);
+    if (routeCache.has(key)) return routeCache.get(key);
+    const p = planRoute(start, end)
+      .then((plan) => {
+        const best = [...(plan.routes || [])].sort((a, b) => a.length - b.length)[0] || null;
+        if (best) store.set(`wr-route:${key}`, best);
+        return best;
+      })
+      .catch(() => null);
+    routeCache.set(key, p);
+    return p;
+  }
+  const routeHtml = (r) => `<div class="path-inline">${r.map(esc).join('<span class="arrow">→</span>')}</div>`;
 
   // ---------- daily challenge ----------
   // One hard pair per calendar day, the same for everyone. Players are ranked by clicks, then time.
@@ -908,15 +964,14 @@
     const n = dailyNumber(key);
     // After the hand-picked run, every day is generated from the Vital Articles snapshot with a
     // date-seeded RNG: a lesser-known start and a core target from a different subject.
-    if (n > pool.length && window.VITAL) {
+    if (n > pool.length && POOL.ranked.length) {
       const rnd = seeded(hashStr(`daily-${key}`));
-      const V = window.VITAL;
-      const subjects = Object.keys(V.l3).filter((c) => V.l3[c].length).sort();
-      const c1 = subjects[Math.floor(rnd() * subjects.length)];
-      let c2 = c1;
-      while (c2 === c1) c2 = subjects[Math.floor(rnd() * subjects.length)];
-      const starts = V.l4[c1] && V.l4[c1].length ? V.l4[c1] : V.l3[c1];
-      return { start: starts[Math.floor(rnd() * starts.length)], end: V.l3[c2][Math.floor(rnd() * V.l3[c2].length)], n, key };
+      const starts = POOL.ranked.slice(100, 1500);
+      const ends = [...POOL.familiar.map(([t, g]) => [t, `f:${g}`]), ...POOL.ranked.slice(0, 500).map(([t, si]) => [t, `r:${si}`])];
+      const [start, ss] = starts[Math.floor(rnd() * starts.length)];
+      let end = ends[Math.floor(rnd() * ends.length)];
+      for (let k = 0; k < 6 && end[1] === `r:${ss}`; k++) end = ends[Math.floor(rnd() * ends.length)];
+      return { start, end: end[0], n, key };
     }
     const i = (((n - 1) % pool.length) + pool.length) % pool.length;
     const cycle = Math.floor((n - 1) / pool.length);
@@ -935,7 +990,11 @@
   // past 12, and 14–26% run out of time or give up. Times scale with clicks (~25s per page + reading).
   function dailyStats(key) {
     const rnd = seeded(hashStr(`stats-${key}`));
-    const par = rnd() < 0.55 ? 3 : 4;
+    // The model's guess at the best route, never longer than a real route we've actually found.
+    const d = dailyPair(key);
+    const real = store.get(`wr-route:${pairKey(d.start, d.end)}`);
+    const modelPar = rnd() < 0.55 ? 3 : 4;
+    const par = real ? Math.min(modelPar, real.length - 1) : modelPar;
     const dnf = 0.14 + rnd() * 0.12;
     const mu = Math.log(3.0 + rnd() * 1.5); // extra clicks above par (+1), log-normal
     const sigma = 0.5 + rnd() * 0.15;
@@ -1000,24 +1059,21 @@
     const stats = dailyStats(key);
     const streak = streakInfo();
     const card = $('#daily-card');
-    const head = `<div class="daily-top"><span class="mono-label">02 / Daily #${d.n} <span class="tag-hard">Hard · 10:00</span></span>
-      <span class="daily-players">${streak.count ? `<span class="streak">${streak.count}-day streak</span> · ` : ''}${stats.players.toLocaleString()} today</span></div>`;
+    const meta = `<div class="blk-meta">${streak.count ? `${streak.count}-day streak · ` : ''}${stats.players.toLocaleString()} today</div>`;
     if (rec) {
       const beat = dailyBeat(stats, rec);
-      card.innerHTML = `${head}
-        <div class="daily-route">${esc(d.start)} <span class="arrow">→</span> <span class="tgt">${esc(d.end)}</span></div>
-        <div class="daily-done">${rec.result === 'finished'
-          ? `Done in <b>${plural(rec.score, 'click')}</b> · <b>${fmtTime(rec.time)}</b> · <b class="top">${topLabel(beat)}</b>`
-          : `${rec.result === 'timeout' ? 'Ran out of time' : rec.abandoned ? 'Left mid-race' : 'Gave up'} today. New race tomorrow.`}</div>
-        <div class="daily-actions"><button class="btn primary" id="daily-results">See how you ranked</button>
-        <span class="muted">Next daily in <b data-next-daily>${nextDailyIn()}</b></span></div>`;
+      card.innerHTML = `<h2 class="blk-title">Daily #${d.n}</h2>
+        <p class="blk-sub">${rec.result === 'finished'
+          ? `Done: <b>${plural(rec.score, 'click')}</b> · ${fmtTime(rec.time)} · <b class="hl">${topLabel(beat)}</b>`
+          : `${rec.result === 'timeout' ? 'Ran out of time' : rec.abandoned ? 'Left mid-race' : 'Gave up'} today.`}</p>
+        <button class="sq" id="daily-results">See results</button>
+        <div class="blk-meta">Next in <b data-next-daily>${nextDailyIn()}</b></div>`;
       $('#daily-results').onclick = () => showDailyResults(key);
     } else {
-      card.innerHTML = `${head}
-        <div class="daily-route mystery"><span class="q">? ? ?</span> <span class="arrow">→</span> <span class="q tgt">? ? ?</span></div>
-        <p class="daily-sub">Same race for everyone, revealed when you start. One attempt.</p>
-        <div class="daily-actions"><button class="btn primary" id="daily-play">Start today's race</button>
-        <span class="muted">Resets in <b data-next-daily>${nextDailyIn()}</b></span></div>`;
+      card.innerHTML = `<h2 class="blk-title">Daily #${d.n}</h2>
+        <p class="blk-sub">Hard · <b>? ? ? → ? ? ?</b> · one try</p>
+        <button class="sq" id="daily-play">Start</button>
+        ${meta}`;
       $('#daily-play').onclick = startDaily;
     }
   }
@@ -1033,7 +1089,7 @@
       pair = await validatePair(d.start, d.end);
     } catch (e) {
       toast(e.message);
-      if (btn) { btn.disabled = false; btn.textContent = "▶ Start today's challenge"; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Start'; }
       return;
     }
     // The attempt is locked in the moment the pair is revealed: refreshing or leaving counts as giving up.
@@ -1041,6 +1097,9 @@
     store.set(`wr-daily:${key}`, placeholder);
     bumpStreak(key);
     const round = { ...pair, difficulty: 'hard', limit: LIMITS.hard };
+    shortestRoute(pair.start, pair.end).then(() => {
+      if (!game && !$('#results').classList.contains('hidden') && dailyRecord(key)) showDailyResults(key);
+    });
     await runCountdown(round, `📅 Daily #${d.n} · Hard · ${fmtTime(LIMITS.hard)} on the clock`);
     startGame(round, 'daily', { dailyKey: key, dailyN: d.n });
   }
@@ -1124,6 +1183,7 @@
         <span>📊 Median: <b>${stats.medianClicks}</b> clicks · <b>${fmtTime(stats.timeMedian(stats.medianClicks))}</b></span>
         <span>🚫 Didn't finish: <b>${Math.round(stats.dnf * 100)}%</b></span>
       </div>
+      ${(() => { const r = store.get(`wr-route:${pairKey(rec.start, rec.end)}`); return r ? `<h3 class="sec">Shortest route we found (${r.length - 1} clicks)</h3>${routeHtml(r)}` : ''; })()}
       <h3 class="sec">Your route</h3>
       <div class="lanes">${laneHtml({ id: 'daily', name: $('#name-input').value.trim() || 'You', color: COLORS[0], status: finished ? 'finished' : rec.result, clicks: rec.clicks, penalties: rec.penalties, time: rec.time, path: rec.path }, `daily:${key}`, new Set(), { start: rec.start, end: rec.end }, '')}</div>
       <p class="center muted next-daily">Next daily in <b data-next-daily>${nextDailyIn()}</b></p>`;
@@ -2559,21 +2619,23 @@
     const box = $('#route-demo');
     if (!box) return;
     let i = Math.floor(Math.random() * DEMO_ROUTES.length);
+    const STEP = 700;
     const play = () => {
-      if (!$('#home').classList.contains('active')) { setTimeout(play, 1500); return; }
+      if (!$('#home').classList.contains('active') || document.hidden) { setTimeout(play, 1500); return; }
       const r = DEMO_ROUTES[i++ % DEMO_ROUTES.length];
+      $('#board-target').textContent = `Target: ${r[r.length - 1]}`;
       box.classList.remove('out');
-      box.innerHTML = r.map((t, k) => `${k ? `<span class="rd-line" style="--d:${k * 420 - 120}ms"></span>` : ''}<span class="rd-chip ${k === r.length - 1 ? 'end' : ''}" style="--d:${k * 420}ms">${esc(t)}</span>`).join('')
-        + `<span class="rd-count" style="--d:${r.length * 420}ms">${r.length - 1} clicks</span>`;
-      setTimeout(() => box.classList.add('out'), r.length * 420 + 2600);
-      setTimeout(play, r.length * 420 + 3100);
+      box.innerHTML = r.map((t, k) => `<div class="rd-row${k === r.length - 1 ? ' end' : ''}" style="--d:${k * STEP}ms"><i>${String(k).padStart(2, '0')}</i><b>${esc(t)}</b></div>`).join('')
+        + `<div class="rd-count" style="--d:${r.length * STEP}ms">${r.length - 1} clicks</div>`;
+      setTimeout(() => box.classList.add('out'), r.length * STEP + 2600);
+      setTimeout(play, r.length * STEP + 3000);
     };
     play();
   }
 
   function initHowTo() {
     const box = $('#howto');
-    $('#open-howto').addEventListener('click', () => box.classList.remove('hidden'));
+    ['#open-howto', '#open-howto-2'].forEach((sel) => $(sel) && $(sel).addEventListener('click', () => box.classList.remove('hidden')));
     $('#close-howto').addEventListener('click', () => box.classList.add('hidden'));
     box.addEventListener('click', (e) => { if (e.target === box) box.classList.add('hidden'); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') box.classList.add('hidden'); });
@@ -2686,7 +2748,9 @@
       $('#banner-play').addEventListener('click', async () => {
         try {
           const pair = await validatePair(s, e);
-          startGame({ ...pair, difficulty: d, limit: limitFor(d) }, 'challenge', { challenge });
+          const round = { ...pair, difficulty: d, limit: limitFor(d) };
+          await runCountdown(round, `${challenge.by}'s challenge · ${fmtTime(round.limit)} on the clock`);
+          startGame(round, 'challenge', { challenge });
         } catch (err) {
           toast(err.message);
         }
@@ -2705,4 +2769,5 @@
     });
   }
   addEventListener('flappy-score', (e) => track('flappy_game', { score: e.detail }));
+  if (/[?&]debug\b/.test(location.search)) window.__wr = { planRoute, shortestRoute, pickPair };
 })();
