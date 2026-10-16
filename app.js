@@ -2639,7 +2639,9 @@
     const render = (step) => {
       title.textContent = step[0];
       url.textContent = `wiki/${step[0].replace(/ /g, '_')}`;
-      text.innerHTML = esc(step[1]).replace(/\[\[([^\]|]+)(\|&gt;)?\]\]/g, (_, label, next) => `<span class="dl${next ? ' next' : ''}">${label}</span>`);
+      const target = ($('#board-target .tv') || {}).textContent || '';
+      text.innerHTML = esc(step[1]).replace(/\[\[([^\]|]+)(\|&gt;)?\]\]/g, (_, label, next) =>
+        `<span class="dl${next ? ' next' : ''}${sameTitle(label, target) ? ' tgt' : ''}">${label}</span>`);
     };
     const moveCursorTo = (el) => {
       const b = board.getBoundingClientRect(), r = el.getBoundingClientRect();
@@ -2657,7 +2659,8 @@
     async function play() {
       const route = DEMO_ROUTES[i++ % DEMO_ROUTES.length];
       const names = route.map((s) => s[0]);
-      $('#board-target').textContent = `Target: ${names[names.length - 1]}`;
+      const target = names[names.length - 1];
+      $('#board-target').innerHTML = `<span class="tl">Target</span><span class="tv">${esc(target)}</span>`;
       board.classList.remove('done');
       showTrail(names, 0, false);
       for (let k = 0; k < route.length; k++) {

@@ -664,3 +664,13 @@ input { border-radius: 0; font-family: var(--sans); }
 #home .home-wrap { padding-top: 4vh; padding-bottom: 7vh; gap: 34px; }
 .board { min-height: 330px; }
 .actions .blk { min-height: 178px; }
+
+/* target badge in the demo board */
+.board-head { align-items: center; }
+#board-target { display: inline-flex; align-items: stretch; font: 700 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+#board-target .tl { background: #f4f2ed; color: #111; padding: 5px 8px; }
+#board-target .tl::after { content: " →"; }
+#board-target .tv { background: var(--accent); color: #fff; padding: 5px 10px; font-family: var(--display); font-weight: 900; font-stretch: 80%; font-size: 17px; letter-spacing: .02em; line-height: 1.1; }
+.board.done #board-target .tv::after { content: " ✓"; }
+.dl.tgt { color: #fff; background: rgba(255,68,51,.22); text-decoration: underline 2px var(--accent); padding: 0 3px; }
+.dl.tgt::before { content: "🏁 "; font-size: .8em; }
