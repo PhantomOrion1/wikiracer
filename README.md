@@ -11,7 +11,7 @@ Get from one Wikipedia article to another using only the links on the page. Fewe
 - **Live spectating**: follow a racer's scroll position and hovered link in real time.
 - **No word search**: Ctrl/⌘+F is blocked mid-race, and link text is drawn with CSS so the browser's Find never matches a clickable link.
 - **Time limits**: 2:30 easy, 5:00 medium, 10:00 hard.
-- **Quick match**: join a random public race with strangers (Omegle-style). It starts automatically once 2+ racers are in, with up to 8 per room. Hit "Next room" to skip.
+- **Quick match**: join a random public race with strangers (up to 8 per room). Players vote on difficulty (public races lean Easy/Medium) and ready up; the race starts once most of the room is ready. Public rooms have codes (PUB01…) so friends can join the same one, and a private room's host can open it to the public.
 - **Spectate**: once you're finished or out, watch any racer's screen live.
 - **Lane Rush**: a quick racing mini-game (dodge traffic, grab flags) to play while you wait. Locked during countdowns and while you race.
 - **Route comparison**: podium plus everyone's route side by side, with shared articles highlighted.

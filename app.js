@@ -12,7 +12,7 @@
       firstDelayMs: [12000, 20000], secondDelayMs: [6000, 14000], leaveChance: 0.2,
       busyRoomsHalf: 3, busyRoomsOff: 6,
     },
-    lobby: { soloWaitMs: 75000, groupWaitMs: 60000, readyGoMs: 5000, minAfterJoinMs: 8000, resultsMs: 30000 },
+    lobby: { soloWaitMs: 75000, groupWaitMs: 60000, readyGoMs: 5000, minAfterJoinMs: 8000, resultsMs: 15000 },
     peer: null,
     analytics: { posthogKey: '', posthogHost: 'https://us.i.posthog.com' },
   };
@@ -77,6 +77,9 @@
   // ?debug uses a separate set of public rooms so testing never lands in real players' races.
   const PUBLIC_NS = /[?&]debug\b/.test(location.search) ? 'test-public-' : 'public-';
   const publicPeerId = (i) => `${PEER_PREFIX}${PUBLIC_NS}${i}`;
+  // Public rooms have codes too (PUB01, PUB02…) so friends can jump into the same one.
+  const pubCode = (slot) => `PUB${String(slot + 1).padStart(2, '0')}`;
+  const pubSlotFromCode = (code) => (/^PUB\d\d$/.test(code) ? parseInt(code.slice(3), 10) - 1 : null);
   const MAX_PLAYERS = 8;
   const COUNTDOWN_MS = 3300;
   const GRACE_MS = 4000;
@@ -490,6 +493,9 @@
     };
     show('game');
     $('#hud-target').textContent = round.end;
+    const hd = $('#hud-diff');
+    hd.textContent = DIFF_LABEL[round.difficulty] || round.difficulty || '';
+    hd.className = `hud-diff ${round.difficulty || ''}`;
     $('#article-title').textContent = '';
     $('#article').replaceChildren();
     $('#panel').classList.remove('open');
@@ -1413,8 +1419,8 @@
     });
   }
 
-  function wireHostPeer(peer, me) {
-    peer.on('connection', (conn) => hostAccept(conn, me));
+  function wireHostPeer(peer, me, viaPublic = false) {
+    peer.on('connection', (conn) => { conn.viaPublic = viaPublic; hostAccept(conn, me); });
     peer.on('disconnected', () => { if (net === me && !peer.destroyed) peer.reconnect(); });
     peer.on('error', (err) => {
       if (net === me && peer.open && err.type !== 'peer-unavailable') toast('Connection problem: ' + err.type);
@@ -1502,6 +1508,11 @@
         if (conn && conn.open) conn.send({ type: 'lobbyinfo', count: activeCount(), phase: net.phase, accepting: net.isPublic && activeCount() < MAX_PLAYERS });
         return;
       case 'hello': {
+        if (!p && conn && conn.viaPublic && !net.isPublic) {
+          if (conn.open) conn.send({ type: 'error', message: 'That room just went private' });
+          setTimeout(() => conn.close(), 400);
+          return;
+        }
         if (p) {
           // Someone we already know: a rejoin after a host handover.
           p.name = cleanName(msg.name);
@@ -1634,6 +1645,7 @@
     }
     return {
       type: 'state', players, phase: net.phase, round: net.round, isPublic: net.isPublic,
+      slot: net.slot, publicFromPrivate: !!net.publicFromPrivate,
       roundElapsed: net.phase !== 'lobby' && net.roundStartedAt ? Date.now() - net.roundStartedAt : 0,
       autoStartIn: net.autoStartAt ? Math.max(0, net.autoStartAt - Date.now()) : 0,
       nextIn: net.nextAt && net.phase === 'results' ? Math.max(0, net.nextAt - Date.now()) : 0,
@@ -1818,7 +1830,7 @@
       const p = net.players[id];
       if (!p || net.phase !== 'lobby' || p.vote) return;
       const human = Object.entries(net.players).find(([pid, x]) => !isBot(pid) && x.vote);
-      p.vote = human && Math.random() < 0.65 ? human[1].vote : pickWeighted([{ v: 'easy', w: 0.3 }, { v: 'medium', w: 0.45 }, { v: 'hard', w: 0.25 }]).v;
+      p.vote = human && Math.random() < 0.65 ? human[1].vote : pickWeighted([{ v: 'easy', w: 0.4 }, { v: 'medium', w: 0.47 }, { v: 'hard', w: 0.13 }]).v;
       broadcast();
     }, rand(2500, 9000));
   }
@@ -1827,9 +1839,10 @@
     const counts = { easy: 0, medium: 0, hard: 0 };
     for (const p of Object.values(net.players)) if (p.connected && p.vote) counts[p.vote]++;
     const top = Math.max(...Object.values(counts));
-    if (!top) return ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)];
-    const tied = Object.keys(counts).filter((k) => counts[k] === top);
-    return tied[Math.floor(Math.random() * tied.length)];
+    // Public races lean easy/medium: no votes or a tie is a weighted pick, hard only now and then.
+    const W = { easy: 0.45, medium: 0.45, hard: 0.1 };
+    const pool = (top ? Object.keys(counts).filter((k) => counts[k] === top) : Object.keys(counts)).map((v) => ({ v, w: W[v] }));
+    return pickWeighted(pool).v;
   }
 
   function addBot() {
@@ -1973,7 +1986,7 @@
     let plan = null;
     try { plan = await planRoute(round.start, round.end); } catch {}
     if (net !== me || net.round !== round || net.phase !== 'playing') return;
-    for (const id of ids) Object.assign(net.bots.get(id), { routeKey: null, hurried: false, script: null });
+    for (const id of ids) Object.assign(net.bots.get(id), { routeKey: null, hurried: false, script: null, holding: false });
     for (const id of ids) simulateBot(id, round, plan);
     maybeHurryBots();
   }
@@ -1984,7 +1997,12 @@
     if (!b || !p) return;
     const tier = b.tier;
     const dm = DIFF_MUL[round.difficulty] || 1;
-    const cap = round.limit * 0.75;
+    const cap = round.limit * 0.92;
+    // Each round a fill-in is either on form (tight route, quick) or off it (extra detours, slower), so
+    // they're sometimes better and sometimes worse than the person they're racing.
+    const sharpChance = { 0: 0.25, 1: 0.4, 2: 0.55, 3: 0.7 }[BOT_TIERS.indexOf(tier)] ?? 0.45;
+    const sharp = Math.random() < sharpChance;
+    b.form = sharp ? 'sharp' : 'off';
 
     // Build the route: real shortest-ish path plus "explore and come back" detours for weaker players.
     const path = [{ t: round.start, via: round.start, back: false }];
@@ -1998,7 +2016,8 @@
     b.routeKey = route ? route.join('|') : null;
     if (route) {
       const pool = plan.startLinks.filter((t) => !route.some((r) => sameTitle(r, t)));
-      const detours = Math.min(pool.length, randInt(tier.detours[0], tier.detours[1] + (dm > 1.2 ? 1 : 0)));
+      const extra = sharp ? 0 : randInt(1, 2);
+      const detours = Math.min(pool.length, (sharp ? tier.detours[0] : randInt(tier.detours[0], tier.detours[1] + (dm > 1.2 ? 1 : 0))) + extra);
       for (let k = 0; k < detours; k++) {
         const w = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
         path.push({ t: w, via: w, back: false }, { t: round.start, via: round.start, back: true });
@@ -2007,15 +2026,15 @@
     }
     const givesUp = !route || Math.random() < tier.giveUp * dm;
 
-    // Timing: warm-up read of the first page, then a think time per click, all inside 75% of the clock.
+    // Timing: warm-up read of the first page, then a think time per click, inside ~92% of the clock.
     const nSteps = route ? path.length - 1 : randInt(2, 5);
     let times = [];
     let tSum = rand(tier.warmup[0], tier.warmup[1]) * 1000;
     for (let i = 0; i < nSteps; i++) {
-      tSum += rand(tier.secPerClick[0], tier.secPerClick[1]) * Math.sqrt(dm) * 1000;
+      tSum += rand(tier.secPerClick[0], tier.secPerClick[1]) * Math.sqrt(dm) * (sharp ? 0.85 : 1.25) * 1000;
       times.push(tSum);
     }
-    const budget = cap * rand(0.55, 0.97);
+    const budget = cap * rand(0.5, 0.97);
     const last = times[times.length - 1] + 1000;
     if (last > budget) times = times.map((t) => (t * budget) / last);
 
@@ -2037,8 +2056,8 @@
       });
       script.end = { type: 'gaveup', at: quitAt };
     } else {
-      times.forEach((t, i) => script.steps.push({ at: t, step: path[i + 1] }));
-      script.end = { type: 'finished', at: times[times.length - 1] + 50 };
+      times.slice(0, -1).forEach((t, i) => script.steps.push({ at: t, step: path[i + 1] }));
+      script.end = { type: 'finished', at: times[times.length - 1], last: path[path.length - 1] };
     }
     if (Math.random() < tier.pen) script.penAt = times[Math.floor(times.length / 2)] || 20000;
     b.script = script;
@@ -2073,6 +2092,14 @@
       });
     });
     at(b.script.end.at, () => {
+      // Never let every fill-in finish while a real person is still racing: the last one waits a
+      // page away from the target and wraps up once they're done (see maybeHurryBots).
+      if (b.script.end.type === 'finished' && realPlayersRacing() && !otherBotsStillRacing(id)) {
+        b.holding = true;
+        return;
+      }
+      b.holding = false;
+      if (b.script.end.type === 'finished' && b.script.end.last) { b.walk.push(b.script.end.last); b.script.end.last = null; }
       p.time = Math.min(round.limit, Date.now() - net.roundStartedAt);
       p.path = b.walk.map((x) => ({ ...x }));
       p.clicks = p.path.length - 1;
@@ -2094,6 +2121,9 @@
     });
   }
 
+  const realPlayersRacing = () => Object.entries(net.players).some(([pid, x]) => x.inRound && x.status === 'playing' && !isBot(pid));
+  const otherBotsStillRacing = (id) => [...net.bots.keys()].some((bid) => bid !== id && net.players[bid] && net.players[bid].inRound && net.players[bid].status === 'playing');
+
   // Once every real person is done (finished, gave up or out of time), nobody should sit watching
   // fill-ins take minutes. Their remaining clicks get re-timed to a quick but human pace, staggered
   // so they don't all land at once: everyone's done within roughly 5–25 seconds.
@@ -2113,7 +2143,9 @@
         t += rand(1800, 4200);
         s.at = Math.min(s.at, t);
       });
-      b.script.end.at = Math.min(b.script.end.at, b.script.end.type === 'gaveup' ? now + offset + rand(2000, 9000) : t + rand(400, 1400));
+      b.script.end.at = b.holding
+        ? now + offset + rand(2500, 8000)
+        : Math.min(b.script.end.at, b.script.end.type === 'gaveup' ? now + offset + rand(2000, 9000) : t + rand(400, 1400));
       if (b.script.penAt != null) b.script.penAt = null;
       runBotScript(id);
       offset += rand(2500, 7000);
@@ -2146,6 +2178,53 @@
         if (c && c.open) c.send(out);
       }
     }
+  }
+
+  // --- opening a private room to the public ---
+  // The host also claims a public slot, so quick match finds this room; friends already in stay put.
+  async function hostTogglePublic() {
+    if (!net.isHost) return;
+    const btn = $('#toggle-public');
+    if (net.isPublic && net.publicFromPrivate) {
+      // Keep the public slot reserved so anyone who joined through it stays connected; quick match
+      // just sees it as not accepting, and new strangers are turned away.
+      for (const id of [...net.bots.keys()]) removeBot(id);
+      clearTimeout(net.timers.auto);
+      Object.assign(net, { isPublic: false, publicFromPrivate: false, autoStartAt: 0, fallbackAt: 0 });
+      for (const p of Object.values(net.players)) Object.assign(p, { ready: false, vote: null });
+      toast('Room is private again');
+      broadcast();
+      renderLobby();
+      return;
+    }
+    if (net.isPublic || net.phase !== 'lobby') return;
+    if (net.pubPeer && !net.pubPeer.destroyed && net.slot != null) {
+      Object.assign(net, { isPublic: true, publicFromPrivate: true });
+      toast(`Room is public again: ${pubCode(net.slot)}`);
+      scheduleAutoStart(); botPolicy(); broadcast(); renderLobby();
+      return;
+    }
+    const me = net;
+    btn.disabled = true;
+    btn.textContent = 'Opening…';
+    for (let i = 0; i < CONFIG.publicSlots; i++) {
+      const peer = await tryClaim(publicPeerId(i));
+      if (net !== me) { if (peer) peer.destroy(); return; }
+      if (!peer) continue;
+      Object.assign(net, { pubPeer: peer, isPublic: true, publicFromPrivate: true, slot: i });
+      wireHostPeer(peer, me, true);
+      track('room_opened_public');
+      toast(`Room is now public: ${pubCode(i)}`);
+      btn.disabled = false;
+      scheduleAutoStart();
+      botPolicy();
+      broadcast();
+      renderLobby();
+      return;
+    }
+    btn.disabled = false;
+    toast('All public rooms are busy right now, try again soon');
+    renderLobby();
   }
 
   // --- guest ---
@@ -2296,6 +2375,13 @@
     else if (spec.id) hostHandle('host', { type: 'spectate', id: spec.id });
     applySnapshot('host', players.host, mySnapshot());
     wireHostPeer(peer, n);
+    if (old.isPublic && old.publicFromPrivate && old.slot != null) {
+      Object.assign(n, { isPublic: true, publicFromPrivate: true, slot: old.slot });
+      tryClaim(publicPeerId(old.slot)).then((pp) => {
+        if (net !== n) { if (pp) pp.destroy(); return; }
+        if (pp) { n.pubPeer = pp; wireHostPeer(pp, n, true); } else { n.isPublic = false; n.publicFromPrivate = false; n.slot = null; broadcast(); }
+      });
+    }
 
     for (const [id, p] of Object.entries(players)) {
       if (p.status === 'finished' && p.verify === 'pending' && p.path && p.path.length) verifyPlayer(id);
@@ -2349,7 +2435,9 @@
     setLobbyStatus(`Joining room ${code}…`);
     renderLobby();
 
-    net.roomId = PEER_PREFIX + code;
+    const pubSlot = pubSlotFromCode(code);
+    net.roomId = pubSlot != null ? publicPeerId(pubSlot) : PEER_PREFIX + code;
+    if (pubSlot != null) Object.assign(net, { isPublic: true, slot: pubSlot });
     const me = net;
     const fail = (message) => {
       if (net !== me) return;
@@ -2363,7 +2451,7 @@
     peer.on('open', () => {
       if (net !== me) return;
       net.myId = peer.id;
-      attachGuest(peer.connect(PEER_PREFIX + code, { reliable: true }), name, me, fail);
+      attachGuest(peer.connect(net.roomId, { reliable: true }), name, me, fail);
     });
     peer.on('error', (err) => {
       if (me.joined) return; // after joining, errors are handled by the host handover
@@ -2381,6 +2469,8 @@
       net.phase = ['lobby', 'playing', 'results'].includes(d.phase) ? d.phase : 'lobby';
       net.round = d.round || null;
       net.isPublic = !!d.isPublic;
+      net.slot = Number.isInteger(d.slot) ? d.slot : null;
+      net.publicFromPrivate = !!d.publicFromPrivate;
       net.autoStartAt = d.autoStartIn ? Date.now() + int(d.autoStartIn, 0, 60e3) : 0;
       net.nextAt = d.nextIn ? Date.now() + int(d.nextIn, 0, 60e3) : 0;
       net.roundStartedAt = Date.now() - int(d.roundElapsed, -60e3, 3600e3);
@@ -2569,6 +2659,7 @@
     try { old.hostConn && old.hostConn.close(); } catch {}
     for (const c of old.conns.values()) { try { c.close(); } catch {} }
     try { old.peer && old.peer.destroy(); } catch {}
+    try { old.pubPeer && old.pubPeer.destroy(); } catch {}
     if (location.search.includes('room=')) history.replaceState(null, '', baseUrl());
   }
 
@@ -2603,12 +2694,16 @@
 
   function renderLobby() {
     const pub = net.isPublic;
-    $('#room-label').textContent = pub ? 'Quick match' : 'Room code';
-    $('#room-code').textContent = pub ? (net.matching ? 'Searching…' : 'Public room') : net.code || '·····';
-    $('#room-code').classList.toggle('pub', pub);
-    $('#invite').classList.toggle('hidden', pub);
-    $('#invite-link').value = net.code && !pub ? inviteLink() : '';
-    $('#skip-room').classList.toggle('hidden', !pub || net.matching);
+    const code = pub && net.slot != null ? pubCode(net.slot) : net.code || (pub ? '' : '');
+    $('#room-label').textContent = pub ? 'Public Room' : 'Private Room';
+    $('#room-code').textContent = net.matching ? 'Searching…' : code || '·····';
+    $('#room-code').classList.toggle('pub', !!net.matching);
+    $('#invite').classList.toggle('hidden', !code || net.matching);
+    $('#invite-link').value = code ? `${baseUrl()}?room=${code}` : '';
+    $('#skip-room').classList.toggle('hidden', !pub || net.matching || !!net.publicFromPrivate);
+    const tp = $('#toggle-public');
+    tp.classList.toggle('hidden', !net.isHost || (pub && !net.publicFromPrivate) || net.phase !== 'lobby');
+    if (!tp.disabled) tp.textContent = pub ? 'Make private again' : 'Open to public';
     $('#host-controls').classList.toggle('hidden', !net.isHost || pub);
     $('#guest-wait').classList.toggle('hidden', net.isHost && !pub);
     const showPublic = pub && !net.matching && net.phase === 'lobby' && !!net.players[net.myId];
@@ -2834,7 +2929,8 @@
     $('#join-form').addEventListener('submit', (e) => { e.preventDefault(); joinRoom($('#join-code').value); });
     $('#leave-lobby').addEventListener('click', leaveRoomAndGoHome);
     $('#skip-room').addEventListener('click', quickMatch);
-    $('#copy-invite').addEventListener('click', () => copyText(inviteLink()));
+    $('#copy-invite').addEventListener('click', () => copyText($('#invite-link').value || inviteLink()));
+    $('#toggle-public').addEventListener('click', hostTogglePublic);
     $$('#room-diff .btn').forEach((b) => b.addEventListener('click', () => {
       net.diff = b.dataset.diff;
       $$('#room-diff .btn').forEach((x) => x.classList.toggle('selected', x === b));

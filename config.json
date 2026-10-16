@@ -27,6 +27,6 @@
     "groupWaitMs": 60000,
     "readyGoMs": 5000,
     "minAfterJoinMs": 8000,
-    "resultsMs": 30000
+    "resultsMs": 15000
   }
 }

@@ -791,3 +791,6 @@ h3.sec { font-size: 18px; color: var(--text); }
 .mg-title { font-family: var(--brand); font-weight: 400; font-size: 20px; letter-spacing: .02em; }
 .flappy-box { background: var(--surface); }
 .flappy-btn:disabled { opacity: .55; cursor: not-allowed; }
+.hud-diff { font: 800 13px var(--display); font-stretch: 85%; text-transform: uppercase; letter-spacing: .04em; padding: 5px 9px; color: #fff; background: var(--text); white-space: nowrap; align-self: center; }
+.hud-diff.easy { background: var(--easy); } .hud-diff.medium { background: var(--medium); } .hud-diff.hard, .hud-diff.daily { background: var(--hard); }
+.hud-diff:empty { display: none; }
