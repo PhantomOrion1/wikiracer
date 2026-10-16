@@ -677,3 +677,117 @@ input { border-radius: 0; font-family: var(--sans); }
 .lobby-flappy { display: flex; justify-content: center; margin-top: 12px; }
 .lobby-flappy .flappy-box { box-shadow: none; border: 2px solid var(--ink-line); }
 .lobby-flappy #flappy-canvas { max-height: 60vh; }
+
+/* ===================== scoreboard style for lobby, race, results ===================== */
+/* shared */
+.btn { border: 2px solid var(--ink-line); background: var(--surface); color: var(--text); text-transform: uppercase; font-family: var(--display); font-weight: 800; font-stretch: 85%; letter-spacing: .01em; }
+.btn:hover:not(:disabled) { background: var(--ink-line); color: var(--bg); transform: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: var(--text); border-color: var(--text); color: var(--bg); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--accent); border-color: var(--accent); }
+.btn.tiny { border-width: 1.5px; font-size: 12px; padding: 3px 8px; }
+.card { border: 2px solid var(--ink-line); background: var(--surface); }
+.card h2, .modal h3.sec, h3.sec { font-family: var(--display); font-weight: 900; font-stretch: 75%; text-transform: uppercase; letter-spacing: 0; }
+.card h2 { font-size: 26px; margin-bottom: 10px; }
+h3.sec { font-size: 18px; color: var(--text); }
+.avatar { border-radius: 0; box-shadow: none; width: 26px; height: 26px; }
+.badge { border-radius: 0; font-family: var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+.badge.host { background: var(--text); color: var(--bg); }
+.badge.ready { background: var(--easy); color: #fff; }
+.toast { border-radius: 0; background: var(--text); color: var(--bg); font-weight: 700; }
+.chip-s { border-radius: 0; font-family: var(--mono); text-transform: uppercase; }
+.overlay { background: rgba(10,10,10,.72); backdrop-filter: blur(3px); }
+
+/* lobby */
+#lobby .home-wrap { max-width: 860px; padding: 26px 24px 40px; min-height: 0; display: block; }
+#lobby .card { margin-bottom: 14px; padding: 18px 20px; }
+.lobby-head { margin-bottom: 18px; }
+.lobby-head .logo.small { font-size: 26px; }
+.room-row { gap: 24px; }
+.room-row .label, #room-label { font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em; color: var(--muted); }
+.room-code { font-family: var(--brand); font-weight: 400; font-size: 46px; letter-spacing: .08em; line-height: 1.05; }
+.room-code.pub { font-family: var(--display); font-weight: 900; font-stretch: 75%; text-transform: uppercase; font-size: 34px; letter-spacing: 0; }
+#invite-link { border: 2px solid var(--ink-line); background: var(--bg); font-family: var(--mono); font-size: 13px; }
+#lobby-status { font-size: 14px; margin: 10px 0 0; }
+#player-count { font-family: var(--mono); font-size: 14px; font-weight: 500; }
+#lobby .player-list li { border: 1.5px solid var(--line); background: var(--bg); border-radius: 0; padding: 9px 12px; }
+#lobby .player-list li.me { border-color: var(--ink-line); }
+#lobby .player-list .pname { font-weight: 700; }
+#lobby .player-list .pmeta { font-family: var(--mono); font-size: 12px; }
+.wins { color: var(--medium); font-family: var(--mono); }
+#room-diff .btn { opacity: 1; border-color: var(--ink-line); background: var(--surface); color: var(--text); }
+#room-diff .btn.diff.easy:hover, #room-diff .btn.diff.easy.selected { background: var(--easy); border-color: var(--easy); color: #fff; }
+#room-diff .btn.diff.medium:hover, #room-diff .btn.diff.medium.selected { background: var(--medium); border-color: var(--medium); color: #fff; }
+#room-diff .btn.diff.hard:hover, #room-diff .btn.diff.hard.selected { background: var(--hard); border-color: var(--hard); color: #fff; }
+#room-diff .btn.selected { outline: none; }
+#room-diff .btn.ghost.selected { background: var(--text); color: var(--bg); }
+#room-diff .btn small { color: inherit; opacity: .8; }
+#room-custom input { border: 2px solid var(--ink-line); background: var(--bg); }
+#start-race { padding: 14px; font-size: 18px; }
+.wait-text { font-family: var(--sans); font-size: 15px; }
+.wait-text b { font-family: var(--mono); color: var(--accent); font-size: 18px; }
+#lobby .flappy-btn { border: 2px dashed var(--line); font-size: 14px; }
+/* public lobby: vote + ready */
+.pc-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: end; }
+.vote-row { display: flex; gap: 8px; }
+.vote-row .sq { flex: 1; display: flex; justify-content: center; align-items: baseline; gap: 6px; }
+.vote-row .vc { font-family: var(--mono); font-size: 13px; }
+.vote-row .vc:not(:empty)::before { content: "· "; opacity: .6; }
+.vote-row .vote.easy:hover, .vote-row .vote.easy.selected { background: var(--easy); border-color: var(--easy); color: #fff; }
+.vote-row .vote.medium:hover, .vote-row .vote.medium.selected { background: var(--medium); border-color: var(--medium); color: #fff; }
+.vote-row .vote.hard:hover, .vote-row .vote.hard.selected { background: var(--hard); border-color: var(--hard); color: #fff; }
+.ready-btn { width: 100%; padding: 14px; font-size: 20px; }
+.ready-btn.on { background: var(--easy); border-color: var(--easy); }
+.ready-text { margin: 8px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+.ready-text b { font-family: var(--mono); color: var(--text); }
+@media (max-width: 640px) { .pc-row { grid-template-columns: 1fr; } }
+
+/* race HUD + side panel */
+.hud { border-bottom: 2px solid var(--ink-line); }
+.hud .logo.tiny { font-size: 20px; }
+.route span { font-family: var(--mono); letter-spacing: .1em; }
+.route strong { font-family: var(--display); font-weight: 900; font-stretch: 78%; text-transform: uppercase; font-size: 22px; color: var(--accent); }
+.stat span { font-family: var(--mono); }
+.stat small { font-family: var(--mono); }
+.panel-section { border: 2px solid var(--ink-line); }
+.panel-section h3, .target-card h3 { font-family: var(--mono); letter-spacing: .1em; }
+.target-card .tname { font-family: var(--display); font-weight: 900; font-stretch: 78%; text-transform: uppercase; font-size: 24px; }
+.target-card img { border-radius: 0; }
+.article-wrap { border: 2px solid var(--ink-line); }
+.racers-strip .chip { border-radius: 0; }
+
+/* countdown */
+.cd-diff { font-family: var(--mono); color: var(--accent); }
+.cd-route { font-family: var(--display); font-weight: 900; font-stretch: 78%; text-transform: uppercase; font-size: 30px; }
+.cd-route b { color: var(--accent); }
+.cd-num { font-family: var(--brand); font-weight: 400; font-size: 140px; }
+
+/* results */
+.modal { background: var(--surface); }
+.res-kicker { font-family: var(--mono); letter-spacing: .1em; }
+.res-head h2 { font-size: 40px; line-height: 1; }
+.big-stats > div { border: 2px solid var(--ink-line); background: var(--bg); }
+.big-stats b { font-size: 30px; }
+.big-stats small { font-family: var(--mono); }
+.podium .avatar { border-radius: 0; }
+.pod-name { font-family: var(--display); font-weight: 900; font-stretch: 80%; text-transform: uppercase; }
+.pod-score { font-family: var(--mono); }
+.pod-block { border-radius: 0; background: var(--c); font-family: var(--brand); font-weight: 400; }
+.lane { border: 2px solid var(--line); border-left: 6px solid var(--c); background: var(--bg); }
+.lane-name { font-family: var(--display); font-weight: 900; font-stretch: 80%; text-transform: uppercase; font-size: 17px; }
+.lane-stats { font-family: var(--mono); font-size: 12px; }
+.node { border-radius: 0; font-family: var(--sans); border-width: 1.5px; }
+.node.start { background: var(--text); color: var(--bg); }
+.edge { background: var(--accent); }
+.edge::after { border-left-color: var(--accent); }
+.modal-actions .btn { padding: 12px; font-size: 16px; }
+.next-in { font-family: var(--mono); color: var(--accent); }
+.daily-facts, .histo .hfill { border-radius: 0; }
+.hbar.mine .hfill { background: var(--accent); box-shadow: none; }
+.you { border-radius: 0; background: var(--accent); color: #fff; }
+.flappy-box, .spec-box { border-radius: 0; border: 2px solid var(--ink-line); }
+#flappy-canvas { border-radius: 0; }
+.mg-title { font-family: var(--brand); font-weight: 400; font-size: 20px; letter-spacing: .02em; }
+.flappy-box { background: var(--surface); }
+.flappy-btn:disabled { opacity: .55; cursor: not-allowed; }

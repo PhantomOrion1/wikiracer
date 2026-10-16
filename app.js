@@ -12,7 +12,7 @@
       firstDelayMs: [12000, 20000], secondDelayMs: [6000, 14000], leaveChance: 0.2,
       busyRoomsHalf: 3, busyRoomsOff: 6,
     },
-    lobby: { soloWaitMs: 45000, groupWaitMs: 20000, minAfterJoinMs: 10000 },
+    lobby: { soloWaitMs: 75000, groupWaitMs: 60000, readyGoMs: 5000, minAfterJoinMs: 8000, resultsMs: 30000 },
     peer: null,
     analytics: { posthogKey: '', posthogHost: 'https://us.i.posthog.com' },
   };
@@ -475,7 +475,7 @@
     stopTimer();
     closeResults();
     closeSpectate();
-    window.Flappy.close();
+    window.MiniGame.close();
     markPlayed(round.start, round.end);
     track('race_start', {
       mode, difficulty: round.difficulty, start: round.start, end: round.end,
@@ -874,7 +874,7 @@
     if (g.mode === 'duel') {
       if (net.isHost && !net.isPublic) add(net.phase === 'results' ? 'Next round' : 'End round → lobby', 'primary', hostBackToLobby);
       else if (!net.isPublic) actions.insertAdjacentHTML('beforeend', `<p class="muted center full">${net.phase === 'results' ? 'Waiting for the host to start the next round…' : 'Waiting for everyone to finish…'}</p>`);
-      add('🐦 Flappy Wiki', '', () => window.Flappy.open());
+      if (game.finished) add('🏎 Lane Rush', '', () => { if (miniGameAllowed()) window.MiniGame.open(); });
       if (net.isPublic) add('⏭ Next room', '', () => { quickMatch(); });
       add('Leave', 'ghost', () => { leaveRoomAndGoHome(); });
     } else {
@@ -1350,7 +1350,7 @@
 
   const newPlayer = (name, color) => ({
     name, color, status: 'lobby', clicks: 0, penalties: 0, tabLeaves: 0, title: '', time: 0, path: [],
-    wins: 0, connected: true, inRound: false, verify: null, flagReason: '',
+    wins: 0, connected: true, inRound: false, verify: null, flagReason: '', ready: false, vote: null,
   });
   const activeCount = () => Object.values(net.players).filter((p) => p.connected).length;
   const nextColor = () => {
@@ -1541,6 +1541,16 @@
         relayView(id, { type: 'view', id, t: normTitle(str(msg.t, 300)), b: int(msg.b, 0, 1e5), f: frac(msg.f), p: frac(msg.p), h: int(msg.h, -1, 1e5) });
         return;
       }
+      case 'ready':
+        if (!p || net.phase !== 'lobby' || !net.isPublic) return;
+        p.ready = !!msg.ready;
+        if (p.ready && !isBot(id)) botsFollowReady();
+        scheduleAutoStart();
+        break;
+      case 'vote':
+        if (!p || net.phase !== 'lobby' || !net.isPublic) return;
+        p.vote = ['easy', 'medium', 'hard'].includes(msg.vote) ? msg.vote : null;
+        break;
       case 'progress':
         if (p && p.status === 'playing') {
           p.clicks = int(msg.clicks, 0, 999);
@@ -1607,8 +1617,8 @@
     const top = ranked()[0];
     if (top && validFinish(top)) net.players[top.id].wins++;
     if (net.isPublic) {
-      net.nextAt = Date.now() + 15000;
-      net.timers.next = setTimeout(hostBackToLobby, 15000);
+      net.nextAt = Date.now() + CONFIG.lobby.resultsMs;
+      net.timers.next = setTimeout(hostBackToLobby, CONFIG.lobby.resultsMs);
     }
   }
 
@@ -1639,21 +1649,28 @@
     renderNet();
   }
 
-  // Public rooms start themselves. A lone real player (with fill-ins) waits longer so anyone else
-  // searching right now lands in this room first; once 2+ real people are in, it starts sooner.
-  // Whenever someone joins, the countdown never has less than minAfterJoinMs left.
+  // Public rooms start when most of the room is ready (short countdown), or after a longer fallback so
+  // one idle player can't hold everyone up. Fill-ins only ready up after a real person has.
+  // Whenever someone joins, the clock never has less than minAfterJoinMs left.
+  const readyCount = () => Object.values(net.players).filter((p) => p.connected && p.ready).length;
   function scheduleAutoStart(joined = false) {
     if (!net.isHost || !net.isPublic) return;
     clearTimeout(net.timers.auto);
-    if (net.phase !== 'lobby' || activeCount() < 2) {
+    const total = activeCount();
+    if (net.phase !== 'lobby' || total < 2) {
       net.autoStartAt = 0;
+      net.fallbackAt = 0;
       return;
     }
     const cfg = CONFIG.lobby;
-    const delay = activeCount() >= MAX_PLAYERS ? 5000 : humanCount() >= 2 ? cfg.groupWaitMs : cfg.soloWaitMs;
-    let at = Date.now() + delay;
-    if (net.autoStartAt) at = Math.min(at, net.autoStartAt);
+    if (!net.fallbackAt) net.fallbackAt = Date.now() + (humanCount() >= 2 ? cfg.groupWaitMs : cfg.soloWaitMs);
+    if (humanCount() >= 2) net.fallbackAt = Math.min(net.fallbackAt, Date.now() + cfg.groupWaitMs);
+    const majority = readyCount() * 2 > total;
+    let at = net.fallbackAt;
+    if (total >= MAX_PLAYERS) at = Math.min(at, Date.now() + cfg.readyGoMs * 2);
+    if (majority) at = Math.min(at, net.readyGo && net.autoStartAt ? net.autoStartAt : Date.now() + cfg.readyGoMs);
     if (joined) at = Math.max(at, Date.now() + cfg.minAfterJoinMs);
+    net.readyGo = majority;
     net.autoStartAt = at;
     net.timers.auto = setTimeout(() => {
       net.autoStartAt = 0;
@@ -1669,7 +1686,7 @@
     btn.disabled = true;
     btn.textContent = 'Picking articles…';
     try {
-      if (net.isPublic) net.diff = ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)];
+      if (net.isPublic) net.diff = tallyVotes();
       const pair = await pickPair(net.diff, [$('#room-start').value, $('#room-end').value]);
       net.roundNum++;
       const round = { ...pair, difficulty: net.diff, n: net.roundNum, limit: limitFor(net.diff) };
@@ -1723,9 +1740,15 @@
     net.nextAt = 0;
     for (const [id, p] of Object.entries(net.players)) {
       if (!p.connected) delete net.players[id];
-      else Object.assign(p, { status: 'lobby', inRound: false });
+      else Object.assign(p, { status: 'lobby', inRound: false, ready: false, vote: null });
     }
-    if (net.isPublic) botsAfterRound();
+    net.fallbackAt = 0;
+    net.readyGo = false;
+    for (const b of net.bots.values()) { clearTimeout(b.readyTimer); b.readyTimer = null; }
+    if (net.isPublic) {
+      botsAfterRound();
+      for (const id of net.bots.keys()) botMaybeVote(id);
+    }
     goToLobbyScreen();
     scheduleAutoStart();
     botPolicy();
@@ -1774,12 +1797,49 @@
   }
   const recentBotNames = [];
 
+  function botsFollowReady() {
+    for (const [id, b] of net.bots) {
+      const p = net.players[id];
+      if (!p || p.ready || b.readyTimer) continue;
+      b.readyTimer = setTimeout(() => {
+        b.readyTimer = null;
+        if (net.phase !== 'lobby' || !net.players[id]) return;
+        net.players[id].ready = true;
+        scheduleAutoStart();
+        broadcast();
+      }, rand(900, 3800));
+    }
+  }
+
+  // Fill-ins vote about half the time, usually siding with what real people picked.
+  function botMaybeVote(id) {
+    if (Math.random() > 0.5) return;
+    setTimeout(() => {
+      const p = net.players[id];
+      if (!p || net.phase !== 'lobby' || p.vote) return;
+      const human = Object.entries(net.players).find(([pid, x]) => !isBot(pid) && x.vote);
+      p.vote = human && Math.random() < 0.65 ? human[1].vote : pickWeighted([{ v: 'easy', w: 0.3 }, { v: 'medium', w: 0.45 }, { v: 'hard', w: 0.25 }]).v;
+      broadcast();
+    }, rand(2500, 9000));
+  }
+
+  function tallyVotes() {
+    const counts = { easy: 0, medium: 0, hard: 0 };
+    for (const p of Object.values(net.players)) if (p.connected && p.vote) counts[p.vote]++;
+    const top = Math.max(...Object.values(counts));
+    if (!top) return ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)];
+    const tied = Object.keys(counts).filter((k) => counts[k] === top);
+    return tied[Math.floor(Math.random() * tied.length)];
+  }
+
   function addBot() {
     if (!net.isHost || !net.isPublic || net.phase !== 'lobby' || activeCount() >= MAX_PLAYERS) return;
     const id = crypto.randomUUID();
     net.players[id] = newPlayer(botName(), nextColor());
     net.bots.set(id, { tier: pickWeighted(BOT_TIERS), timers: [], view: { b: 0, p: 0 } });
     toast(`${net.players[id].name} joined`);
+    botMaybeVote(id);
+    if (Object.entries(net.players).some(([pid, x]) => !isBot(pid) && x.ready)) botsFollowReady();
     scheduleAutoStart(true);
     broadcast();
   }
@@ -2250,8 +2310,8 @@
       }, Math.max(1000, n.roundStartedAt + round.limit + GRACE_MS - Date.now()));
     }
     if (n.phase === 'results' && n.isPublic) {
-      n.nextAt = Date.now() + 15000;
-      n.timers.next = setTimeout(hostBackToLobby, 15000);
+      n.nextAt = Date.now() + CONFIG.lobby.resultsMs;
+      n.timers.next = setTimeout(hostBackToLobby, CONFIG.lobby.resultsMs);
     }
     // Anyone who hasn't reconnected after 30s is gone.
     n.timers.rejoin = setTimeout(() => {
@@ -2470,7 +2530,7 @@
     fetchInfo(round.end).catch(() => {});
     closeResults();
     closeSpectate();
-    window.Flappy.close();
+    window.MiniGame.close();
     const overlay = $('#countdown');
     $('#cd-diff').textContent = kicker || `${DIFF_LABEL[round.difficulty] || ''} · ${fmtTime(round.limit)} on the clock`;
     $('#cd-route').innerHTML = `${esc(round.start)} → <b>${esc(round.end)}</b>`;
@@ -2519,7 +2579,7 @@
     game = null;
     closeResults();
     closeSpectate();
-    window.Flappy.close();
+    window.MiniGame.close();
     $('#countdown').classList.add('hidden');
     show('home');
   }
@@ -2551,14 +2611,33 @@
     $('#skip-room').classList.toggle('hidden', !pub || net.matching);
     $('#host-controls').classList.toggle('hidden', !net.isHost || pub);
     $('#guest-wait').classList.toggle('hidden', net.isHost && !pub);
+    const showPublic = pub && !net.matching && net.phase === 'lobby' && !!net.players[net.myId];
+    $('#public-controls').classList.toggle('hidden', !showPublic);
+    if (showPublic) {
+      const me = net.players[net.myId];
+      const counts = { easy: 0, medium: 0, hard: 0 };
+      for (const p of Object.values(net.players)) if (p.connected && p.vote) counts[p.vote]++;
+      $$('#vote-row [data-vote]').forEach((b) => {
+        const v = b.dataset.vote;
+        b.classList.toggle('selected', me.vote === v);
+        b.querySelector('.vc').textContent = counts[v] ? counts[v] : '';
+      });
+      const total = activeCount();
+      const readyN = Object.values(net.players).filter((p) => p.connected && p.ready).length;
+      const need = Math.floor(total / 2) + 1;
+      $('#ready-btn').textContent = me.ready ? 'Ready ✓' : "I'm ready";
+      $('#ready-btn').classList.toggle('on', !!me.ready);
+      $('#ready-text').innerHTML = total < 2 ? 'Waiting for someone to join…'
+        : `<b>${readyN}/${total}</b> ready · starts when ${need} are`;
+    }
 
     const count = activeCount();
     let wait;
     if (net.matching) wait = '🔎 Searching for an open room…';
-    else if (net.phase === 'playing') wait = "A race is in progress. You'll be in the next one. Spectate someone or play Flappy meanwhile.";
+    else if (net.phase === 'playing') wait = "A race is in progress. You'll be in the next one. Spectate someone or play Lane Rush meanwhile.";
     else if (net.phase === 'results') wait = 'Round just finished. Next one coming up…';
     else if (pub && count < 2) wait = 'Waiting for at least one more racer to join…';
-    else if (pub && net.autoStartAt) wait = `Race starts in <b data-autostart>${Math.ceil((net.autoStartAt - Date.now()) / 1000)}</b>s · random difficulty · others can still join`;
+    else if (pub && net.autoStartAt) wait = `Race starts in <b data-autostart>${Math.ceil((net.autoStartAt - Date.now()) / 1000)}</b>s · others can still join`;
     else wait = 'Waiting for the host to start the race…';
     $('#wait-text').innerHTML = wait;
 
@@ -2575,6 +2654,7 @@
         ${avatar(pl)}<span class="pname">${esc(p.name)}</span>
         ${id === 'host' ? `<span class="badge host">${pub ? 'room host' : 'host'}</span>` : ''}
         ${p.wins ? `<span class="wins">🏆 ${p.wins}</span>` : ''}
+        ${pub && net.phase === 'lobby' && p.ready ? '<span class="badge ready">Ready</span>' : ''}
         ${meta ? `<span class="pmeta">${esc(meta)}</span>` : ''}
         ${canSpectate(pl) ? `<button class="btn tiny" data-spectate="${esc(id)}">👁 Spectate</button>` : ''}
         ${net.isHost && !pub && id !== 'host' ? `<button class="btn tiny ghost" data-kick="${esc(id)}" title="Remove player">✕</button>` : ''}
@@ -2616,6 +2696,27 @@
     $$('[data-next-daily]').forEach((el) => { el.textContent = nextDailyIn(); });
     const n = $('[data-next-in]');
     if (n && net.nextAt) n.textContent = `Next round in ${Math.max(0, Math.ceil((net.nextAt - Date.now()) / 1000))}s`;
+  }, 500);
+
+  // ---------- mini-game gating ----------
+  // Lane Rush is for waiting: not during a 3-2-1 countdown, not in the last seconds before a public
+  // room auto-starts, and not while you're racing.
+  function miniGameAllowed() {
+    if (!$('#countdown').classList.contains('hidden')) return false;
+    if (game && !game.finished) return false;
+    if (net.isPublic && net.phase === 'lobby' && net.autoStartAt && net.autoStartAt - Date.now() < 10000) return false;
+    return true;
+  }
+  function renderMiniGameButton() {
+    const b = $('#lobby-flappy-btn');
+    if (!b) return;
+    const ok = miniGameAllowed();
+    b.disabled = !ok;
+    b.textContent = !ok ? 'Race starting… no time for Lane Rush' : window.MiniGame.isOpen() && window.MiniGame.isInline() ? 'Hide Lane Rush' : '🏎 Play Lane Rush while you wait';
+  }
+  setInterval(() => {
+    if (window.MiniGame.isOpen() && !miniGameAllowed()) window.MiniGame.close();
+    renderMiniGameButton();
   }, 500);
 
   // ---------- home page motion ----------
@@ -2740,6 +2841,14 @@
       $('#room-custom').classList.toggle('hidden', net.diff !== 'custom');
     }));
     $('#start-race').addEventListener('click', hostStartRace);
+    $('#ready-btn').addEventListener('click', () => {
+      const me = net.players[net.myId];
+      if (me) net.send({ type: 'ready', ready: !me.ready });
+    });
+    $$('#vote-row [data-vote]').forEach((b) => b.addEventListener('click', () => {
+      const me = net.players[net.myId];
+      if (me) net.send({ type: 'vote', vote: me.vote === b.dataset.vote ? null : b.dataset.vote });
+    }));
 
     const article = $('#article');
     article.addEventListener('click', onArticleClick);
@@ -2758,11 +2867,12 @@
       if (s) openSpectate(s.dataset.spectate);
       const k = e.target.closest('[data-kick]');
       if (k) kick(k.dataset.kick);
-      if (e.target.closest('[data-flappy]')) window.Flappy.open();
+      if (e.target.closest('[data-flappy]') && miniGameAllowed()) window.MiniGame.open();
       if (e.target.closest('#lobby-flappy-btn')) {
-        if (window.Flappy.isOpen() && window.Flappy.isInline()) window.Flappy.close();
-        else { window.Flappy.open($('#lobby-flappy')); $('#lobby-flappy').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-        $('#lobby-flappy-btn').textContent = window.Flappy.isOpen() ? 'Hide Flappy Wiki' : '🐦 Play Flappy Wiki while you wait';
+        if (!miniGameAllowed()) return;
+        if (window.MiniGame.isOpen() && window.MiniGame.isInline()) window.MiniGame.close();
+        else { window.MiniGame.open($('#lobby-flappy')); $('#lobby-flappy').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        renderMiniGameButton();
       }
     });
     document.addEventListener('keydown', (e) => {
@@ -2840,7 +2950,7 @@
       played_before: playedList().length > 0,
     });
   }
-  addEventListener('flappy-score', (e) => track('flappy_game', { score: e.detail }));
-  addEventListener('flappy-close', () => { const b = $('#lobby-flappy-btn'); if (b) b.textContent = '🐦 Play Flappy Wiki while you wait'; });
+  addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
+  addEventListener('minigame-close', () => renderMiniGameButton());
   if (/[?&]debug\b/.test(location.search)) window.__wr = { planRoute, shortestRoute, pickPair };
 })();

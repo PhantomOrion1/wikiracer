@@ -13,7 +13,7 @@ Get from one Wikipedia article to another using only the links on the page. Fewe
 - **Time limits**: 2:30 easy, 5:00 medium, 10:00 hard.
 - **Quick match**: join a random public race with strangers (Omegle-style). It starts automatically once 2+ racers are in, with up to 8 per room. Hit "Next room" to skip.
 - **Spectate**: once you're finished or out, watch any racer's screen live.
-- **Flappy Wiki**: a mini-game to play while you wait.
+- **Lane Rush**: a quick racing mini-game (dodge traffic, grab flags) to play while you wait. Locked during countdowns and while you race.
 - **Route comparison**: podium plus everyone's route side by side, with shared articles highlighted.
 - **Anti-cheat**: leaving the tab costs +1 click after one warning. The host re-checks every route against Wikipedia's link data, and fake routes get flagged. Times and click counts are measured by the host, not trusted from players. Racers can't see each other's pages until they finish.
 - **Security**: strict Content-Security-Policy, Subresource Integrity on the CDN script, Wikipedia HTML stripped of scripts and event handlers, and peer messages validated and rate-limited.
@@ -59,7 +59,7 @@ Then open http://localhost:8000.
 
 - `index.html`: screens (home, lobby, game, results)
 - `app.js`: Wikipedia fetching and link handling, game logic, and duel networking
-- `flappy.js`: the Flappy Wiki mini-game
+- `minigame.js`: the Lane Rush mini-game
 - `pairs.js`: curated start → target pairs per difficulty
 - `styles.css`: styles
 
