@@ -4,10 +4,20 @@ Get from one Wikipedia article to another using only the links on the page. Fewe
 
 **Play:** https://phantomorion1.github.io/wikirace/
 
+## Features
+
+- **Time limits**: 2:30 easy, 5:00 medium, 10:00 hard.
+- **Quick match**: join a random public race with strangers (Omegle-style). It starts automatically once 2+ racers are in, with up to 5 per room. Hit "Next room" to skip.
+- **Spectate**: once you're finished or out, watch any racer's screen live.
+- **Flappy Wiki**: a mini-game to play while you wait.
+- **Route comparison**: podium plus everyone's route side by side, with shared articles highlighted.
+- **Anti-cheat**: leaving the tab costs +1 click after one warning. The host re-checks every route against Wikipedia's link data, and fake routes get flagged. Times and click counts are measured by the host, not trusted from players. Racers can't see each other's pages until they finish.
+- **Security**: strict Content-Security-Policy, Subresource Integrity on the CDN script, Wikipedia HTML stripped of scripts and event handlers, and peer messages validated and rate-limited.
+
 ## Modes
 
 - **Solo**: Easy / Medium / Hard curated pairs, random articles, or your own custom pair. Personal bests are saved in your browser.
-- **Duel**: create a room, send the invite link, and up to 8 people race the same pair live. You see everyone's click count while racing, and full routes once you finish. Wins are tallied across rounds.
+- **Duel**: create a room, send the invite link, and up to 5 people race the same pair live. You see everyone's click count while racing, and full routes once you finish. Wins are tallied across rounds.
 - **Challenge links**: after a solo race, "Challenge a friend" copies a link with your start, target and score so someone else can try to beat it.
 
 ## How it works
@@ -28,6 +38,7 @@ Then open http://localhost:8000.
 
 - `index.html`: screens (home, lobby, game, results)
 - `app.js`: Wikipedia fetching and link handling, game logic, and duel networking
+- `flappy.js`: the Flappy Wiki mini-game
 - `pairs.js`: curated start → target pairs per difficulty
 - `styles.css`: styles
 

@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src https://*.wikipedia.org https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Wikirace</title>
-  <meta name="description" content="Race through Wikipedia from one article to another in as few clicks as possible. Play solo or duel your friends live.">
+  <meta name="description" content="Race through Wikipedia from one article to another in as few clicks as possible. Play solo, quick match strangers, or duel your friends live.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,14 +32,14 @@
       <div class="cards">
         <div class="card">
           <h2>Solo</h2>
-          <p class="muted">Pick a difficulty and beat your personal best.</p>
+          <p class="muted">Beat the clock and your personal best.</p>
           <div class="diff-buttons">
-            <button class="btn diff easy" data-solo="easy">Easy</button>
-            <button class="btn diff medium" data-solo="medium">Medium</button>
-            <button class="btn diff hard" data-solo="hard">Hard</button>
+            <button class="btn diff easy" data-solo="easy">Easy<small>2:30</small></button>
+            <button class="btn diff medium" data-solo="medium">Medium<small>5:00</small></button>
+            <button class="btn diff hard" data-solo="hard">Hard<small>10:00</small></button>
           </div>
           <div class="diff-buttons secondary">
-            <button class="btn ghost" data-solo="random">🎲 Random articles</button>
+            <button class="btn ghost" data-solo="random">🎲 Random</button>
             <button class="btn ghost" id="solo-custom-toggle">✏️ Custom</button>
           </div>
           <form id="solo-custom" class="custom-form hidden">
@@ -48,9 +50,11 @@
         </div>
 
         <div class="card">
-          <h2>Duel</h2>
-          <p class="muted">Race friends live on the same start and target. Up to 8 players.</p>
-          <button class="btn primary wide" id="create-room">Create a room</button>
+          <h2>Multiplayer</h2>
+          <p class="muted">Race up to 5 people live on the same start and target.</p>
+          <button class="btn primary wide big" id="quick-match">⚡ Quick match<small>Join a random public race</small></button>
+          <div class="or"><span>or with friends</span></div>
+          <button class="btn wide" id="create-room">Create a private room</button>
           <form id="join-form" class="join-form">
             <input id="join-code" maxlength="5" placeholder="Room code" autocomplete="off" spellcheck="false">
             <button class="btn" type="submit">Join</button>
@@ -61,14 +65,15 @@
       <details class="card rules">
         <summary>How to play</summary>
         <ul>
-          <li>You start on one article and need to reach the target article.</li>
-          <li>Only links inside the article count — no search bar, no external links, no category or file pages.</li>
-          <li>Every page change is one click, including the in-game <b>Back</b> button.</li>
-          <li>Lowest clicks wins. Ties are broken by time.</li>
-          <li>In a duel everyone gets the same pair and you can watch each other's progress live.</li>
+          <li>Start on one article and reach the target using only links inside the article. Search, external links, and category or file pages don't work.</li>
+          <li>Every page change is one click, including the in-game <b>Back</b> button. Fewest clicks wins, and ties go to the fastest time.</li>
+          <li>Time limits: <b>2:30</b> easy, <b>5:00</b> medium, <b>10:00</b> hard.</li>
+          <li><b>Stay on the tab.</b> The first time you leave you get a warning. After that, every time you leave adds a +1 click penalty.</li>
+          <li>In multiplayer the host checks every route against Wikipedia. Routes with fake clicks are flagged.</li>
+          <li>Finished early? Spectate the others live, or play Flappy Wiki while you wait.</li>
         </ul>
       </details>
-      <p class="foot muted">Articles load live from <a href="https://en.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a> (CC BY-SA).</p>
+      <p class="foot muted">Articles load live from <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer">Wikipedia</a> (CC BY-SA).</p>
     </div>
   </section>
 
@@ -82,28 +87,29 @@
       <div class="card">
         <div class="room-row">
           <div>
-            <div class="muted label">Room code</div>
+            <div class="muted label" id="room-label">Room code</div>
             <div class="room-code" id="room-code">·····</div>
           </div>
-          <div class="invite">
-            <input id="invite-link" readonly>
+          <div class="invite" id="invite">
+            <input id="invite-link" readonly aria-label="Invite link">
             <button class="btn" id="copy-invite">Copy invite link</button>
           </div>
+          <button class="btn hidden" id="skip-room">⏭ Next room</button>
         </div>
         <p class="muted" id="lobby-status">Connecting…</p>
       </div>
 
       <div class="card">
-        <h2>Players</h2>
+        <h2>Players <span class="muted" id="player-count"></span></h2>
         <ul id="lobby-players" class="player-list"></ul>
       </div>
 
       <div class="card" id="host-controls">
         <h2>Next race</h2>
         <div class="diff-buttons" id="room-diff">
-          <button class="btn diff easy selected" data-diff="easy">Easy</button>
-          <button class="btn diff medium" data-diff="medium">Medium</button>
-          <button class="btn diff hard" data-diff="hard">Hard</button>
+          <button class="btn diff easy selected" data-diff="easy">Easy<small>2:30</small></button>
+          <button class="btn diff medium" data-diff="medium">Medium<small>5:00</small></button>
+          <button class="btn diff hard" data-diff="hard">Hard<small>10:00</small></button>
           <button class="btn ghost" data-diff="random">🎲 Random</button>
           <button class="btn ghost" data-diff="custom">✏️ Custom</button>
         </div>
@@ -114,8 +120,9 @@
         <button class="btn primary wide" id="start-race">Start race</button>
       </div>
       <div class="card hidden" id="guest-wait">
-        <p class="muted center">Waiting for the host to start the race…</p>
+        <p class="center wait-text" id="wait-text">Waiting for the host to start the race…</p>
       </div>
+      <button class="btn wide ghost flappy-btn" data-flappy>🐦 Play Flappy Wiki while you wait</button>
     </div>
   </section>
 
@@ -130,8 +137,8 @@
         </div>
       </div>
       <div class="hud-stats">
-        <div class="stat"><span id="hud-clicks">0</span><small>clicks</small></div>
-        <div class="stat"><span id="hud-time">0:00</span><small>time</small></div>
+        <div class="stat"><span><span id="hud-clicks">0</span><sup id="hud-pen" class="pen hidden"></sup></span><small>clicks</small></div>
+        <div class="stat" id="stat-time"><span id="hud-time">0:00</span><small>left</small></div>
       </div>
       <div class="hud-actions">
         <button class="btn small" id="btn-back" title="Go back (costs a click)">← Back</button>
@@ -163,6 +170,7 @@
   <!-- COUNTDOWN -->
   <div id="countdown" class="overlay hidden">
     <div class="countdown-box">
+      <div class="cd-diff" id="cd-diff"></div>
       <div class="cd-route" id="cd-route"></div>
       <div class="cd-num" id="cd-num">3</div>
     </div>
@@ -170,19 +178,50 @@
 
   <!-- RESULTS -->
   <div id="results" class="overlay hidden">
-    <div class="modal">
+    <div class="modal wide">
+      <div id="confetti" class="confetti"></div>
       <div id="results-body"></div>
       <div class="modal-actions" id="results-actions"></div>
     </div>
   </div>
 
-  <div id="toast" class="toast"></div>
+  <!-- SPECTATE -->
+  <div id="spectate" class="overlay spectate hidden">
+    <div class="spec-box">
+      <header class="spec-head">
+        <span class="live-dot"></span>
+        <div class="spec-who" id="spec-who"></div>
+        <button class="btn small" id="spec-close">✕ Close</button>
+      </header>
+      <div class="spec-path" id="spec-path"></div>
+      <div class="spec-body">
+        <h1 class="article-title" id="spec-title"></h1>
+        <article class="article readonly" id="spec-article"></article>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLAPPY -->
+  <div id="flappy" class="overlay flappy hidden">
+    <div class="flappy-box">
+      <header class="flappy-head">
+        <b>🐦 Flappy Wiki</b>
+        <span class="muted" id="flappy-best"></span>
+        <button class="btn small" id="flappy-close">✕</button>
+      </header>
+      <canvas id="flappy-canvas" width="360" height="520"></canvas>
+      <p class="muted center small-print">Tap, click or press Space to flap</p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <datalist id="suggest-start"></datalist>
   <datalist id="suggest-end"></datalist>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="pairs.js"></script>
+  <script src="flappy.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
