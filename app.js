@@ -13,6 +13,7 @@
       busyRoomsHalf: 3, busyRoomsOff: 6,
     },
     peer: null,
+    analytics: { posthogKey: '', posthogHost: 'https://us.i.posthog.com' },
   };
   async function loadConfig() {
     try {
@@ -22,16 +23,62 @@
       if (typeof j.publicSlots === 'number') CONFIG.publicSlots = Math.max(1, Math.min(30, j.publicSlots));
       if (j.bots && typeof j.bots === 'object') Object.assign(CONFIG.bots, j.bots);
       if (j.peer && typeof j.peer === 'object') CONFIG.peer = j.peer;
+      if (j.analytics && typeof j.analytics === 'object') Object.assign(CONFIG.analytics, j.analytics);
+    } catch {}
+    flushAnalytics();
+  }
+
+  // ---------- analytics ----------
+  // Anonymous product analytics sent straight to PostHog's capture API (no third-party script).
+  // Stays off until config.json has analytics.posthogKey. Honours Do Not Track. Never sends names.
+  const APP_VERSION = '16';
+  const SESSION_ID = crypto.randomUUID();
+  const aQueue = [];
+  let aTimer = null;
+  function anonId() {
+    let id = store.get('wr-aid');
+    if (!id) { id = crypto.randomUUID(); store.set('wr-aid', id); }
+    return id;
+  }
+  function track(event, props = {}) {
+    try {
+      if (navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+      aQueue.push({
+        event,
+        timestamp: new Date().toISOString(),
+        properties: {
+          ...props, distinct_id: anonId(), $session_id: SESSION_ID, app_version: APP_VERSION,
+          $current_url: location.origin + location.pathname, mobile: matchMedia('(max-width: 760px)').matches,
+        },
+      });
+      if (aQueue.length > 300) aQueue.splice(0, aQueue.length - 300);
+      clearTimeout(aTimer);
+      aTimer = setTimeout(flushAnalytics, 4000);
     } catch {}
   }
+  function flushAnalytics() {
+    const key = CONFIG.analytics.posthogKey;
+    if (!key || !aQueue.length) return;
+    const batch = aQueue.splice(0, aQueue.length).map((e) => ({ ...e, distinct_id: e.properties.distinct_id }));
+    try {
+      fetch(`${CONFIG.analytics.posthogHost.replace(/\/$/, '')}/batch/`, {
+        method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: key, batch }),
+      }).catch(() => {});
+    } catch {}
+  }
+  addEventListener('pagehide', flushAnalytics);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushAnalytics(); });
+  addEventListener('error', (e) => track('client_error', { message: String(e.message || '').slice(0, 200), source: String(e.filename || '').split('/').pop(), line: e.lineno }));
+  addEventListener('unhandledrejection', (e) => track('client_error', { message: String((e.reason && e.reason.message) || e.reason || '').slice(0, 200), kind: 'promise' }));
   const peerOpts = () => ({ debug: 0, ...(CONFIG.peer || {}) });
   const publicPeerId = (i) => `${PEER_PREFIX}public-${i}`;
-  const MAX_PLAYERS = 5;
+  const MAX_PLAYERS = 8;
   const COUNTDOWN_MS = 3300;
   const GRACE_MS = 4000;
   const LIMITS = { easy: 150e3, medium: 300e3, hard: 600e3, random: 600e3, custom: 300e3, challenge: 300e3 };
   const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', random: 'Random', custom: 'Custom', challenge: 'Challenge', daily: 'Daily' };
-  const COLORS = ['#3355ff', '#f76707', '#2f9e44', '#d6336c', '#7048e8'];
+  const COLORS = ['#3355ff', '#f76707', '#2f9e44', '#d6336c', '#7048e8', '#0c8599', '#e8a400', '#8a5a44'];
   // Namespaces / interwiki prefixes that don't count as articles.
   const BLOCKED_NS = new Set([
     'file', 'image', 'media', 'category', 'help', 'special', 'wikipedia', 'wp', 'project',
@@ -401,6 +448,11 @@
     closeSpectate();
     window.Flappy.close();
     markPlayed(round.start, round.end);
+    track('race_start', {
+      mode, difficulty: round.difficulty, start: round.start, end: round.end,
+      room_players: mode === 'duel' ? Object.values(net.players).filter((p) => p.inRound).length : 1,
+      public_room: mode === 'duel' ? !!net.isPublic : false,
+    });
     game = {
       start: round.start, end: round.end, difficulty: round.difficulty, limit: round.limit || limitFor(round.difficulty),
       mode, ...extra,
@@ -462,6 +514,7 @@
     try {
       art = await fetchArticle(title);
     } catch (e) {
+      track('issue', { kind: 'article_load', title: String(title).slice(0, 120), message: String(e.message || '').slice(0, 160) });
       toast(e.message || "Couldn't load that article");
       if (!g.current && game === g) {
         stopTimer();
@@ -572,11 +625,17 @@
         path: g.path, penalties: g.penalties, tabLeaves: g.tabLeaves,
       });
     }
+    track('race_end', {
+      mode: g.mode, difficulty: g.difficulty, result, clicks: g.clicks, penalties: g.penalties, score: score(g),
+      tab_leaves: g.tabLeaves, time_ms: g.elapsed, limit_ms: g.limit, start: g.start, end: g.end,
+      back_clicks: g.path.filter((x) => x.back).length,
+    });
     if (result === 'timeout') toast("⏰ Time's up!", 3000);
     renderPath();
     renderRacers();
     if (g.mode === 'daily') {
-      saveDaily(g);
+      const rec = saveDaily(g);
+      track('daily_end', { n: g.dailyN, result, score: rec.score, time_ms: rec.time, beat_pct: Math.round(dailyBeat(dailyStats(g.dailyKey), rec) * 100) });
       showDailyResults(g.dailyKey);
       return;
     }
@@ -794,6 +853,7 @@
     const name = $('#name-input').value.trim();
     if (name) params.set('by', cleanName(name));
     const url = `${baseUrl()}?${params}`;
+    track('share', { kind: 'challenge' });
     const text = `🏁 I got from ${g.start} to ${g.end} in ${plural(score(g), 'click')} on WikiRacer. Can you beat me?\n${url}`;
     if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
     else copyText(text);
@@ -1027,6 +1087,7 @@
     const line = rec.result === 'finished'
       ? `🖱 ${plural(rec.score, 'click')} · ⏱ ${fmtTime(rec.time)} · ${topLabel(beat)}`
       : rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up';
+    track('share', { kind: 'daily' });
     const text = `WikiRacer Daily #${rec.n} 🏁\n${rec.start} → ${rec.end}\n${line}\n${squares}\n${baseUrl()}`;
     if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
     else copyText(text);
@@ -1105,6 +1166,7 @@
     $('#spec-rail-dot').style.top = '0%';
     $('#spectate').classList.remove('hidden');
     net.send({ type: 'spectate', id });
+    track('spectate_open');
     renderSpectate();
   }
 
@@ -1305,7 +1367,8 @@
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await hostRoom({ name, code: makeCode() });
-        setLobbyStatus('Send the invite link to your friends (up to 5 players), then start the race.');
+        track('room_created');
+        setLobbyStatus('Send the invite link to your friends (up to 8 players), then start the race.');
         renderLobby();
         return;
       } catch (e) {
@@ -1351,6 +1414,7 @@
         p.connected = false;
         if (p.status === 'playing') p.status = 'left';
         checkRoundOver();
+        maybeHurryBots();
       }
       if (spec.id === conn.peer) closeSpectate();
       scheduleAutoStart();
@@ -1444,6 +1508,7 @@
           p.status = type === 'giveup' ? 'gaveup' : 'timeout';
         }
         checkRoundOver();
+        maybeHurryBots();
         break;
       }
       default:
@@ -1545,6 +1610,10 @@
       net.phase = 'playing';
       net.round = round;
       net.watchers = new Map();
+      track('round_start', {
+        public: !!net.isPublic, difficulty: net.diff, humans: humanCount(),
+        bots: [...net.bots.keys()].filter((id) => net.players[id]).length,
+      });
       net.autoStartAt = 0;
       net.nextAt = 0;
       net.roundStartedAt = Date.now() + COUNTDOWN_MS;
@@ -1774,8 +1843,9 @@
     let plan = null;
     try { plan = await planRoute(round.start, round.end); } catch {}
     if (net !== me || net.round !== round || net.phase !== 'playing') return;
-    for (const id of ids) net.bots.get(id).routeKey = null;
+    for (const id of ids) Object.assign(net.bots.get(id), { routeKey: null, hurried: false, script: null });
     for (const id of ids) simulateBot(id, round, plan);
+    maybeHurryBots();
   }
 
   function simulateBot(id, round, plan) {
@@ -1808,80 +1878,116 @@
     const givesUp = !route || Math.random() < tier.giveUp * dm;
 
     // Timing: warm-up read of the first page, then a think time per click, all inside 75% of the clock.
-    const steps = route ? path.length - 1 : randInt(2, 5);
+    const nSteps = route ? path.length - 1 : randInt(2, 5);
     let times = [];
     let tSum = rand(tier.warmup[0], tier.warmup[1]) * 1000;
-    for (let i = 0; i < steps; i++) {
+    for (let i = 0; i < nSteps; i++) {
       tSum += rand(tier.secPerClick[0], tier.secPerClick[1]) * Math.sqrt(dm) * 1000;
       times.push(tSum);
     }
-    const finishAt = times[times.length - 1] + rand(400, 1500);
     const budget = cap * rand(0.55, 0.97);
-    if (finishAt > budget) times = times.map((t) => (t * budget) / finishAt);
+    const last = times[times.length - 1] + 1000;
+    if (last > budget) times = times.map((t) => (t * budget) / last);
 
-    const at = (ms, fn) => {
-      const delay = net.roundStartedAt + ms - Date.now();
-      b.timers.push(setTimeout(() => {
-        if (net.players[id] !== p || p.status !== 'playing' || net.round !== round) return;
-        fn();
-      }, Math.max(0, delay)));
-    };
-
-    // Tab-switch penalty for some, mid-race.
-    if (Math.random() < tier.pen) at(times[Math.floor(times.length / 2)] || 20000, () => { p.tabLeaves = 2; p.penalties = 1; broadcast(); });
-
+    // The bot's whole race as a script: pages to reveal at given times, then finish or give up.
+    const script = { round, steps: [], end: null, penAt: null };
     if (givesUp) {
       const quitAt = Math.min(cap * rand(0.35, 0.95), (times[times.length - 1] || cap * 0.5) + rand(10e3, 60e3));
       // Follow the real route partway (never reaching the target), or explore links off the start page
       // and come back, so even a give-up route only uses real links.
       const wander = plan && plan.startLinks.length ? plan.startLinks : [];
-      const walk = [{ t: round.start, via: round.start, back: false }];
       times.forEach((t, i) => {
         if (t >= quitAt) return;
         let step = null;
         if (route && i + 1 < path.length - 1) step = path[i + 1];
         else if (!route && wander.length) {
-          step = i % 2 === 0
-            ? { t: wander[(i * 7 + 3) % wander.length], via: '', back: false }
-            : { t: round.start, via: round.start, back: true };
+          step = i % 2 === 0 ? { t: wander[(i * 7 + 3) % wander.length], via: '', back: false } : { t: round.start, via: round.start, back: true };
         }
-        if (!step) return;
-        walk.push(step);
-        const n = walk.length - 1;
-        at(t, () => { p.clicks = n; p.title = step.t; resetBotView(b); broadcast(); });
+        if (step) script.steps.push({ at: t, step: { ...step, via: step.via || step.t } });
       });
-      at(quitAt, () => {
-        p.status = 'gaveup';
-        p.path = walk.slice(0, p.clicks + 1).map((x) => ({ ...x, via: x.via || x.t }));
-        p.time = Date.now() - net.roundStartedAt;
-        checkRoundOver();
+      script.end = { type: 'gaveup', at: quitAt };
+    } else {
+      times.forEach((t, i) => script.steps.push({ at: t, step: path[i + 1] }));
+      script.end = { type: 'finished', at: times[times.length - 1] + 50 };
+    }
+    if (Math.random() < tier.pen) script.penAt = times[Math.floor(times.length / 2)] || 20000;
+    b.script = script;
+    b.done = 0; // steps already shown
+    b.walk = [path[0]];
+    runBotScript(id);
+  }
+
+  // Schedules whatever is left of a bot's script (also used to re-time it when hurrying).
+  function runBotScript(id) {
+    const b = net.bots.get(id);
+    const p = net.players[id];
+    if (!b || !p || !b.script) return;
+    clearBotTimers(id);
+    const { round } = b.script;
+    const at = (ms, fn) => {
+      b.timers.push(setTimeout(() => {
+        if (net.players[id] !== p || p.status !== 'playing' || net.round !== round) return;
+        fn();
+      }, Math.max(0, net.roundStartedAt + ms - Date.now())));
+    };
+    if (b.script.penAt != null) at(b.script.penAt, () => { b.script.penAt = null; p.tabLeaves = 2; p.penalties = 1; broadcast(); });
+    b.script.steps.forEach((s, i) => {
+      if (i < b.done) return;
+      at(s.at, () => {
+        b.done = i + 1;
+        b.walk.push(s.step);
+        p.clicks = b.walk.length - 1;
+        p.title = s.step.t;
+        resetBotView(b);
         broadcast();
       });
-      return;
-    }
-
-    times.forEach((t, i) => at(t, () => {
-      p.clicks = i + 1;
-      p.title = path[i + 1].t;
-      resetBotView(b);
-      if (i + 1 < path.length - 1) broadcast();
-    }));
-    at(times[times.length - 1] + 50, () => {
-      p.status = 'finished';
-      p.path = path;
-      p.clicks = path.length - 1;
-      p.title = round.end;
+    });
+    at(b.script.end.at, () => {
       p.time = Math.min(round.limit, Date.now() - net.roundStartedAt);
-      p.verify = 'pending';
+      p.path = b.walk.map((x) => ({ ...x }));
+      p.clicks = p.path.length - 1;
+      if (b.script.end.type === 'gaveup') {
+        p.status = 'gaveup';
+      } else {
+        p.status = 'finished';
+        p.title = round.end;
+        p.verify = 'pending';
+        b.timers.push(setTimeout(() => {
+          if (net.players[id] !== p || p.verify !== 'pending') return;
+          p.verify = 'ok';
+          checkRoundOver();
+          broadcast();
+        }, rand(500, 1800)));
+      }
       checkRoundOver();
       broadcast();
-      b.timers.push(setTimeout(() => {
-        if (net.players[id] !== p || p.verify !== 'pending') return;
-        p.verify = 'ok';
-        checkRoundOver();
-        broadcast();
-      }, rand(500, 1800)));
     });
+  }
+
+  // Once every real person is done (finished, gave up or out of time), nobody should sit watching
+  // fill-ins take minutes. Their remaining clicks get re-timed to a quick but human pace, staggered
+  // so they don't all land at once: everyone's done within roughly 5–25 seconds.
+  function maybeHurryBots() {
+    if (!net.isHost || net.phase !== 'playing' || !net.bots.size) return;
+    const racing = Object.entries(net.players).filter(([, p]) => p.inRound && p.status === 'playing');
+    if (!racing.length || racing.some(([id]) => !isBot(id))) return;
+    const now = Date.now() - net.roundStartedAt;
+    let offset = rand(1500, 4500);
+    for (const [id] of racing.sort(() => Math.random() - 0.5)) {
+      const b = net.bots.get(id);
+      if (!b || !b.script || b.hurried) continue;
+      b.hurried = true;
+      let t = now + offset;
+      b.script.steps.forEach((s, i) => {
+        if (i < b.done) return;
+        t += rand(1800, 4200);
+        s.at = Math.min(s.at, t);
+      });
+      b.script.end.at = Math.min(b.script.end.at, b.script.end.type === 'gaveup' ? now + offset + rand(2000, 9000) : t + rand(400, 1400));
+      if (b.script.penAt != null) b.script.penAt = null;
+      runBotScript(id);
+      offset += rand(2500, 7000);
+    }
   }
 
   // Spectating a fill-in: drift down the page like someone reading and skimming.
@@ -1925,6 +2031,7 @@
       me.migrating = false;
       conn.send({ type: 'hello', name, snapshot: mySnapshot() });
       if (spec.id) conn.send({ type: 'spectate', id: spec.id });
+      if (!rejoin) track('room_joined', { public: !!me.isPublic });
       if (!rejoin) setLobbyStatus(me.isPublic ? 'Matched! Waiting for racers…' : "You're in! Waiting for the host to start.");
       else setLobbyStatus('Reconnected to the new host.');
       renderLobby();
@@ -2021,12 +2128,14 @@
         if (net !== me) { if (conn) conn.close(); return; }
         if (conn) {
           attachGuest(conn, me.myName, me, me.fail);
+          track('host_migrated', { role: 'reconnected' });
           toast('Reconnected. The race goes on!');
           return;
         }
         await sleep(1500);
       }
       if (net !== me) return;
+      track('issue', { kind: 'migration_failed', public: !!me.isPublic });
       if (me.isPublic) { toast('The room closed. Finding you a new race…', 3000); quickMatch(); }
       else me.fail('Lost connection to the room');
     })();
@@ -2087,6 +2196,7 @@
       scheduleAutoStart();
       broadcast();
     }, 30000);
+    track('host_migrated', { role: 'new_host', phase: n.phase });
     toast("👑 You're the new host", 3500);
     setLobbyStatus(n.isPublic ? 'You are now hosting this public room.' : 'You are now the host. Send the invite link to friends, then start the race.');
     checkRoundOver();
@@ -2127,6 +2237,7 @@
     });
     peer.on('error', (err) => {
       if (me.joined) return; // after joining, errors are handled by the host handover
+      track('issue', { kind: 'join_failed', error: err.type });
       if (err.type === 'peer-unavailable') fail(`Room ${code} wasn't found. It may have closed.`);
       else fail('Connection problem: ' + err.type);
     });
@@ -2228,6 +2339,7 @@
     setLobbyStatus('🔎 Looking for a race…');
     renderLobby();
 
+    const qmStart = Date.now();
     for (let attempt = 0; attempt < 3; attempt++) {
       const me = net;
       const res = await findPublicRoom(me);
@@ -2237,6 +2349,7 @@
         const fail = (message) => { if (net === me) { toast(message, 4000); leaveRoomAndGoHome(); } };
         res.peer.on('error', (err) => { if (err.type !== 'peer-unavailable' && !me.joined) fail('Connection problem: ' + err.type); });
         me.myName = name;
+        track('quick_match', { outcome: 'joined', search_ms: Date.now() - qmStart, busy_rooms: res.busy || 0, room_count: res.count || null });
         attachGuest(res.conn, name, me, fail);
         return;
       }
@@ -2246,6 +2359,7 @@
           await hostRoom({ name, isPublic: true, slot });
           if (token !== matchToken) { leaveRoom(); return; }
           net.busyRooms = res.busy || 0;
+          track('quick_match', { outcome: 'hosted', search_ms: Date.now() - qmStart, busy_rooms: net.busyRooms });
           setLobbyStatus('Waiting for other racers to join. The race starts automatically once 2 or more are here.');
           renderLobby();
           botPolicy();
@@ -2256,6 +2370,7 @@
           net = freshNet();
           Object.assign(net, { isPublic: true, matching: true });
           if (e && e.type === 'unavailable-id') { retry = true; break; } // someone just took it: search again
+          track('issue', { kind: 'matchmaking', error: e && e.type });
           toast('Matchmaking failed: ' + (e && e.type || 'error'));
           show('home');
           return;
@@ -2264,6 +2379,7 @@
       if (!retry) break;
     }
     if (token !== matchToken) return;
+    track('issue', { kind: 'all_rooms_busy' });
     toast('All public rooms are busy, try again in a moment', 4000);
     leaveRoomAndGoHome();
   }
@@ -2580,4 +2696,13 @@
 
   loadConfig();
   init();
+  {
+    const q = new URLSearchParams(location.search);
+    track('app_open', {
+      entry: q.get('room') ? 'invite' : q.get('s') ? 'challenge' : 'direct',
+      referrer_host: document.referrer ? new URL(document.referrer).hostname : '',
+      played_before: playedList().length > 0,
+    });
+  }
+  addEventListener('flappy-score', (e) => track('flappy_game', { score: e.detail }));
 })();

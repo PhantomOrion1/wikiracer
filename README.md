@@ -11,7 +11,7 @@ Get from one Wikipedia article to another using only the links on the page. Fewe
 - **Live spectating**: follow a racer's scroll position and hovered link in real time.
 - **No word search**: Ctrl/⌘+F is blocked mid-race, and link text is drawn with CSS so the browser's Find never matches a clickable link.
 - **Time limits**: 2:30 easy, 5:00 medium, 10:00 hard.
-- **Quick match**: join a random public race with strangers (Omegle-style). It starts automatically once 2+ racers are in, with up to 5 per room. Hit "Next room" to skip.
+- **Quick match**: join a random public race with strangers (Omegle-style). It starts automatically once 2+ racers are in, with up to 8 per room. Hit "Next room" to skip.
 - **Spectate**: once you're finished or out, watch any racer's screen live.
 - **Flappy Wiki**: a mini-game to play while you wait.
 - **Route comparison**: podium plus everyone's route side by side, with shared articles highlighted.
@@ -26,10 +26,19 @@ Get from one Wikipedia article to another using only the links on the page. Fewe
 - **Wikipedia API**: responses are cached at Wikimedia's edge (`smaxage`), and failed requests retry with backoff.
 - **Names** are filtered for slurs and profanity.
 
+## Analytics
+
+Anonymous analytics go straight to PostHog's capture API (no tracking script, no names, honours Do Not Track). They're off until you add a key:
+
+1. Create a free project at posthog.com (free tier: 1M events/month).
+2. Copy the project API key (`phc_...`) into `config.json` → `analytics.posthogKey`. Use `https://eu.i.posthog.com` as `posthogHost` if your project is in the EU.
+
+Events: `app_open`, `race_start`, `race_end`, `daily_end`, `quick_match`, `room_created`, `room_joined`, `round_start` (humans vs fill-ins), `spectate_open`, `share`, `flappy_game`, `host_migrated`, `issue` (failed loads, matchmaking, joins), `client_error`.
+
 ## Modes
 
 - **Solo**: Easy / Medium / Hard curated pairs, random articles, or your own custom pair. Personal bests are saved in your browser.
-- **Duel**: create a room, send the invite link, and up to 5 people race the same pair live. You see everyone's click count while racing, and full routes once you finish. Wins are tallied across rounds.
+- **Duel**: create a room, send the invite link, and up to 8 people race the same pair live. You see everyone's click count while racing, and full routes once you finish. Wins are tallied across rounds.
 - **Challenge links**: after a solo race, "Challenge a friend" copies a link with your start, target and score so someone else can try to beat it.
 
 ## How it works

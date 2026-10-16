@@ -24,6 +24,7 @@ window.Flappy = (() => {
   function die() {
     s.mode = 'dead';
     s.t = 0;
+    dispatchEvent(new CustomEvent('flappy-score', { detail: s.score }));
     if (s.score > best) {
       best = s.score;
       try { localStorage.setItem('wr-flappy-best', String(best)); } catch {}
