@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Privacy | WikiRacer Live</title>
+  <meta name="description" content="What WikiRacer Live collects (very little), what stays on your device, who else is involved, and how to opt out.">
+  <link rel="canonical" href="https://wikiracer.live/privacy/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WikiRacer Live">
+  <meta property="og:title" content="Privacy | WikiRacer Live">
+  <meta property="og:description" content="What WikiRacer Live collects (very little), what stays on your device, who else is involved, and how to opt out.">
+  <meta property="og:url" content="https://wikiracer.live/privacy/">
+  <meta property="og:image" content="https://wikiracer.live/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="WikiRacer: race friends through Wikipedia, one link at a time">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#f4f2ed">
+  <link rel="icon" href="/icons/icon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="stylesheet" href="/pages.css?v=2">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://wikiracer.live/"},{"@type":"ListItem","position":2,"name":"Privacy","item":"https://wikiracer.live/privacy/"}]}</script>
+</head>
+<body>
+  <header class="top"><div class="in">
+    <a class="logo" href="/">Wiki<span>Racer</span></a>
+    <a class="play" href="/">Play now</a>
+  </div></header>
+  <main>
+    
+    <h1>Privacy</h1>
+    
+    <p class="lead">Short version: no accounts, no ads, no cookies. We collect a small amount of anonymous usage data to improve the game, and you can switch it off.</p>
+    <p class="muted">Last updated 17 October 2026.</p>
+
+    <h2>What stays on your device</h2>
+    <p>Your browser's local storage keeps your name, the pairs you've played (so you don't get repeats), your daily results and your settings. This never leaves your device unless you play multiplayer (see below). Clear your site data to remove it.</p>
+
+    <h2>Multiplayer</h2>
+    <p>Multiplayer connects your browser directly to the other players' browsers (WebRTC). The other players in your room see the name you choose and your race progress. As with any peer-to-peer connection, the players you connect to can technically see your IP address. To set up the connection, your browser briefly talks to the PeerJS signalling service (0.peerjs.com), which sees your IP address and a random ID.</p>
+
+    <h2>Anonymous usage analytics</h2>
+    <p>We send anonymous game events (for example "race started", "race finished", difficulty, number of clicks, device type and errors) to PostHog (US region) so we can see what's working. Events are linked to a random ID, not your name. We don't use cookies or advertising IDs, and we don't sell data.</p>
+    <ul>
+      <li>Outside Europe, the random ID is kept in local storage so repeat visits count as one person.</li>
+      <li>If your device's time zone is in Europe, the ID only lives in memory for that visit and nothing analytics-related is stored on your device.</li>
+      <li>If your browser sends <b>Do Not Track</b>, or you block PostHog with a content blocker, no analytics are sent and the game still works normally.</li>
+    </ul>
+
+    <h2>Wikipedia</h2>
+    <p>Articles are loaded straight from Wikipedia's public API, so the Wikimedia Foundation receives those requests under its own <a href="https://foundation.wikimedia.org/wiki/Policy:Privacy_policy" rel="noopener">privacy policy</a>. Fonts are served from this site, not Google.</p>
+
+    <h2>Children</h2>
+    <p>WikiRacer Live isn't directed at children under 13, and we don't knowingly collect information from them.</p>
+
+    <h2>Your choices and contact</h2>
+    <p>You can play without entering your real name, enable Do Not Track, block analytics, or clear site data at any time. Questions or deletion requests: <a href="https://github.com/PhantomOrion1/wikiracer/issues" rel="noopener">open an issue on GitHub</a>. Since we don't know who you are, include your analytics ID (shown in your browser's local storage as <code>wr-aid</code>) if you want its events deleted.</p>
+  </main>
+  <footer class="foot"><div class="in">
+    <nav aria-label="Site"><a href="/">Play</a><a href="/how-to-play/">How to play</a><a href="/multiplayer/">Play with friends</a><a href="/daily/">Daily archive</a><a href="/wiki-race-ideas/">Race ideas</a><a href="/faq/">FAQ</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+    <p>Articles from <a href="https://en.wikipedia.org" rel="noopener">Wikipedia</a> under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener">CC BY-SA 4.0</a>. WikiRacer Live is an independent fan project, not affiliated with or endorsed by the Wikimedia Foundation. Wikipedia® is a registered trademark of the Wikimedia Foundation, Inc.</p>
+  </div></footer>
+</body>
+</html>

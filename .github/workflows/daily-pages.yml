@@ -1,0 +1,24 @@
+# Adds yesterday's daily challenge to the archive pages and sitemap every day.
+name: Daily archive
+on:
+  schedule:
+    - cron: '30 14 * * *'   # after UTC-14 midnight, so the day has ended everywhere
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: daily-archive
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/build-pages.js
+      - name: Commit if anything changed
+        run: |
+          git add -A daily sitemap.xml
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Daily archive update"
+          git push

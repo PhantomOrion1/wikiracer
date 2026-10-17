@@ -1,0 +1,10 @@
+# gitleaks config: default rules plus a documented allowlist.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-public values"
+# PostHog *project* API keys (phc_) are write-only ingestion keys designed to be embedded in public
+# web pages; every PostHog site exposes theirs. Personal API keys (phx_) are secret and must never be
+# committed: they are NOT allowlisted.
+regexes = ['''phc_[A-Za-z0-9]{40,}''']

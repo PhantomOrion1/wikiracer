@@ -1,6 +1,21 @@
 (() => {
   'use strict';
 
+  // GitHub Pages can't send X-Frame-Options / frame-ancestors, so refuse to run inside someone
+  // else's frame (clickjacking) by breaking out of it.
+  if (window.top !== window.self) {
+    // Browsers often block a framed page from navigating the top window, so also blank ourselves.
+    try { window.top.location = window.self.location.href; } catch { /* blocked */ }
+    document.documentElement.innerHTML = '';
+    return;
+  }
+  // crypto.randomUUID needs Safari 15.4+/Chrome 92+; fall back so older browsers still run.
+  const uuid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15);
+      return (c === 'x' ? r : (r & 3) | 8).toString(16);
+    }));
+
   const API = 'https://en.wikipedia.org/w/api.php';
   const PEER_PREFIX = 'wikirace-room-v1-';
   // Runtime settings. config.json (same folder) can override any of these without a code change,
@@ -34,12 +49,17 @@
   // Anonymous product analytics sent straight to PostHog's capture API (no third-party script).
   // Stays off until config.json has analytics.posthogKey. Honours Do Not Track. Never sends names.
   const APP_VERSION = '16';
-  const SESSION_ID = crypto.randomUUID();
+  const SESSION_ID = uuid();
   const aQueue = [];
   let aTimer = null;
+  // Visitors in Europe (EU/UK ePrivacy rules: storing an ID on the device needs consent) get an ID
+  // that lives only in memory for this visit; nothing analytics-related is written to their device.
+  const EU_VISITOR = (() => { try { return /^(Europe|Atlantic\/(Canary|Madeira|Azores|Reykjavik|Faroe))/.test(Intl.DateTimeFormat().resolvedOptions().timeZone || ''); } catch { return false; } })();
+  let memoryId = null;
   function anonId() {
+    if (EU_VISITOR) return (memoryId = memoryId || uuid());
     let id = store.get('wr-aid');
-    if (!id) { id = crypto.randomUUID(); store.set('wr-aid', id); }
+    if (!id) { id = uuid(); store.set('wr-aid', id); }
     return id;
   }
   function track(event, props = {}) {
@@ -148,8 +168,24 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
   const baseUrl = () => location.origin + location.pathname;
-  const peerReady = () => {
-    if (typeof Peer === 'undefined') { toast('Multiplayer failed to load, check your connection'); return false; }
+  // PeerJS (WebRTC) costs ~1s of main-thread work on a mid-range phone as soon as it loads, so it
+  // isn't in the page: it loads on the first tap/keypress or when the browser is idle, and every
+  // multiplayer action waits for it. Same file and SRI hash as a normal <script> tag.
+  const PEERJS = { src: 'vendor/peerjs.min.js', integrity: 'sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR' };
+  let peerLoading = null;
+  function loadPeer() {
+    if (typeof Peer !== 'undefined') return Promise.resolve(true);
+    return peerLoading || (peerLoading = new Promise((resolve) => {
+      const el = Object.assign(document.createElement('script'), PEERJS);
+      el.onload = () => resolve(typeof Peer !== 'undefined');
+      el.onerror = () => { peerLoading = null; el.remove(); resolve(false); };
+      document.head.append(el);
+    }));
+  }
+  for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => loadPeer(), { once: true, passive: true });
+  addEventListener('load', () => setTimeout(() => (window.requestIdleCallback || setTimeout)(() => loadPeer(), { timeout: 5000 }), 6000));
+  const peerReady = async () => {
+    if (!(await loadPeer())) { toast('Multiplayer failed to load, check your connection'); return false; }
     return true;
   };
 
@@ -182,7 +218,10 @@
     const url = API + '?' + new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params });
     for (let i = 0; ; i++) {
       try {
-        const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
+        // Wikimedia asks API clients to identify themselves. The header costs a CORS preflight that
+        // Wikipedia doesn't let browsers cache, so article loads (the click path) skip it.
+        const headers = params.action === 'parse' ? {} : { 'Api-User-Agent': 'WikiRacerLive/1.0 (https://wikiracer.live; https://github.com/PhantomOrion1/wikiracer/issues)' };
+        const r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer', headers });
         if (r.status === 429 || r.status >= 500) throw Object.assign(new Error(`Wikipedia is busy (${r.status})`), { retry: true });
         if (!r.ok) throw new Error(`Wikipedia request failed (${r.status})`);
         const j = await r.json();
@@ -477,6 +516,14 @@
         a.setAttribute('href', '#');
       }
     });
+    // Files hosted under /wikipedia/en/ are local uploads, usually non-free ("fair use") images that
+    // may only be shown on Wikipedia itself. Commons media (/wikipedia/commons/) is freely licensed.
+    $$('img, source', doc).forEach((img) => {
+      if (/\/wikipedia\/en\//.test((img.getAttribute('src') || '') + (img.getAttribute('srcset') || ''))) {
+        const fig = img.closest('figure, .thumb, .infobox-image, .mw-default-size');
+        (fig && fig !== doc.body ? fig : img).remove();
+      }
+    });
     $$('img, source, video, audio', doc).forEach((img) => {
       img.setAttribute('draggable', 'false');
       for (const attr of ['src', 'srcset', 'poster']) {
@@ -485,6 +532,15 @@
       }
     });
     return { title: titleDoc.body.textContent || art.title, nodes: [...doc.body.childNodes] };
+  }
+
+  // CC BY-SA 4.0 attribution for the article on screen (title, source, authors via history, licence,
+  // and a note that it was changed). Opens outside the game, so it's not a shortcut.
+  function attribution(title) {
+    const page = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(title.replace(/ /g, '_'));
+    const link = (href, text) => Object.assign(document.createElement('a'), { href, textContent: text, target: '_blank', rel: 'noopener noreferrer' });
+    return ['Text from the Wikipedia article ', link(page, `“${title}”`), ' by ', link(page.replace('/wiki/', '/w/index.php?action=history&title='), 'its contributors'),
+      ', under ', link('https://creativecommons.org/licenses/by-sa/4.0/', 'CC BY-SA 4.0'), '. Links and layout adapted for the game.'];
   }
 
   // ---------- game ----------
@@ -573,7 +629,8 @@
         setTimeout(() => { if (game === g && !g.current) goTo(title, { count, back, via }); }, 1500 + g.startRetries * 800);
         return;
       }
-      toast(e.message || "Couldn't load that article");
+      const offline = e instanceof TypeError || navigator.onLine === false;
+      toast(offline ? "Can't reach Wikipedia. Check your connection and click again." : (e.message || "Couldn't load that article"), 4000);
       if (!g.current && game === g) {
         stopTimer();
         game = null;
@@ -596,6 +653,7 @@
     const built = buildArticle(art);
     $('#article-title').textContent = built.title;
     $('#article').replaceChildren(...built.nodes);
+    $('#article-credit').replaceChildren(...attribution(art.title));
     window.scrollTo(0, 0);
     $('#panel').classList.remove('open');
     updateHud();
@@ -1000,26 +1058,8 @@
   // One hard pair per calendar day, the same for everyone. Players are ranked by clicks, then time.
   // There's no server, so the "everyone else" numbers come from a statistical model seeded by the
   // date: everyone sees the same spread for the same day, and it fills up as the day goes on.
-  const DAILY_EPOCH = Date.UTC(2026, 9, 17); // Daily #1
-  const dateKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const dailyNumber = (key) => {
-    const [y, m, d] = key.split('-').map(Number);
-    return Math.round((Date.UTC(y, m - 1, d) - DAILY_EPOCH) / 864e5) + 1;
-  };
-  function hashStr(str) {
-    let h = 2166136261;
-    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-    return h >>> 0;
-  }
-  function seeded(seed) {
-    let a = seed;
-    return () => {
-      a = (a + 0x6d2b79f5) | 0;
-      let t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
+  // Day numbering, seeded RNG and the pair picker live in daily-core.js (shared with the archive builder).
+  const { dateKey, dailyNumber, hashStr, seeded, dailyPair } = window.WRDaily;
   // Standard normal CDF (Abramowitz–Stegun approximation).
   function phi(x) {
     const t = 1 / (1 + 0.2316419 * Math.abs(x));
@@ -1028,31 +1068,6 @@
     return x > 0 ? 1 - p : p;
   }
   const lnCdf = (x, mu, sigma) => (x <= 0 ? 0 : phi((Math.log(x) - mu) / sigma));
-
-  function dailyPair(key) {
-    const pool = [...(window.PAIRS.daily || []), ...window.PAIRS.hard];
-    const n = dailyNumber(key);
-    // After the hand-picked run, every day is generated from the Vital Articles snapshot with a
-    // date-seeded RNG: a lesser-known start and a core target from a different subject.
-    if (n > pool.length && POOL.familiar.length) {
-      const rnd = seeded(hashStr(`daily-${key}`));
-      const F = POOL.familiar;
-      const [start, g1] = F[Math.floor(rnd() * F.length)];
-      let end = F[Math.floor(rnd() * F.length)];
-      for (let k = 0; k < 8 && (end[1] === g1 || end[0] === start); k++) end = F[Math.floor(rnd() * F.length)];
-      return { start, end: end[0], n, key };
-    }
-    const i = (((n - 1) % pool.length) + pool.length) % pool.length;
-    const cycle = Math.floor((n - 1) / pool.length);
-    const rnd = seeded(hashStr(`cycle-${cycle}`));
-    const order = pool.map((_, k) => k);
-    for (let k = order.length - 1; k > 0; k--) {
-      const j = Math.floor(rnd() * (k + 1));
-      [order[k], order[j]] = [order[j], order[k]];
-    }
-    const [start, end] = pool[order[i]];
-    return { start, end, n, key };
-  }
 
   // Model of how everyone else did today. Calibrated to typical hard WikiRacer play: the shortest
   // route is 3–4 clicks, most finishers take 2–3 more than that (median ~6), a long tail wanders
@@ -1498,7 +1513,33 @@
     });
   }
 
+  // Heartbeat. A crashed tab, a sleeping laptop or a phone that loses signal never fires WebRTC's
+  // close event, so both sides ping every 3s and treat 12s of silence as a disconnect. That lets
+  // the host drop dead players and lets guests start a host handover.
+  const HEARTBEAT_MS = 3000, SILENCE_MS = 12000;
+  function startHeartbeat(me) {
+    if (me.timers.hb) return;
+    me.timers.hb = setInterval(() => {
+      if (net !== me) { clearInterval(me.timers.hb); return; }
+      const now = Date.now();
+      if (me.isHost) {
+        for (const conn of me.conns.values()) {
+          if (!me.players[conn.peer]) continue;
+          if (now - (conn.lastSeen || now) > SILENCE_MS) { try { conn.close(); } catch {} continue; }
+          if (conn.open) conn.send({ type: 'ping' });
+        }
+      } else if (me.joined && !me.migrating && me.hostConn) {
+        if (now - (me.lastHostAt || now) > SILENCE_MS) {
+          const conn = me.hostConn;
+          try { conn.close(); } catch {}
+          if (net === me && !me.migrating) migrateHost(me);
+        } else if (me.hostConn.open) me.hostConn.send({ type: 'ping' });
+      }
+    }, HEARTBEAT_MS);
+  }
+
   function wireHostPeer(peer, me, viaPublic = false) {
+    startHeartbeat(me);
     peer.on('connection', (conn) => { conn.viaPublic = viaPublic; hostAccept(conn, me); });
     peer.on('disconnected', () => { if (net === me && !peer.destroyed) peer.reconnect(); });
     peer.on('error', (err) => {
@@ -1508,7 +1549,7 @@
 
   async function createRoom() {
     const name = getName();
-    if (!name || !peerReady()) return;
+    if (!name || !(await peerReady())) return;
     matchToken++;
     leaveRoom();
     show('lobby');
@@ -1529,10 +1570,20 @@
     show('home');
   }
 
+  // PeerJS 1.5.4 reads `.__peerData` on every decoded message and throws on a bare null, so a
+  // hostile peer could spam uncaught errors. Swallow malformed frames before they reach PeerJS.
+  function guardConn(conn) {
+    const orig = conn && conn._handleDataMessage;
+    if (typeof orig === 'function') conn._handleDataMessage = function (m) { try { return orig.call(this, m); } catch { /* drop malformed frame */ } };
+    return conn;
+  }
+
   function hostAccept(conn, me) {
+    guardConn(conn);
     const rate = { hits: [], strikes: 0 };
     conn.on('open', () => {
       if (net !== me) { conn.close(); return; }
+      conn.lastSeen = Date.now();
       net.conns.set(conn.peer, conn);
       // Connections that never say hello (probes, idle sockets) get cleaned up.
       setTimeout(() => { if (net === me && !net.players[conn.peer]) conn.close(); }, 20000);
@@ -1540,6 +1591,7 @@
     conn.on('data', (d) => {
       if (net !== me || !net.conns.has(conn.peer)) return;
       const now = Date.now();
+      conn.lastSeen = now;
       rate.hits = rate.hits.filter((t) => now - t < 1000);
       if (rate.hits.length >= 15) {
         if (++rate.strikes > 60) conn.close();
@@ -1664,11 +1716,18 @@
         p.title = path.length ? path[path.length - 1].t : p.title;
         let type = msg.type;
         if (type === 'finish' && p.time > net.round.limit + GRACE_MS) type = 'timeout';
+        // Loading and reading a page takes time: anything under ~0.7s per click wasn't really played.
+        const tooFast = type === 'finish' && !isBot(id) && p.time < Math.max(1500, p.clicks * 700);
         if (type === 'finish') {
           p.status = 'finished';
           p.time = Math.min(p.time, net.round.limit);
-          p.verify = 'pending';
-          verifyPlayer(id);
+          if (tooFast) {
+            p.verify = 'failed';
+            p.flagReason = 'Finished faster than the pages could be read';
+          } else {
+            p.verify = 'pending';
+            verifyPlayer(id);
+          }
         } else {
           p.status = type === 'giveup' ? 'gaveup' : 'timeout';
         }
@@ -1930,7 +1989,7 @@
 
   function addBot() {
     if (!net.isHost || !net.isPublic || net.phase !== 'lobby' || activeCount() >= MAX_PLAYERS) return;
-    const id = crypto.randomUUID();
+    const id = uuid();
     net.players[id] = newPlayer(botName(), nextColor());
     net.bots.set(id, { tier: pickWeighted(BOT_TIERS), timers: [], view: { b: 0, p: 0 } });
     toast(`${net.players[id].name} joined`);
@@ -2322,6 +2381,8 @@
       const rejoin = me.joined;
       me.joined = true;
       me.migrating = false;
+      me.lastHostAt = Date.now();
+      startHeartbeat(me);
       conn.send({ type: 'hello', name, snapshot: mySnapshot() });
       if (spec.id) conn.send({ type: 'spectate', id: spec.id });
       if (!rejoin) track('room_joined', { public: !!me.isPublic });
@@ -2331,7 +2392,8 @@
     };
     if (conn.open) onOpen();
     else conn.on('open', onOpen);
-    conn.on('data', (d) => { if (net === me) guestHandle(d, fail); });
+    guardConn(conn);
+    conn.on('data', (d) => { if (net === me && me.hostConn === conn) me.lastHostAt = Date.now(); if (net === me) guestHandle(d, fail); });
     conn.on('close', () => {
       if (net !== me || me.hostConn !== conn) return;
       if (me.joined) migrateHost(me);
@@ -2506,11 +2568,11 @@
     renderResults();
   }
 
-  function joinRoom(rawCode) {
+  async function joinRoom(rawCode) {
     const code = String(rawCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (code.length !== 5) return toast('Room codes are 5 characters');
     const name = getName();
-    if (!name || !peerReady()) return;
+    if (!name || !(await peerReady())) return;
     matchToken++;
     leaveRoom();
     net = freshNet();
@@ -2545,11 +2607,35 @@
     });
   }
 
+  // Never trust the host's copy of the room: a modified client could send anything. Rebuild every
+  // player record from scratch with checked types, lengths and values before it touches the UI.
+  const STATUSES = ['lobby', 'playing', 'finished', 'gaveup', 'timeout', 'left'];
+  function sanitizePlayers(raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    for (const [id, p] of Object.entries(raw).slice(0, 16)) {
+      if (!/^[\w-]{1,64}$/.test(id) || !p || typeof p !== 'object') continue;
+      out[id] = {
+        name: cleanName(p.name),
+        color: /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : '#777777',
+        status: STATUSES.includes(p.status) ? p.status : 'lobby',
+        clicks: int(p.clicks, 0, 999), penalties: int(p.penalties, 0, 999), tabLeaves: int(p.tabLeaves, 0, 9999),
+        title: str(p.title, 300), time: int(p.time, 0, 36e5), wins: int(p.wins, 0, 9999),
+        path: cleanPath(p.path), livePath: cleanPath(p.livePath).slice(-60),
+        connected: p.connected !== false, inRound: !!p.inRound, awaiting: !!p.awaiting,
+        verify: ['pending', 'ok', 'failed'].includes(p.verify) ? p.verify : null,
+        flagReason: str(p.flagReason, 200), ready: !!p.ready,
+        vote: ['easy', 'medium', 'hard'].includes(p.vote) ? p.vote : null, watchers: int(p.watchers, 0, 16),
+      };
+    }
+    return out;
+  }
+
   function guestHandle(d, fail) {
     if (!d || typeof d !== 'object') return;
     if (d.type === 'state' && d.players && typeof d.players === 'object') {
       const prevPhase = net.phase;
-      net.players = d.players;
+      net.players = sanitizePlayers(d.players);
       net.phase = ['lobby', 'playing', 'results'].includes(d.phase) ? d.phase : 'lobby';
       net.round = d.round || null;
       net.isPublic = !!d.isPublic;
@@ -2604,7 +2690,7 @@
       const check = () => { if (results.size >= CONFIG.publicSlots) finish(); };
       peer.on('open', () => {
         for (let i = 0; i < CONFIG.publicSlots; i++) {
-          const conn = peer.connect(publicPeerId(i), { reliable: true });
+          const conn = guardConn(peer.connect(publicPeerId(i), { reliable: true }));
           const onData = (d) => {
             if (d && d.type === 'lobbyinfo') {
               conn.off('data', onData);
@@ -2630,7 +2716,7 @@
 
   async function quickMatch() {
     const name = getName();
-    if (!name || !peerReady()) return;
+    if (!name || !(await peerReady())) return;
     const token = ++matchToken;
     leaveRoom();
     stopTimer();
@@ -3132,5 +3218,7 @@
   }
   addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
   addEventListener('minigame-close', () => renderMiniGameButton());
-  if (/[?&]debug\b/.test(location.search)) window.__wr = { planRoute, shortestRoute, pickPair };
+  if (/[?&]debug\b/.test(location.search)) {
+    window.__wr = { loadPeer, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
+  }
 })();

@@ -3,15 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.posthog.com https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.posthog.com https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>WikiRacer</title>
-  <meta name="description" content="Race through Wikipedia from one article to another in as few clicks as possible. Play solo, quick match strangers, or duel your friends live.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Bungee&family=JetBrains+Mono:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=52">
+  <title>WikiRacer Live: Multiplayer Wikipedia Race Game</title>
+  <meta name="description" content="Race friends through Wikipedia from one article to another in the fewest clicks. Free multiplayer wiki race with quick match, private rooms for up to 8, solo and a daily challenge.">
+  <link rel="canonical" href="https://wikiracer.live/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WikiRacer Live">
+  <meta property="og:title" content="WikiRacer Live: Multiplayer Wikipedia Race Game">
+  <meta property="og:description" content="Race friends through Wikipedia, one link at a time. Free, no sign-up, up to 8 players.">
+  <meta property="og:url" content="https://wikiracer.live/">
+  <meta property="og:image" content="https://wikiracer.live/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="WikiRacer: race friends through Wikipedia, one link at a time">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#f4f2ed">
+  <link rel="icon" href="/icons/icon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"WikiRacer Live","alternateName":["WikiRacer","Wiki Racer Live"],"url":"https://wikiracer.live/"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"WikiRacer Live","url":"https://wikiracer.live/","description":"A free multiplayer wiki race game. Start on one Wikipedia article and race friends to a target article in the fewest clicks.","image":"https://wikiracer.live/og.png","applicationCategory":"GameApplication","operatingSystem":"Any (web browser)","genre":["Puzzle","Trivia","Party"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"numberOfPlayers":{"@type":"QuantitativeValue","minValue":1,"maxValue":8},"isAccessibleForFree":true,"inLanguage":"en","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+  <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="stylesheet" href="styles.css?v=58">
 </head>
 <body>
   <!-- HOME -->
@@ -76,7 +92,12 @@
         </div>
       </div>
 
-      <p class="credit">Articles from <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer">Wikipedia</a>, CC BY-SA</p>
+      <footer class="site-foot">
+        <nav aria-label="More">
+          <a href="/how-to-play/">How to play</a><a href="/multiplayer/">Play with friends</a><a href="/daily/">Daily archive</a><a href="/wiki-race-ideas/">Race ideas</a><a href="/faq/">FAQ</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a>
+        </nav>
+        <p class="credit">Articles from <a href="https://en.wikipedia.org" target="_blank" rel="noopener noreferrer">Wikipedia</a> under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>. WikiRacer Live is an independent fan project, not affiliated with or endorsed by the Wikimedia Foundation. Wikipedia® is a registered trademark of the Wikimedia Foundation, Inc.</p>
+      </footer>
     </div>
   </section>
 
@@ -212,6 +233,7 @@
         <div id="loading" class="loading hidden"><div class="spinner"></div></div>
         <h1 id="article-title" class="article-title"></h1>
         <article id="article" class="article"></article>
+        <p id="article-credit" class="article-credit"></p>
       </main>
       <div class="race-controls" role="group" aria-label="Race controls">
         <button class="btn" id="btn-back" title="Go back to the previous page (costs a click)">Go Back</button>
@@ -296,11 +318,11 @@
   <datalist id="suggest-start"></datalist>
   <datalist id="suggest-end"></datalist>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js" integrity="sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="pairs.js?v=52"></script>
-  <script src="bots.js?v=52"></script>
-  <script src="vital.js?v=52"></script>
-  <script src="minigame.js?v=52"></script>
-  <script src="app.js?v=52"></script>
+  <script src="pairs.js?v=58" defer></script>
+  <script src="bots.js?v=58" defer></script>
+  <script src="vital.js?v=58" defer></script>
+  <script src="minigame.js?v=58" defer></script>
+  <script src="daily-core.js?v=58" defer></script>
+  <script src="app.js?v=58" defer></script>
 </body>
 </html>

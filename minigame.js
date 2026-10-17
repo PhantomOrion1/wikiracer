@@ -83,7 +83,8 @@ window.MiniGame = (() => {
 
   function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
 
-  const rr = (x, y, w, h, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
+  // roundRect needs Safari 16+; plain rectangles are fine on older browsers.
+  const rr = (x, y, w, h, r, c) => { ctx.fillStyle = c; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); ctx.fill(); };
 
   // Player: a top-down open-wheel race car pointing right.
   function drawRacer(x, cy, red) {
