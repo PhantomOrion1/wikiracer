@@ -110,9 +110,13 @@
     return out;
   }
   const pubCode = (slot) => codeFor(slot, utcDay());
+  // Public rooms grow with demand: quick match searches slots in pages of CONFIG.publicSlots and
+  // only looks at the next page when every room on this one is full. A slot costs nothing until
+  // someone hosts it, so quiet times stay at one or two rooms. 120 slots × 8 players = 960 at once.
+  const MAX_PUBLIC_SLOTS = 120;
   function pubSlotFromCode(code) {
     for (const day of [utcDay(), utcDay(-1)]) {
-      for (let i = 0; i < 30; i++) if (codeFor(i, day) === code) return i;
+      for (let i = 0; i < MAX_PUBLIC_SLOTS; i++) if (codeFor(i, day) === code) return i;
     }
     return null;
   }
@@ -2350,7 +2354,7 @@
     const me = net;
     btn.disabled = true;
     btn.textContent = 'Opening…';
-    for (let i = 0; i < CONFIG.publicSlots; i++) {
+    for (let i = 0; i < MAX_PUBLIC_SLOTS; i++) {
       const peer = await tryClaim(publicPeerId(i));
       if (net !== me) { if (peer) peer.destroy(); return; }
       if (!peer) continue;
@@ -2663,7 +2667,8 @@
   }
 
   // --- quick match: finds an open public room, or opens one for others to find ---
-  function findPublicRoom(me) {
+  function findPublicRoom(me, base = 0) {
+    const size = Math.min(CONFIG.publicSlots, MAX_PUBLIC_SLOTS - base);
     return new Promise((resolve) => {
       const peer = new Peer(peerOpts());
       me.peer = peer;
@@ -2681,15 +2686,15 @@
         if (best) resolve({ peer, conn: best[1].conn, slot: best[0], busy });
         else {
           const free = [];
-          for (let i = 0; i < CONFIG.publicSlots; i++) if (!results.get(i)) free.push(i);
+          for (let i = base; i < base + size; i++) if (!results.get(i)) free.push(i);
           peer.destroy();
           resolve({ free, busy });
         }
       };
       const timer = setTimeout(finish, 6000);
-      const check = () => { if (results.size >= CONFIG.publicSlots) finish(); };
+      const check = () => { if (results.size >= size) finish(); };
       peer.on('open', () => {
-        for (let i = 0; i < CONFIG.publicSlots; i++) {
+        for (let i = base; i < base + size; i++) {
           const conn = guardConn(peer.connect(publicPeerId(i), { reliable: true }));
           const onData = (d) => {
             if (d && d.type === 'lobbyinfo') {
@@ -2732,8 +2737,16 @@
     const qmStart = Date.now();
     for (let attempt = 0; attempt < 3; attempt++) {
       const me = net;
-      const res = await findPublicRoom(me);
-      if (token !== matchToken) { if (res.peer) res.peer.destroy(); return; }
+      let res, base = 0, busy = 0;
+      for (;;) {
+        res = await findPublicRoom(me, base);
+        if (token !== matchToken) { if (res.peer) res.peer.destroy(); return; }
+        busy += res.busy || 0;
+        if (res.conn || res.free.length || base + CONFIG.publicSlots >= MAX_PUBLIC_SLOTS) break;
+        base += CONFIG.publicSlots; // every room on this page is full: open up the next page
+        setLobbyStatus('🔎 Busy right now, finding you a room…');
+      }
+      res.busy = busy;
       if (res.conn) {
         Object.assign(net, { peer: res.peer, myId: res.peer.id, slot: res.slot, matching: false, roomId: publicPeerId(res.slot) });
         const fail = (message) => { if (net === me) { toast(message, 4000); leaveRoomAndGoHome(); } };

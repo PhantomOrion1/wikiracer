@@ -50,7 +50,7 @@ code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .9em; 
 .steps li::before { content: counter(s); position: absolute; left: 0; top: 2px; width: 34px; height: 34px; display: grid; place-items: center; background: var(--ink); color: var(--bg); font: 400 17px "Bungee", sans-serif; }
 
 table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 16px; }
-th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th, td { overflow-wrap: anywhere; text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .tag { display: inline-block; font-size: 12px; font-weight: 800; text-transform: uppercase; padding: 2px 7px; border: 2px solid currentColor; }
 .tag.easy { color: var(--easy); } .tag.medium { color: var(--medium); } .tag.hard { color: var(--hard); }
@@ -76,5 +76,7 @@ details p { margin: 8px 0 0; }
 @media (max-width: 560px) {
   body { font-size: 16px; }
   .pairs li { flex-direction: column; align-items: flex-start; }
+  table { font-size: 14px; }
+  th, td { padding: 8px 6px; }
   .top .play { padding: 8px 12px; font-size: 14px; }
 }

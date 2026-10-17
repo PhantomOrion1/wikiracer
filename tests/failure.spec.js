@@ -165,3 +165,25 @@ test('PeerJS file blocked: multiplayer says so and the rest of the game still wo
   await expect(page.locator('#toast')).toContainText(/Multiplayer failed to load/i, { timeout: 15000 });
   expect(errors).toEqual([]);
 });
+
+test('Quick match opens more public rooms when every room is full', async ({ browser }) => {
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [full, player] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [full, player]) await mockWikipedia(p);
+  // Search one room per page, so filling room 0 forces the search onto the next page.
+  await player.route('**/config.json*', async (r) => {
+    const res = await r.fetch(); const j = await res.json(); j.publicSlots = 1;
+    r.fulfill({ response: res, json: j });
+  });
+  await openHome(full);
+  await full.evaluate(async () => {
+    const peer = new Peer('wikirace-room-v1-test-public-0', { debug: 0 });
+    await new Promise((res, rej) => { peer.on('open', res); peer.on('error', rej); });
+    peer.on('connection', (c) => c.on('data', (d) => { if (d && d.type === 'probe') c.send({ type: 'lobbyinfo', count: 8, phase: 'playing', accepting: false }); }));
+    window.__fullRoom = peer;
+  });
+  await openHome(player, 'Overflow');
+  await player.click('#quick-match');
+  await player.waitForFunction(() => window.__wr.net().isHost && window.__wr.net().slot === 1, null, { timeout: 40000 });
+  await Promise.all(ctxs.map((c) => c.close()));
+});

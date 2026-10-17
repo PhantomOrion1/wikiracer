@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const SITE = 'https://wikiracer.live';
 const NAME = 'WikiRacer Live';
 const ISSUES = 'https://github.com/PhantomOrion1/wikiracer/issues';
-const CSS_V = '2';
+const CSS_V = '3';
 
 globalThis.window = globalThis;
 require(path.join(ROOT, 'pairs.js'));
@@ -22,7 +22,8 @@ const playUrl = (s, e, d) => `/?${new URLSearchParams({ s, e, ...(d ? { d } : {}
 
 const FOOT_LINKS = [
   ['/', 'Play'], ['/how-to-play/', 'How to play'], ['/multiplayer/', 'Play with friends'], ['/daily/', 'Daily archive'],
-  ['/wiki-race-ideas/', 'Race ideas'], ['/faq/', 'FAQ'], ['/privacy/', 'Privacy'], ['/terms/', 'Terms'],
+  ['/wiki-race-ideas/', 'Race ideas'], ['/wikipedia-speedrun/', 'Wikipedia speedrun'], ['/classroom/', 'For teachers'],
+  ['/alternatives/', 'Alternatives'], ['/faq/', 'FAQ'], ['/privacy/', 'Privacy'], ['/terms/', 'Terms'],
 ];
 
 function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noindex = false }) {
@@ -291,6 +292,132 @@ add({
     <p>The game is a free hobby project provided "as is". It may change, break or go offline. To the extent the law allows, we're not liable for any loss from using it. Nothing here limits rights you have under consumer law that can't be excluded, including the Australian Consumer Law.</p>
     <h2>Changes and contact</h2>
     <p>We may update these terms and will change the date above when we do. Questions: <a href="${ISSUES}" rel="noopener">GitHub issues</a>.</p>`,
+});
+
+add({
+  url: '/wikipedia-speedrun/',
+  title: `Wikipedia Speedrun: How It Works & How to Get Faster | ${NAME}`,
+  description: 'What a Wikipedia speedrun is, the two ways people score it, and the strategies fast runners use to get from any article to any other in a few clicks.',
+  h1: 'Wikipedia speedrun',
+  body: `
+    <p class="lead">A Wikipedia speedrun is a race from one Wikipedia article to another using only the links inside the pages. It's the same game as a wiki race. "Speedrun" just puts the focus on beating your own best.</p>
+    <div class="cta"><a class="play" href="/">Start a run</a><a class="play ghost" href="/how-to-play/">Rules</a></div>
+
+    <h2>Two ways to score a run</h2>
+    <table>
+      <thead><tr><th>Format</th><th>Winner</th><th>Good for</th></tr></thead>
+      <tbody>
+        <tr><td><b>Fewest clicks</b></td><td>Shortest route; time breaks ties</td><td>Thinking, planning, fair on slow connections</td></tr>
+        <tr><td><b>Fastest time</b></td><td>First to arrive, however many clicks</td><td>Streams, parties, quick reflexes</td></tr>
+      </tbody>
+    </table>
+    <p>WikiRacer Live uses <b>fewest clicks, then time</b>, so a careful route beats frantic clicking, but speed still matters when two players tie.</p>
+
+    <h2>Why almost every run is short</h2>
+    <p>English Wikipedia has millions of articles, but they're densely linked. Most pairs of articles are only three or four clicks apart, because a small number of "hub" articles (big countries, major cities, centuries, broad sciences) link to a huge share of everything else. A good run is about finding the right hub quickly.</p>
+
+    <h2>Strategies fast runners use</h2>
+    <h3>1. Climb, then descend</h3>
+    <p>From a narrow start, click up to something broad (a country, a field, a time period), then come back down towards the target's world. "Croissant → France → Europe → …" climbs fast.</p>
+    <h3>2. Work backwards from the target</h3>
+    <p>Before clicking anything, ask what page would definitely link to the target. For "Volcano" that's "Plate tectonics". For a footballer, it's their club or country. Now you're racing to an easier target.</p>
+    <h3>3. Read the top, not the whole page</h3>
+    <p>The lead paragraph and the infobox hold the densest, most general links. Long articles hide good links far down, but scrolling costs seconds.</p>
+    <h3>4. Know your hubs</h3>
+    <p>"United States", "United Kingdom", "World War II", "Latin", "Biology", "Mathematics" and the century pages ("20th century") connect almost everything. Learn which ones lead where.</p>
+    <h3>5. Don't back-track unless you're sure</h3>
+    <p>Going back costs a click. A slightly worse link forward is usually better than a step backwards.</p>
+
+    <h2>Practise</h2>
+    <ul>
+      <li><b>Daily challenge:</b> one hard pair a day, the same for everyone. Compare your route with past days in the <a href="/daily/">daily archive</a>.</li>
+      <li><b>Solo:</b> Easy, Medium and Hard with time limits of 2:30, 5:00 and 10:00.</li>
+      <li><b>Race ideas:</b> 50 pairs sorted by difficulty on the <a href="/wiki-race-ideas/">ideas page</a>.</li>
+      <li><b>Race people:</b> Quick match or a <a href="/multiplayer/">private room</a> shows everyone's full route at the end, which is the fastest way to learn new shortcuts.</li>
+    </ul>
+    <div class="cta"><a class="play" href="/">Play now</a></div>`,
+});
+
+add({
+  url: '/classroom/',
+  title: `Wiki Races in the Classroom: A Teacher's Guide | ${NAME}`,
+  description: 'Use wiki races to practise reading, research and reasoning. Free private rooms for up to 8, custom start and target articles, no student accounts.',
+  h1: 'For teachers',
+  body: `
+    <p class="lead">A wiki race gets students reading closely, scanning for relevant information and explaining how ideas connect, while it feels like a game. WikiRacer Live is free, has no ads, and needs no student accounts or emails.</p>
+    <div class="cta"><a class="play" href="/">Open WikiRacer</a><a class="play ghost" href="/how-to-play/">Rules for students</a></div>
+
+    <h2>What students practise</h2>
+    <ul>
+      <li><b>Skimming and scanning:</b> finding the useful sentence fast instead of reading every word.</li>
+      <li><b>Categorising:</b> recognising that a topic belongs to a bigger field, place or period.</li>
+      <li><b>Reasoning and planning:</b> working backwards from a goal, then explaining the route.</li>
+      <li><b>Vocabulary and general knowledge:</b> every race passes through unfamiliar articles.</li>
+    </ul>
+
+    <h2>Running a race with your class</h2>
+    <ol class="steps">
+      <li><b>Create a private room</b> and put the 5-letter code on the board. Each room holds up to 8 players, so for a big class run several rooms, or let groups share a device and race as teams.</li>
+      <li><b>Choose the pair yourself:</b> pick <b>Custom</b> and type the start and target articles. Linking two topics from your current unit works well ("Photosynthesis" to "Industrial Revolution").</li>
+      <li><b>Race.</b> Everyone starts together after a 3-second countdown. Fewest clicks wins; ties go to the faster time.</li>
+      <li><b>Debrief with the results screen.</b> It shows every player's full route. Ask students to justify their key click: why did that link get them closer?</li>
+    </ol>
+
+    <h2>Lesson ideas</h2>
+    <ul>
+      <li><b>Unit connector:</b> start on this week's topic and finish on last week's.</li>
+      <li><b>Predict first:</b> students write down their planned route before racing, then compare.</li>
+      <li><b>Fewest clicks challenge:</b> no time pressure. Can anyone beat the class record for a pair?</li>
+      <li><b>Daily warm-up:</b> the <a href="/daily/">daily challenge</a> gives everyone the same pair; share results at the start of class.</li>
+    </ul>
+
+    <h2>Things to know</h2>
+    <ul>
+      <li><b>Content comes straight from Wikipedia.</b> Articles are unfiltered, so supervise younger students and choose pairs that keep them in suitable areas.</li>
+      <li><b>Names:</b> students type any display name. Obvious slurs are filtered automatically; ask students to use first names or nicknames.</li>
+      <li><b>Privacy:</b> no accounts, no cookies and no ads. See the <a href="/privacy/">privacy page</a> for exactly what is collected. The site isn't directed at children under 13.</li>
+      <li><b>Devices:</b> any modern browser works, including iPads, Chromebooks and phones. Leaving the tab mid-race adds a penalty, which keeps attention on the task.</li>
+    </ul>
+    <div class="cta"><a class="play" href="/">Start a class race</a><a class="play ghost" href="/wiki-race-ideas/">Ready-made pairs</a></div>`,
+});
+
+add({
+  url: '/alternatives/',
+  title: `Wiki Race Games Compared: WikiRacer Live & Alternatives | ${NAME}`,
+  description: 'How the main Wikipedia racing games and tools differ: live multiplayer, daily puzzles, accounts and shortest-path finders. Pick the one that suits how you play.',
+  h1: 'Wiki race alternatives',
+  body: `
+    <p class="lead">There are a few good ways to play the Wikipedia game online. They suit different players, so here's an honest look at how they differ. Features change, so check each site for what it offers today.</p>
+
+    <h2>Kinds of wiki race games</h2>
+    <table>
+      <thead><tr><th>Type</th><th>What it's like</th><th>Examples</th></tr></thead>
+      <tbody>
+        <tr><td><b>Shared timed rounds</b></td><td>Everyone online gets the same pair each round and a global leaderboard</td><td>The Wiki Game (thewikigame.com)</td></tr>
+        <tr><td><b>Daily puzzle</b></td><td>One pair per day, Wordle-style</td><td>wikiracer.com, the WikiRacer Live daily</td></tr>
+        <tr><td><b>Live rooms with friends</b></td><td>Private room, invite link, race together in real time</td><td>WikiRacer Live</td></tr>
+        <tr><td><b>Shortest-path finders</b></td><td>Not a game: shows the shortest known route between two articles</td><td>Six Degrees of Wikipedia (sixdegreesofwikipedia.com)</td></tr>
+        <tr><td><b>Do it yourself</b></td><td>Open Wikipedia in browser tabs and race on the honour system</td><td>Any browser</td></tr>
+      </tbody>
+    </table>
+
+    <h2>What WikiRacer Live is good at</h2>
+    <ul>
+      <li><b>Playing with people you know.</b> Private rooms for up to 8, a 5-letter code, and a shared start so everyone races at once.</li>
+      <li><b>No sign-up.</b> Type a name and play. No accounts, ads or cookies.</li>
+      <li><b>Fair results.</b> Search and Find in page are disabled, leaving the tab is penalised, and every multiplayer route is re-checked against Wikipedia's real links.</li>
+      <li><b>Seeing how others did it.</b> The results screen compares every player's full route, and you can spectate once you've finished.</li>
+      <li><b>Pairs you can actually solve.</b> Easy, Medium and Hard pairs are picked from familiar topics, not obscure stubs.</li>
+    </ul>
+
+    <h2>When another option might suit you better</h2>
+    <ul>
+      <li>If you want a <b>large public leaderboard</b> with thousands of strangers each round, a shared-round game is a better fit.</li>
+      <li>If you want to <b>check the theoretical shortest route</b> after a race, use a path finder like Six Degrees of Wikipedia.</li>
+      <li>If you want <b>non-English Wikipedia</b>, WikiRacer Live currently uses English Wikipedia only.</li>
+    </ul>
+    <p class="muted">WikiRacer Live isn't affiliated with any of the sites mentioned here, or with the Wikimedia Foundation.</p>
+    <div class="cta"><a class="play" href="/">Try WikiRacer Live</a><a class="play ghost" href="/multiplayer/">Play with friends</a></div>`,
 });
 
 add({
