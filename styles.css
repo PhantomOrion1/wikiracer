@@ -842,3 +842,15 @@ h3.sec { font-size: 18px; color: var(--text); }
 .demo-trail span, .demo-trail i { flex-shrink: 0; }
 .demo-clicks { flex-shrink: 0; }
 .demo-cursor.press { scale: .85; transition: transform .62s cubic-bezier(.45,.05,.25,1), scale .1s; }
+/* live route of someone still racing (shown once you're done) */
+.node.live-cur { border-color: var(--accent); color: var(--text); box-shadow: 0 0 0 2px rgba(255,68,51,.25); }
+.node.live-tail { border-style: dashed; color: var(--muted); font-style: italic; animation: live-blink 1.4s ease-in-out infinite; }
+.edge.dashed { background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px); }
+.edge.dashed::after { border-left-color: var(--muted); }
+@keyframes live-blink { 50% { opacity: .45; } }
+/* demo: smoother click: cursor press eases both ways, page swaps with a soft fade (no slide) */
+.demo-cursor { transition: transform .62s cubic-bezier(.45,.05,.25,1), scale .14s ease; }
+.demo-cursor.press { scale: .86; transition: transform .62s cubic-bezier(.45,.05,.25,1), scale .14s ease; }
+.demo-page.flip { animation: page-fade .26s ease-out; }
+@keyframes page-fade { from { opacity: .15; } to { opacity: 1; } }
+.demo-trail { scroll-behavior: smooth; }

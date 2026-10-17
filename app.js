@@ -566,6 +566,13 @@
       art = await fetchArticle(title);
     } catch (e) {
       track('issue', { kind: 'article_load', title: String(title).slice(0, 120), message: String(e.message || '').slice(0, 160) });
+      // The very first page must load or you can't race at all: keep retrying for ~20s first.
+      if (!g.current && game === g && (g.startRetries = (g.startRetries || 0) + 1) <= 6) {
+        toast('Wikipedia is slow right now, retrying…', 2500);
+        g.busy = false;
+        setTimeout(() => { if (game === g && !g.current) goTo(title, { count, back, via }); }, 1500 + g.startRetries * 800);
+        return;
+      }
       toast(e.message || "Couldn't load that article");
       if (!g.current && game === g) {
         stopTimer();
@@ -808,6 +815,11 @@
         if (shared.has(normTitle(s.t))) cls.push('shared');
         return `${i ? '<span class="edge"></span>' : ''}<span class="${cls.join(' ')}" style="--d:${i * 90}ms">${s.back ? '↩ ' : ''}${esc(s.t)}</span>`;
       }).join('');
+    } else if (p.status === 'playing' && p.livePath && p.livePath.length && iAmDoneThisRound()) {
+      // Still racing: their route so far, live (only shown to people who are out of the race).
+      const lp = p.livePath;
+      route = lp.map((s, i) => `${i ? '<span class="edge"></span>' : ''}<span class="node${i === 0 ? ' start' : ''}${s.back ? ' back' : ''}${i === lp.length - 1 ? ' live-cur' : ''}">${s.back ? '↩ ' : ''}${esc(s.t)}</span>`).join('')
+        + '<span class="edge dashed"></span><span class="node live-tail">still racing…</span>';
     } else if (p.status === 'playing') {
       route = `<span class="muted">Route hidden until they finish${p.title ? ` · now on <b>${esc(p.title)}</b>` : ''}</span>`;
     } else {
@@ -2955,7 +2967,7 @@
         await wait(700);                       // cursor travels to the link
         link.classList.add('hit');
         cursor.classList.add('press');
-        await wait(200);
+        await wait(160);
         cursor.classList.remove('press');
         await wait(350);                       // the clicked link stays lit…
         showTrail(names, k + 1, true);         // …then joins the chain
