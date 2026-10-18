@@ -834,7 +834,10 @@
     renderResults();
   }
 
+  // Easter egg: anyone named "b" gets a pink crown instead of their initial.
+  const PINK_CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ff2e93" d="M2.5 7.5l5 4.2L12 4.5l4.5 7.2 5-4.2-2.2 11.5H4.7z"/><rect x="4.7" y="19.6" width="14.6" height="2" fill="#ff2e93"/></svg>';
   function avatar(p) {
+    if (String(p.name || '').trim().toLowerCase() === 'b') return `<span class="avatar crowned" style="--c:#ffd9ec" title="b">${PINK_CROWN}</span>`;
     return `<span class="avatar" style="--c:${esc(p.color || COLORS[0])}">${esc((p.name || '?').charAt(0).toUpperCase())}</span>`;
   }
 

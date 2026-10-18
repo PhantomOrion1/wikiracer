@@ -875,3 +875,4 @@ h3.sec { font-size: 18px; color: var(--text); }
 #room-diff .btn.diff.easy:hover, #room-diff .btn.diff.easy.selected, .vote-row .vote.easy:hover, .vote-row .vote.easy.selected { background-color: var(--easy-fill); border-color: var(--easy-fill); color: #fff; }
 .btn.diff.medium, .pill.medium, .hud-diff.medium, .diffs .sq[data-solo="medium"]:hover,
 #room-diff .btn.diff.medium:hover, #room-diff .btn.diff.medium.selected, .vote-row .vote.medium:hover, .vote-row .vote.medium.selected { background-color: var(--medium-fill); border-color: var(--medium-fill); color: #fff; }
+.avatar.crowned svg { width: 78%; height: 78%; display: block; }
