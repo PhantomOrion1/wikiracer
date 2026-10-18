@@ -400,11 +400,19 @@
   const FAMILIAR = POOL.familiar.map(([t, g]) => ({ t, s: g }));
   const EASY_POOL = FAMILIAR;
 
+  // Easy pairs usually share a subject (two animals, two foods…), which makes the route obvious.
+  // Medium and Hard pairs come from different subjects.
+  const SAME_SUBJECT_EASY = 0.65;
   function generatedCandidate(diff) {
     if (!FAMILIAR.length) return null;
     const a = anyOf(FAMILIAR);
     let b = anyOf(FAMILIAR);
-    if (diff !== 'easy') for (let i = 0; i < 6 && b.s === a.s; i++) b = anyOf(FAMILIAR);
+    if (diff === 'easy' && Math.random() < SAME_SUBJECT_EASY) {
+      const same = FAMILIAR.filter((x) => x.s === a.s && x.t !== a.t);
+      if (same.length) b = anyOf(same);
+    } else if (diff !== 'easy') {
+      for (let i = 0; i < 6 && b.s === a.s; i++) b = anyOf(FAMILIAR);
+    }
     return [a.t, b.t];
   }
 
@@ -439,7 +447,10 @@
     const recent = recentTitles();
     const fresh = ([s, e]) => !played.has(pairKey(s, e)) && !recent.has(normTitle(s)) && !recent.has(normTitle(e));
     const curated = (window.PAIRS[diff] || []).filter(fresh);
-    let bestHard = null;
+    // Easy wants several 2-click routes (an obvious way through); Medium just needs one to exist,
+    // so the best answer is 2 clicks and most players take 3–4. Hard wants none.
+    const EASY_MIN_ROUTES = 4;
+    let bestHard = null, bestEasy = null;
     for (let attempt = 0; attempt < (diff === 'hard' ? 4 : 8); attempt++) {
       const useCurated = curated.length && (Math.random() < 0.15 || !FAMILIAR.length);
       const cand = useCurated ? curated.splice(Math.floor(Math.random() * curated.length), 1)[0] : generatedCandidate(diff);
@@ -448,12 +459,18 @@
         // Familiar titles are already known-good; only hand-picked pairs need checking.
         const pair = useCurated ? await validatePair(cand[0], cand[1]) : { start: cand[0], end: cand[1] };
         if (played.has(pairKey(pair.start, pair.end)) || await linksDirectly(pair.start, pair.end)) continue;
-        if (diff === 'medium') return pair;
         const mids = await middles(pair.start, pair.end).catch(() => null);
         if (!mids) continue;
-        if (diff === 'easy') {
+        if (diff === 'medium') {
           if (!mids.length) continue;
           return { ...pair, route: [pair.start, mids[0].t, pair.end] };
+        }
+        if (diff === 'easy') {
+          if (!mids.length) continue;
+          const found = { ...pair, route: [pair.start, mids[0].t, pair.end] };
+          if (mids.length >= EASY_MIN_ROUTES) return found;
+          if (!bestEasy || mids.length > bestEasy.n) bestEasy = { pair: found, n: mids.length };
+          continue;
         }
         // Hard: the fewer pages in between, the harder. None at all is ideal.
         if (!mids.length) return pair;
@@ -461,6 +478,7 @@
       } catch {}
     }
     if (bestHard) return bestHard.pair;
+    if (bestEasy) return bestEasy.pair;
     const p = anyOf(window.PAIRS[diff]);
     return validatePair(p[0], p[1]);
   }
