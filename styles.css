@@ -980,3 +980,17 @@ h3.sec { font-size: 18px; color: var(--text); }
 }
 /* A barely-there grey edge on faces in lobbies and games. */
 .avatar.pfp { outline: 2px solid #4a4a4a; outline-offset: -2px; }
+
+/* ---------- keep wide Wikipedia content inside the article box ---------- */
+/* Big data/layout tables (periodic table, galleries, navboxes) scroll sideways inside themselves. */
+.article table:not(.infobox):not(.infobox_v2):not(.sidebar) { display: block; max-width: 100%; overflow-x: auto; }
+/* Navbox links are set to never wrap, which makes the boxes huge: let them wrap. */
+.article .nowraplinks a, .article .hlist li, .article .navbox .nowrap { white-space: normal; }
+/* Fixed-width image boxes (multi-image thumbnails) shrink to fit instead of poking out. */
+.article .thumb.tmulti { max-width: 100%; }
+.article [style*="width"] { max-width: 100%; box-sizing: border-box; }
+.article .tmulti .trow { display: flex; flex-wrap: wrap; }
+.article .tsingle { max-width: 100%; }
+.article .tsingle img, .article .thumbimage img { max-width: 100%; height: auto; }
+/* Last resort: anything still too wide is cut off at the edge rather than spilling over. */
+.article { overflow-x: clip; }

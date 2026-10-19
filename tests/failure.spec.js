@@ -398,3 +398,31 @@ test('Profile pictures: ghost by default, picker changes it, other players see i
   expect(await host.evaluate(() => window.__wr.sanitizePlayers({ a: { name: 'x', pfp: '../../evil' } }).a.pfp)).toBe('ghost');
   await Promise.all(ctxs.map((c) => c.close()));
 });
+
+test('Lane Rush on the results screen expands inline and carries on into the lobby', async ({ browser }) => {
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [host, friend]) await mockWikipedia(p);
+  const code = await createPrivateRoom(host, 'Host');
+  await joinPrivateRoom(friend, 'Friend', code);
+  await hostStartCustom(host, 'Dog', 'Wolf');
+  await expect(host.locator('#article-title')).toHaveText('Dog', { timeout: 20000 });
+  await host.waitForTimeout(2500);
+  await host.locator('#article a[data-wr="Canidae"]').click();
+  await expect(host.locator('#article-title')).toHaveText('Canidae', { timeout: 20000 });
+  await host.locator('#article a[data-wr="Wolf"]').click();
+  const btn = host.locator('#results-actions button', { hasText: 'Lane Rush' });
+  await expect(btn).toBeVisible({ timeout: 20000 });
+  await btn.click();
+  await expect(host.locator('#results-flappy #flappy-canvas')).toBeVisible();
+  await expect(host.locator('#flappy')).toBeHidden(); // no pop-up
+  await expect(host.locator('#results-actions button', { hasText: 'Hide Lane Rush' })).toBeVisible();
+  // friend gives up so the round ends; host goes back to the lobby: the run moves with them
+  await friend.click('#btn-giveup');
+  if (await friend.locator('#confirm').isVisible()) await friend.click('#confirm-ok');
+  await host.locator('#results-actions button', { hasText: /Next round|End round/ }).click();
+  await expect(host.locator('#lobby')).toHaveClass(/active/);
+  await expect(host.locator('#lobby-flappy #flappy-canvas')).toBeVisible();
+  expect(await host.evaluate(() => window.MiniGame.isOpen())).toBe(true);
+  await Promise.all(ctxs.map((c) => c.close()));
+});

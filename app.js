@@ -911,6 +911,7 @@
   let confettiRound = null;
 
   function closeResults() {
+    if (window.MiniGame.isOpen() && !$('#results-flappy').classList.contains('hidden')) window.MiniGame.close();
     $('#results').classList.add('hidden');
     $('#confetti').replaceChildren();
   }
@@ -1092,7 +1093,15 @@
     if (g.mode === 'duel') {
       if (net.isHost && !net.isPublic) add(net.phase === 'results' ? 'Next round' : 'End round → lobby', 'primary', hostBackToLobby);
       else if (!net.isPublic) actions.insertAdjacentHTML('beforeend', `<p class="muted center full">${net.phase === 'results' ? 'Waiting for the host to start the next round…' : 'Waiting for everyone to finish…'}</p>`);
-      if (game.finished) add('🏎 Lane Rush', '', () => { if (miniGameAllowed()) window.MiniGame.open(); });
+      if (game.finished) {
+        // Plays inside the results box (expands downwards) instead of as a separate pop-up.
+        const inResults = window.MiniGame.isOpen() && window.MiniGame.isInline() && !$('#results-flappy').classList.contains('hidden');
+        add(inResults ? 'Hide Lane Rush' : '🏎 Lane Rush', '', () => {
+          if (window.MiniGame.isOpen() && !$('#results-flappy').classList.contains('hidden')) window.MiniGame.close();
+          else if (miniGameAllowed()) { window.MiniGame.open($('#results-flappy')); $('#results-flappy').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+          renderResults();
+        });
+      }
       if (net.isPublic) add('⏭ Next room', '', () => { quickMatch(); });
       add('Leave', 'ghost', () => { leaveRoomAndGoHome(); });
     } else {
@@ -2196,7 +2205,8 @@
   function addBot() {
     if (!net.isHost || !net.isPublic || net.phase !== 'lobby' || activeCount() >= MAX_PLAYERS) return;
     const id = uuid();
-    net.players[id] = newPlayer(botName(), nextColor(), anyOf(PFPS));
+    // Ghost is the default, so like real players, bots wear it a bit more often (25% vs ~9% each).
+    net.players[id] = newPlayer(botName(), nextColor(), Math.random() < 0.25 ? 'ghost' : anyOf(PFPS.filter((x) => x !== 'ghost')));
     net.bots.set(id, { tier: pickWeighted(BOT_TIERS), timers: [], view: { b: 0, p: 0 } });
     toast(`${net.players[id].name} joined`);
     botMaybeVote(id);
@@ -3043,6 +3053,8 @@
   function goToLobbyScreen() {
     stopTimer();
     game = null;
+    // A Lane Rush run in the results box carries on in the lobby's box.
+    if (window.MiniGame.isOpen() && !$('#results-flappy').classList.contains('hidden')) window.MiniGame.moveTo($('#lobby-flappy'));
     closeResults();
     $('#countdown').classList.add('hidden');
     show('lobby');
@@ -3597,7 +3609,7 @@
     });
   }
   addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
-  addEventListener('minigame-close', () => renderMiniGameButton());
+  addEventListener('minigame-close', () => { renderMiniGameButton(); renderResults(); });
   if (/[?&]debug\b/.test(location.search)) {
     window.__wr = { gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
   }

@@ -236,5 +236,15 @@ window.MiniGame = (() => {
     dispatchEvent(new Event('minigame-close'));
   }
 
-  return { open: show, close, isOpen: () => open, isInline: () => !!slot };
+  // Move a running inline game to another slot without restarting it.
+  function moveTo(target) {
+    if (!open || !slot || !target || target === slot) return;
+    const box = document.querySelector('.flappy-box');
+    slot.classList.add('hidden');
+    target.appendChild(box);
+    target.classList.remove('hidden');
+    slot = target;
+  }
+
+  return { open: show, close, moveTo, isOpen: () => open, isInline: () => !!slot };
 })();
