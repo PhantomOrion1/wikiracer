@@ -350,3 +350,28 @@ test('Random pair uses familiar topics', async ({ page }) => {
   });
   expect(res).toBe(true);
 });
+
+test('Choose: everyone sees three pairs, only the host can pick, and the race uses the pick', async ({ browser }) => {
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [host, friend]) await mockWikipedia(p);
+  const code = await createPrivateRoom(host, 'Host');
+  await joinPrivateRoom(friend, 'Friend', code);
+  await host.click('[data-diff=choose]');
+  await expect(host.locator('#choose-list .choice')).toHaveCount(3);
+  await expect(friend.locator('#choose-list .choice')).toHaveCount(3);
+  await expect(friend.locator('#choose-list .choice').first()).toBeDisabled();
+  await expect(friend.locator('#choose-shuffle')).toBeHidden();
+  const before = await host.locator('#choose-list').innerText();
+  await host.click('#choose-shuffle');
+  await expect.poll(() => host.locator('#choose-list').innerText()).not.toBe(before);
+  await host.locator('#choose-list .choice').nth(1).click();
+  await expect(friend.locator('#choose-list .choice').nth(1)).toHaveClass(/selected/);
+  const pick = await host.evaluate(() => window.__wr.net().choices[1]);
+  await expect(host.locator('#start-race')).toHaveText('Play this race');
+  await host.click('#start-race');
+  await friend.waitForFunction(() => window.__wr.net().round, null, { timeout: 20000 });
+  expect(await friend.evaluate(() => { const r = window.__wr.net().round; return { start: r.start, end: r.end, difficulty: r.difficulty }; }))
+    .toEqual({ start: pick.start, end: pick.end, difficulty: 'choose' });
+  await Promise.all(ctxs.map((c) => c.close()));
+});

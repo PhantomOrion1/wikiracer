@@ -908,10 +908,11 @@ h3.sec { font-size: 18px; color: var(--text); }
 #article h2, #article h3 { scroll-margin-top: 96px; } /* clear the sticky race bar when jumping to a section */
 
 /* Feedback: a quiet link-style button in the corner of the home page. */
-.feedback-btn { position: fixed; right: 14px; bottom: 12px; z-index: 20; background: none; border: 0; padding: 6px 4px;
-  font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
-  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.feedback-btn:hover, .feedback-btn:focus-visible { color: var(--text); }
+.feedback-btn { position: fixed; right: 28px; bottom: 24px; z-index: 20; background: #111; color: #f4f2ed;
+  border: 2px solid var(--ink-line); padding: 8px 14px; font: 700 12.5px var(--mono); letter-spacing: .08em;
+  text-transform: uppercase; cursor: pointer; transition: transform .12s, background .12s; }
+.feedback-btn:hover, .feedback-btn:focus-visible { background: var(--accent-fill); border-color: var(--accent-fill); transform: translateY(-1px); }
+@media (max-width: 760px) { .feedback-btn { right: 14px; bottom: 14px; padding: 7px 11px; font-size: 11.5px; } }
 #home:not(.active) ~ .feedback-btn { display: none; }
 #feedback { z-index: 90; }
 .feedback-box h2 { font-size: 26px; }
@@ -924,3 +925,19 @@ h3.sec { font-size: 18px; color: var(--text); }
 .feedback-box textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 110px; margin-bottom: 14px; padding: 10px;
   font: 15px/1.45 var(--sans); background: var(--bg); color: var(--text); border: 2px solid var(--ink-line); border-radius: 0; }
 .feedback-box textarea:focus { outline: none; border-color: var(--accent); }
+
+/* "Choose" in private rooms: three pairs everyone can see, the host picks one. */
+.choose-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.choose-head h2 { margin: 0; }
+.choose-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.choice { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  padding: 12px 14px; border: 2px solid var(--line); background: var(--surface); color: var(--text); font: 600 16px var(--sans); cursor: pointer; }
+.choice i { font-style: normal; color: var(--accent); font-weight: 800; }
+.choice b { font-weight: 800; }
+.choice:not(:disabled):hover { border-color: var(--ink-line); }
+.choice.selected { border-color: var(--accent-fill); box-shadow: inset 4px 0 0 var(--accent-fill); }
+.choice:disabled { cursor: default; }
+.choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.choose-note { margin: 10px 0 0; font-size: 13px; }
+.toc { scrollbar-width: none; } /* still scrolls with wheel/trackpad, just no visible bar */
+.toc::-webkit-scrollbar { display: none; }

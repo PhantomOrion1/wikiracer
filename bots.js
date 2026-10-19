@@ -8,7 +8,7 @@
 //  - A few ALL CAPS, odd spacing, or a single emoji.                                    (~7%)
 //  - Only a handful with numbers, underscores or a last initial.                        (~7%)
 // Avoided on purpose: anything themed on Wikipedia/racing (a giveaway), surnames, email-style
-// handles, real public figures, staff-like names (admin/mod) and bad-connotation numbers.
+// handles and staff-like names (admin/mod). Meme names at the end are deliberate.
 window.BOT_NAMES = [
   // first names, mostly lowercase
   'jake', 'emma', 'liam', 'sophie', 'noah', 'mia', 'ethan', 'chloe', 'josh', 'ella', 'ryan', 'grace',
@@ -37,4 +37,10 @@ window.BOT_NAMES = [
   'ben.', 'ryan!', 'sophie 🙂', 'TOM', 'ELLA',
   // a few with numbers, underscores or an initial
   'jake2847', 'liam23', 'emma_04', 'ryan11', 'zoe28', 'mia_x', 'josh m', 'charlie b', 'omar k', 'sam p',
+  // meme / joke names (picked at the same odds as everything else)
+  'lil bro', 'big dawg', '420', 'cheeseball', 'big chungus', 'skiboi', 'glizzy goblin', 'pookie', 'gigachad',
+  'hogrider', 'big john', '67', 'goobert', 'uncle ruckus', 'shrek', 'sigma69', 'toiletman', 'glizzy king',
+  'stinky pete', 'goonlord', 'chungus69', 'dr pork', 'mr worldwide', 'big chung', 'goblin mode', '999',
+  'el chapo', 'big tony', 'fattymcgee', '饺子王', '臭豆腐', 'zesty boi', 'x', '69', 'trump', 'shanks',
+  'cheeseboyyyy', 'porkchop', '龙王之子',
 ];

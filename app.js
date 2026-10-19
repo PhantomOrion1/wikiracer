@@ -146,8 +146,8 @@
   const MAX_PLAYERS = 8;
   const COUNTDOWN_MS = 3300;
   const GRACE_MS = 4000;
-  const LIMITS = { easy: 150e3, medium: 300e3, hard: 600e3, random: 600e3, custom: 300e3, challenge: 300e3 };
-  const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', random: 'Random', custom: 'Custom', challenge: 'Challenge', daily: 'Daily' };
+  const LIMITS = { easy: 150e3, medium: 300e3, hard: 600e3, random: 600e3, custom: 300e3, choose: 300e3, challenge: 300e3 };
+  const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', random: 'Random', custom: 'Custom', choose: 'Picked', challenge: 'Challenge', daily: 'Daily' };
   const COLORS = ['#3355ff', '#f76707', '#2f9e44', '#d6336c', '#7048e8', '#0c8599', '#e8a400', '#8a5a44'];
   // Namespaces / interwiki prefixes that don't count as articles.
   const BLOCKED_NS = new Set([
@@ -470,6 +470,11 @@
       const [s, e] = custom.map((x) => (x || '').trim());
       if (!s || !e) throw new Error('Enter a start and a target article');
       return validatePair(s, e);
+    }
+    if (diff === 'choose') {
+      const c = net.choices && net.choices[net.chosen];
+      if (!c) throw new Error('Pick one of the races first');
+      return { start: c.start, end: c.end };
     }
     if (diff === 'random') {
       // Two random topics people actually know (any subject, any distance apart), not Wikipedia's
@@ -982,7 +987,6 @@
           ${p.status === 'finished' || p.status === 'playing' ? `<span>🖱 ${plural(p.clicks || 0, 'click')}</span>` : ''}
           ${p.penalties ? `<span class="pen-chip">+${p.penalties} penalty</span>` : ''}
           ${p.status === 'finished' ? `<span>⏱ ${fmtTime(p.time)}</span>` : ''}
-          ${p.tabLeaves ? `<span class="muted" title="Times they left the tab">👀 ${p.tabLeaves}</span>` : ''}
           ${canSpec ? `<button class="btn tiny" data-spectate="${esc(p.id)}">👁 Spectate</button>` : ''}
         </span>
       </div>
@@ -1115,6 +1119,27 @@
     if (launching || (game && !game.finished)) return;
     launching = true;
     try { await fn(); } finally { launching = false; }
+  }
+
+  // "Choose" in private rooms: three pairs of familiar topics everyone can see; the host picks one.
+  function makeChoices() {
+    const played = new Set(playedList());
+    const used = new Set();
+    const out = [];
+    for (let i = 0; i < 60 && out.length < 3 && FAMILIAR.length > 6; i++) {
+      const a = anyOf(FAMILIAR), b = anyOf(FAMILIAR);
+      if (a.t === b.t || a.s === b.s || used.has(a.t) || used.has(b.t) || played.has(pairKey(a.t, b.t))) continue;
+      used.add(a.t); used.add(b.t);
+      out.push({ start: a.t, end: b.t });
+    }
+    return out;
+  }
+  function hostShuffleChoices() {
+    if (!net.isHost) return;
+    net.choices = makeChoices();
+    net.chosen = 0;
+    broadcast();
+    renderLobby();
   }
 
   // Pairs are picked in the background while you're on the home page, so pressing Easy/Medium/Hard
@@ -1641,7 +1666,8 @@
       net = freshNet();
       Object.assign(net, { isHost: true, isPublic, slot, code, myId: 'host' });
       const lastDiff = store.get('wr-room-diff');
-      if (['easy', 'medium', 'hard', 'random', 'custom'].includes(lastDiff)) net.diff = lastDiff;
+      if (['easy', 'medium', 'hard', 'choose', 'custom'].includes(lastDiff)) net.diff = lastDiff;
+      if (net.diff === 'choose') { net.choices = makeChoices(); net.chosen = 0; }
       net.players.host = newPlayer(name, COLORS[0]);
       net.send = (msg) => hostHandle('host', msg);
       const me = net;
@@ -1935,6 +1961,7 @@
       roundElapsed: net.phase !== 'lobby' && net.roundStartedAt ? Date.now() - net.roundStartedAt : 0,
       autoStartIn: net.autoStartAt ? Math.max(0, net.autoStartAt - Date.now()) : 0,
       nextIn: net.nextAt && net.phase === 'results' ? Math.max(0, net.nextAt - Date.now()) : 0,
+      choices: net.diff === 'choose' && !net.isPublic ? net.choices || [] : [], chosen: net.chosen || 0,
     };
   }
 
@@ -2036,6 +2063,7 @@
     }
     net.phase = 'lobby';
     net.nextAt = 0;
+    if (net.diff === 'choose' && !net.isPublic) { net.choices = makeChoices(); net.chosen = 0; }
     for (const [id, p] of Object.entries(net.players)) {
       if (!p.connected) delete net.players[id];
       else Object.assign(p, { status: 'lobby', inRound: false, ready: false, vote: null });
@@ -2086,7 +2114,7 @@
   const humanCount = () => Object.entries(net.players).filter(([id, p]) => p.connected && !isBot(id)).length;
 
   // Compare names by their letters only, so "liam" and "liam07" never end up in the same room.
-  const nameBase = (n) => String(n).toLowerCase().replace(/[^a-z]/g, '');
+  const nameBase = (n) => String(n).toLowerCase().replace(/[^a-z]/g, '') || String(n).toLowerCase().trim();
   function botName() {
     const taken = new Set(Object.values(net.players).map((p) => nameBase(p.name)));
     const pool = (window.BOT_NAMES || []).filter((n) => !taken.has(nameBase(n)) && !recentBotNames.includes(n));
@@ -2661,7 +2689,8 @@
     const n = freshNet();
     Object.assign(n, {
       isHost: true, isPublic: old.isPublic, slot: old.slot, code: old.code, roomId: old.roomId, myId: 'host', peer,
-      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: (old.round && ['easy', 'medium', 'hard', 'random'].includes(old.round.difficulty)) ? old.round.difficulty : old.diff,
+      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: (old.round && ['easy', 'medium', 'hard', 'choose'].includes(old.round.difficulty)) ? old.round.difficulty : (old.choices && old.choices.length ? 'choose' : old.diff),
+      choices: old.choices || [], chosen: old.chosen || 0,
       joined: true, myName: old.myName,
     });
     const players = { host: { ...old.players[old.myId], connected: true, awaiting: false, name: old.myName || 'Host' } };
@@ -2837,6 +2866,8 @@
       net.autoStartAt = d.autoStartIn ? Date.now() + int(d.autoStartIn, 0, 60e3) : 0;
       net.nextAt = d.nextIn ? Date.now() + int(d.nextIn, 0, 60e3) : 0;
       net.roundStartedAt = Date.now() - int(d.roundElapsed, -60e3, 3600e3);
+      net.choices = Array.isArray(d.choices) ? d.choices.slice(0, 3).map((c) => ({ start: str(c && c.start, 120), end: str(c && c.end, 120) })).filter((c) => c.start && c.end) : [];
+      net.chosen = int(d.chosen, 0, 2);
       if (net.phase === 'lobby' && prevPhase !== 'lobby') goToLobbyScreen();
       renderNet();
     } else if (d.type === 'start' && d.round) {
@@ -3071,9 +3102,23 @@
     $('#room-custom').classList.toggle('hidden', net.diff !== 'custom');
   }
 
+  function renderChoices(pub) {
+    const panel = $('#choose-panel');
+    const choices = net.choices || [];
+    const show = !pub && net.phase === 'lobby' && choices.length > 0 && (!net.isHost || net.diff === 'choose');
+    panel.classList.toggle('hidden', !show);
+    $('#start-race').textContent = net.isHost && net.diff === 'choose' && !net.starting ? 'Play this race' : (net.starting ? 'Picking articles…' : 'Start race');
+    if (!show) return;
+    $('#choose-shuffle').classList.toggle('hidden', !net.isHost);
+    $('#choose-note').textContent = net.isHost ? 'Click a race to pick it, or shuffle for three new ones.' : 'The host is picking one of these.';
+    $('#choose-list').innerHTML = choices.map((c, i) => `<li><button type="button" class="choice${i === net.chosen ? ' selected' : ''}" data-choice="${i}" ${net.isHost ? '' : 'disabled'} aria-pressed="${i === net.chosen}">
+      <span>${esc(c.start)}</span><i aria-hidden="true">→</i><b>${esc(c.end)}</b></button></li>`).join('');
+  }
+
   function renderLobby() {
     const pub = net.isPublic;
     syncRoomDiff();
+    renderChoices(pub);
     const code = pub && net.slot != null ? pubCode(net.slot) : net.code || (pub ? '' : '');
     $('#room-label').textContent = pub ? 'Public Room' : 'Private Room';
     $('#room-code').textContent = net.matching ? 'Searching…' : code || '·····';
@@ -3367,9 +3412,19 @@
     $$('#room-diff .btn').forEach((b) => b.addEventListener('click', () => {
       net.diff = b.dataset.diff;
       store.set('wr-room-diff', net.diff);
+      if (net.diff === 'choose' && !(net.choices && net.choices.length)) hostShuffleChoices();
+      else { broadcast(); renderLobby(); }
       syncRoomDiff();
     }));
     $('#start-race').addEventListener('click', hostStartRace);
+    $('#choose-shuffle').addEventListener('click', hostShuffleChoices);
+    $('#choose-list').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-choice]');
+      if (!b || !net.isHost) return;
+      net.chosen = int(b.dataset.choice, 0, 2);
+      broadcast();
+      renderLobby();
+    });
     $('#ready-btn').addEventListener('click', () => {
       const me = net.players[net.myId];
       if (me) net.send({ type: 'ready', ready: !me.ready });
