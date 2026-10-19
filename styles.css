@@ -978,3 +978,5 @@ h3.sec { font-size: 18px; color: var(--text); }
   #lobby .player-list li .avatar { width: 38px; height: 38px; }
   #lobby .player-list .pname { font-size: 16px; }
 }
+/* A barely-there grey edge on faces in lobbies and games. */
+.avatar.pfp { outline: 1px solid rgba(140, 140, 140, .35); outline-offset: -1px; }
