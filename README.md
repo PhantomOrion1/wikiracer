@@ -15,7 +15,7 @@ Get from one Wikipedia article to another using only the links on the page. Fewe
 - **Spectate**: once you're finished or out, watch any racer's screen live.
 - **Lane Rush**: a quick racing mini-game (dodge traffic, grab flags) to play while you wait. Locked during countdowns and while you race.
 - **Route comparison**: podium plus everyone's route side by side, with shared articles highlighted.
-- **Anti-cheat**: leaving the tab costs +1 click after one warning. The host re-checks every route against Wikipedia's link data, and fake routes get flagged. Times and click counts are measured by the host, not trusted from players. Racers can't see each other's pages until they finish.
+- **Anti-cheat**: the article is hidden while you're in another tab or window (the clock keeps running). The host re-checks every route against Wikipedia's link data, and fake routes get flagged. Times and click counts are measured by the host, not trusted from players. Racers can't see each other's pages until they finish.
 - **Security**: strict Content-Security-Policy, Subresource Integrity on the CDN script, Wikipedia HTML stripped of scripts and event handlers, and peer messages validated and rate-limited.
 
 ## Running it at scale

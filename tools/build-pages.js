@@ -121,7 +121,7 @@ add({
 
     <h2>Fair play</h2>
     <ul>
-      <li><b>Leaving the tab</b> gets you one warning, then a +1 click penalty each time.</li>
+      <li><b>Leaving the tab</b> hides the article until you come back, and the clock keeps running.</li>
       <li><b>Find in page (Ctrl/⌘+F)</b> doesn't work on links, so you have to actually read.</li>
       <li><b>Every multiplayer route is checked</b> against Wikipedia's real links, and finishes that are impossibly fast get flagged.</li>
     </ul>
@@ -182,7 +182,7 @@ const FAQ = [
   ['Can I choose the start and target articles?', 'Yes. In a private room or in Solo, pick Custom and type any two English Wikipedia articles. You can also share a challenge link so friends race the same pair.'],
   ['What counts as a click?', 'Every article you open counts as one click, including using Go Back. Jumping to a section within the same article is free.'],
   ['Can I use Ctrl+F or the search bar?', 'No. Search isn’t available, and Find in page doesn’t match link text, so you have to read and scan the article yourself.'],
-  ['What happens if I switch tabs?', 'The first time you get a warning. After that, each time you leave the tab during a race adds a one-click penalty.'],
+  ['What happens if I switch tabs?', 'The article is hidden until you come back, so you can’t keep it open next to a search. The clock keeps running while you’re away.'],
   ['How do you stop cheating?', 'Every multiplayer route is re-checked against Wikipedia’s actual links, and finishes that are faster than anyone could read the pages are flagged in the results.'],
   ['What is the daily challenge?', 'Each day everyone gets the same hard pair. You get one attempt, ranked by clicks and then time.'],
   ['Does it work on phones?', 'Yes. It works in modern mobile browsers, including Safari on iPhone and Chrome on Android.'],

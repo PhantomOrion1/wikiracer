@@ -260,3 +260,21 @@ test('Private room: the difficulty you pick is what you get, and new rooms remem
   expect(await friend.evaluate(() => window.__wr.net().round.difficulty)).toBe('hard');
   await Promise.all(ctxs.map((c) => c.close()));
 });
+
+test('Leaving the tab hides the article (no click penalty), and it comes back on return', async ({ page }) => {
+  await mockWikipedia(page);
+  await openHome(page, 'Away');
+  await page.click('#solo-custom-toggle');
+  await page.fill('#solo-custom input[name=start]', 'Dog');
+  await page.fill('#solo-custom input[name=end]', 'Wolf');
+  await page.click('#solo-custom button[type=submit]');
+  await expect(page.locator('#article-title')).toHaveText('Dog', { timeout: 20000 });
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await expect(page.locator('#article')).toBeHidden();
+    await expect(page.locator('.away-cover')).toContainText('Come back to keep racing');
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(page.locator('#article')).toBeVisible();
+  }
+  expect(await page.evaluate(() => window.__wr.game().penalties)).toBe(0);
+});

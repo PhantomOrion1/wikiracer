@@ -571,6 +571,7 @@
   let gamesStarted = 0; // for tests
   function startGame(round, mode, extra = {}) {
     gamesStarted++;
+    $('#game').classList.remove('away');
     stopTimer();
     closeResults();
     closeSpectate();
@@ -751,31 +752,28 @@
     if (ok && game === g && !g.finished) finishGame('gaveup');
   }
 
-  // Anti-cheat: leaving the tab (to search, open Wikipedia elsewhere, etc.) is tracked.
-  // First time is a warning, then each departure costs +1 click.
+  // Anti-cheat: while you're in another tab or window the article is hidden, so it can't sit
+  // next to a search. No penalty: the clock keeps running, so leaving only costs time.
   function markAway() {
     const g = game;
     if (!g || g.finished || !g.startTime || g.suppressAway || g.away) return;
     g.away = true;
+    $('#game').classList.add('away');
   }
   function markReturn() {
     const g = game;
+    $('#game').classList.remove('away');
     if (!g || !g.away) return;
     g.away = false;
     if (g.finished) return;
-    g.tabLeaves++;
-    if (g.tabLeaves === 1) toast('⚠️ No leaving the tab mid-race! Next time costs +1 click.', 4000);
-    else {
-      g.penalties++;
-      toast('⚠️ You left the tab: +1 click penalty', 3000);
-    }
-    updateHud();
+    g.tabLeaves++; // still counted for stats, never scored
     sendProgress();
   }
 
   function finishGame(result) {
     const g = game;
     if (!g || g.finished) return;
+    $('#game').classList.remove('away');
     g.finished = true;
     g.result = result;
     g.elapsed = g.startTime ? Math.min(Date.now() - g.startTime, g.limit) : 0;
@@ -2276,7 +2274,6 @@
       times.slice(0, -1).forEach((t, i) => script.steps.push({ at: t, step: path[i + 1] }));
       script.end = { type: 'finished', at: times[times.length - 1], last: path[path.length - 1] };
     }
-    if (Math.random() < tier.pen) script.penAt = times[Math.floor(times.length / 2)] || 20000;
     b.script = script;
     b.done = 0; // steps already shown
     b.walk = [path[0]];
@@ -3155,7 +3152,8 @@
     };
     const moveCursorTo = (el) => {
       const b = board.getBoundingClientRect(), r = el.getBoundingClientRect();
-      cursor.style.transform = `translate(${r.left - b.left + r.width * 0.55}px, ${r.top - b.top + r.height * 0.55}px)`;
+      // `translate` (not `transform`) so the click's `scale` can't also scale the position.
+      cursor.style.translate = `${r.left - b.left + r.width * 0.55}px ${r.top - b.top + r.height * 0.55}px`;
     };
     let i = Math.floor(Math.random() * DEMO_ROUTES.length);
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -3199,7 +3197,7 @@
       if (!$('#home').classList.contains('active') || document.hidden) await wait(1500);
       play();
     }
-    cursor.style.transform = 'translate(70%, 260px)';
+    cursor.style.translate = '70% 260px';
     play();
   }
 

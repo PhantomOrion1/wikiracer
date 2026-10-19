@@ -27,7 +27,7 @@
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css">
-  <link rel="stylesheet" href="styles.css?v=66">
+  <link rel="stylesheet" href="styles.css?v=68">
 </head>
 <body>
   <!-- HOME -->
@@ -121,7 +121,7 @@
           <div class="rule">
             <div class="rule-h">🚫 Not allowed</div>
             <ul>
-              <li><b>Leaving the tab</b>: one warning, then +1 click each time</li>
+              <li><b>Leaving the tab</b> hides the article (the clock keeps running)</li>
               <li><b>Word search</b> (Ctrl/⌘+F) is switched off</li>
               <li>External, category and file links don't work</li>
             </ul>
@@ -230,6 +230,7 @@
     <div class="game-body">
       <main class="article-wrap">
         <div id="loading" class="loading hidden"><div class="spinner"></div></div>
+        <div class="away-cover" aria-live="polite"><div class="away-msg"><b>Come back to keep racing</b><span>The article is hidden while you're in another tab or window. The clock is still running.</span></div></div>
         <h1 id="article-title" class="article-title"></h1>
         <article id="article" class="article"></article>
         <p id="article-credit" class="article-credit"></p>
@@ -317,11 +318,11 @@
   <datalist id="suggest-start"></datalist>
   <datalist id="suggest-end"></datalist>
 
-  <script src="pairs.js?v=66" defer></script>
-  <script src="bots.js?v=66" defer></script>
-  <script src="vital.js?v=66" defer></script>
-  <script src="minigame.js?v=66" defer></script>
-  <script src="daily-core.js?v=66" defer></script>
-  <script src="app.js?v=66" defer></script>
+  <script src="pairs.js?v=68" defer></script>
+  <script src="bots.js?v=68" defer></script>
+  <script src="vital.js?v=68" defer></script>
+  <script src="minigame.js?v=68" defer></script>
+  <script src="daily-core.js?v=68" defer></script>
+  <script src="app.js?v=68" defer></script>
 </body>
 </html>
