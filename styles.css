@@ -847,7 +847,9 @@ h3.sec { font-size: 18px; color: var(--text); }
 .dl.hit { padding: 0; background: var(--accent); color: #fff; box-shadow: 0 0 0 3px var(--accent); text-decoration: none; }
 .dl.tgt { padding: 0; box-shadow: 0 0 0 2px rgba(255,68,51,.25); }
 .demo-foot { flex-wrap: nowrap; }
-.demo-trail { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; min-width: 0; flex: 1; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px); mask-image: linear-gradient(90deg, transparent 0, #000 18px); justify-content: flex-start; }
+.demo-trail { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; min-width: 0; flex: 1; justify-content: flex-start; }
+/* Fade the left edge only once older steps have scrolled out of view. */
+.demo-trail.overflow { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px); mask-image: linear-gradient(90deg, transparent 0, #000 18px); }
 .demo-trail span, .demo-trail i { flex-shrink: 0; }
 .demo-clicks { flex-shrink: 0; }
 .demo-cursor.press { scale: .85; transition: transform .62s cubic-bezier(.45,.05,.25,1), scale .1s; }
@@ -885,3 +887,40 @@ h3.sec { font-size: 18px; color: var(--text); }
 #game.away .away-cover b { font: 800 22px var(--display); text-transform: uppercase; }
 #game.away .away-cover span { max-width: 40ch; color: #54595d; }
 #game.away #article, #game.away #article-title, #game.away #article-credit { visibility: hidden; }
+
+/* Contents list: a sticky column left of the article; a collapsible bar above it on smaller screens. */
+.toc { width: 200px; flex-shrink: 0; position: sticky; top: 80px; max-height: calc(100vh - 100px); overflow-y: auto;
+  border: 2px solid var(--ink-line); background: var(--surface); padding: 10px 12px; font-size: 13px; }
+.toc summary { font: 800 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); cursor: pointer; list-style: none; }
+.toc summary::-webkit-details-marker { display: none; }
+.toc ol { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 1px; }
+.toc li.sub { padding-left: 12px; }
+.toc button { all: unset; display: block; width: 100%; box-sizing: border-box; padding: 4px 6px; cursor: pointer; color: var(--text); line-height: 1.3; overflow-wrap: anywhere; }
+.toc li.sub button { color: var(--muted); font-size: 12.5px; }
+.toc button:hover { background: var(--surface-2); color: var(--accent); }
+.toc button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (max-width: 1100px) {
+  .game-body { flex-wrap: wrap; }
+  .toc { position: static; width: 100%; max-height: 50vh; order: -1; }
+  .toc summary::after { content: " ▾"; }
+  .toc[open] summary::after { content: " ▴"; }
+}
+#article h2, #article h3 { scroll-margin-top: 96px; } /* clear the sticky race bar when jumping to a section */
+
+/* Feedback: a quiet link-style button in the corner of the home page. */
+.feedback-btn { position: fixed; right: 14px; bottom: 12px; z-index: 20; background: none; border: 0; padding: 6px 4px;
+  font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.feedback-btn:hover, .feedback-btn:focus-visible { color: var(--text); }
+#home:not(.active) ~ .feedback-btn { display: none; }
+#feedback { z-index: 90; }
+.feedback-box h2 { font-size: 26px; }
+.fb-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.fb-kinds label { cursor: pointer; }
+.fb-kinds input { position: absolute; opacity: 0; pointer-events: none; }
+.fb-kinds span { display: inline-block; padding: 6px 10px; border: 2px solid var(--ink-line); font: 700 13px var(--sans); }
+.fb-kinds input:checked + span { background: var(--ink-line); color: var(--bg); }
+.fb-kinds input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.feedback-box textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 110px; margin-bottom: 14px; padding: 10px;
+  font: 15px/1.45 var(--sans); background: var(--bg); color: var(--text); border: 2px solid var(--ink-line); border-radius: 0; }
+.feedback-box textarea:focus { outline: none; border-color: var(--accent); }

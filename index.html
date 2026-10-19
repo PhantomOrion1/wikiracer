@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.posthog.com https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.posthog.com https://formsubmit.co https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>WikiRacer Live: Multiplayer Wikipedia Race Game</title>
   <meta name="description" content="Race friends through Wikipedia from one article to another in the fewest clicks. Free multiplayer wiki race with quick match, private rooms for up to 8, solo and a daily challenge.">
@@ -27,7 +27,7 @@
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css">
-  <link rel="stylesheet" href="styles.css?v=68">
+  <link rel="stylesheet" href="styles.css?v=71">
 </head>
 <body>
   <!-- HOME -->
@@ -83,7 +83,7 @@
             <button class="sq light" data-solo="medium">Med</button>
             <button class="sq light" data-solo="hard">Hard</button>
           </div>
-          <div class="solo-more"><button class="textlink" data-solo="random">Random articles</button><button class="textlink" id="solo-custom-toggle">Pick your own</button></div>
+          <div class="solo-more"><button class="textlink" data-solo="random">Random pair</button><button class="textlink" id="solo-custom-toggle">Pick your own</button></div>
           <form id="solo-custom" class="custom-form hidden">
             <input name="start" list="suggest-start" placeholder="Start article" required>
             <input name="end" list="suggest-end" placeholder="Target article" required>
@@ -228,6 +228,10 @@
       <div id="racers-strip" class="racers-strip hidden"></div>
     </header>
     <div class="game-body">
+      <details class="toc" id="toc" open>
+        <summary>Contents</summary>
+        <ol id="toc-list"></ol>
+      </details>
       <main class="article-wrap">
         <div id="loading" class="loading hidden"><div class="spinner"></div></div>
         <div class="away-cover" aria-live="polite"><div class="away-msg"><b>Come back to keep racing</b><span>The article is hidden while you're in another tab or window. The clock is still running.</span></div></div>
@@ -302,6 +306,25 @@
   </div>
 
   <!-- CONFIRM -->
+  <!-- FEEDBACK -->
+  <button class="feedback-btn" id="feedback-open" type="button">Feedback</button>
+  <div id="feedback" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+    <form class="confirm-box feedback-box" id="feedback-form">
+      <h2 id="feedback-title">Send feedback</h2>
+      <div class="fb-kinds" role="radiogroup" aria-label="Type">
+        <label><input type="radio" name="kind" value="issue" checked><span>Report an issue</span></label>
+        <label><input type="radio" name="kind" value="feedback"><span>Feedback</span></label>
+        <label><input type="radio" name="kind" value="idea"><span>Idea</span></label>
+      </div>
+      <label class="sr" for="feedback-text">Message</label>
+      <textarea id="feedback-text" maxlength="1000" rows="5" required placeholder="What happened, or what would make it better?"></textarea>
+      <div class="confirm-actions">
+        <button class="btn" type="button" id="feedback-cancel">Cancel</button>
+        <button class="btn primary" type="submit">Send</button>
+      </div>
+    </form>
+  </div>
+
   <div id="confirm" class="overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
     <div class="confirm-box">
       <h2 id="confirm-title"></h2>
@@ -318,11 +341,11 @@
   <datalist id="suggest-start"></datalist>
   <datalist id="suggest-end"></datalist>
 
-  <script src="pairs.js?v=68" defer></script>
-  <script src="bots.js?v=68" defer></script>
-  <script src="vital.js?v=68" defer></script>
-  <script src="minigame.js?v=68" defer></script>
-  <script src="daily-core.js?v=68" defer></script>
-  <script src="app.js?v=68" defer></script>
+  <script src="pairs.js?v=71" defer></script>
+  <script src="bots.js?v=71" defer></script>
+  <script src="vital.js?v=71" defer></script>
+  <script src="minigame.js?v=71" defer></script>
+  <script src="daily-core.js?v=71" defer></script>
+  <script src="app.js?v=71" defer></script>
 </body>
 </html>

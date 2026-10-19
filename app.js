@@ -90,6 +90,29 @@
     } catch {}
   }
   addEventListener('pagehide', flushAnalytics);
+  // Feedback is something the player chose to send, so it goes even with Do Not Track on.
+  // It's emailed via FormSubmit (a free form-to-email service; the first message sends a one-time
+  // activation email to the inbox) and a copy is kept in PostHog in case email is down.
+  const FEEDBACK_EMAIL = 'jursolife@gmail.com';
+  const FEEDBACK_LABEL = { issue: 'Issue report', feedback: 'Feedback', idea: 'Idea' };
+  function sendFeedback(kind, message) {
+    const msg = String(message).slice(0, 1000);
+    const where = (document.querySelector('.screen.active') || {}).id || '';
+    const mobile = matchMedia('(max-width: 760px)').matches;
+    const email = fetch(`https://formsubmit.co/ajax/${FEEDBACK_EMAIL}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        _subject: `WikiRacer ${FEEDBACK_LABEL[kind] || 'Feedback'}`, _template: 'table', _captcha: 'false',
+        type: FEEDBACK_LABEL[kind] || kind, message: msg, screen: where, device: mobile ? 'phone' : 'desktop', version: APP_VERSION,
+      }),
+    }).then((r) => { if (!r.ok) throw new Error(String(r.status)); });
+    const key = CONFIG.analytics.posthogKey;
+    const backup = key ? fetch(`${CONFIG.analytics.posthogHost.replace(/\/$/, '')}/capture/`, {
+      method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: key, event: 'feedback', distinct_id: anonId(), properties: { kind, message: msg, screen: where, mobile, app_version: APP_VERSION } }),
+    }).then((r) => { if (!r.ok) throw new Error(String(r.status)); }) : Promise.reject(new Error('no key'));
+    return Promise.any([email, backup]);
+  }
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushAnalytics(); });
   addEventListener('error', (e) => track('client_error', { message: String(e.message || '').slice(0, 200), source: String(e.filename || '').split('/').pop(), line: e.lineno }));
   addEventListener('unhandledrejection', (e) => track('client_error', { message: String((e.reason && e.reason.message) || e.reason || '').slice(0, 200), kind: 'promise' }));
@@ -202,9 +225,21 @@
     toastTimer = setTimeout(() => t.classList.remove('show'), ms);
   }
 
+  // The game is one page, so the browser's back button used to leave the site (e.g. to the
+  // privacy page you'd visited before). Leaving home adds one history entry; back then returns
+  // to home inside the game instead (see onBack), and going home normally removes the entry.
+  let historyPushed = false, ignoreNextPop = false;
   function show(id) {
     $$('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
     window.scrollTo(0, 0);
+    if (id !== 'home' && !historyPushed) {
+      history.pushState({ wr: id }, '');
+      historyPushed = true;
+    } else if (id === 'home' && historyPushed) {
+      historyPushed = false;
+      ignoreNextPop = true;
+      history.back();
+    }
   }
 
   async function copyText(text) {
@@ -437,6 +472,15 @@
       return validatePair(s, e);
     }
     if (diff === 'random') {
+      // Two random topics people actually know (any subject, any distance apart), not Wikipedia's
+      // own "random article", which is mostly obscure stubs.
+      if (FAMILIAR.length > 1) {
+        const played = new Set(playedList());
+        for (let i = 0; i < 20; i++) {
+          const a = anyOf(FAMILIAR), b = anyOf(FAMILIAR);
+          if (a.t !== b.t && !played.has(pairKey(a.t, b.t))) return { start: a.t, end: b.t };
+        }
+      }
       for (let i = 0; i < 4; i++) {
         const [s, e] = await randomTitles(2);
         try { return await validatePair(s, e); } catch {}
@@ -554,6 +598,25 @@
       }
     });
     return { title: titleDoc.body.textContent || art.title, nodes: [...doc.body.childNodes] };
+  }
+
+  // Contents list beside the article: jumping to a section is free (it isn't a page click).
+  function renderToc() {
+    const list = $('#toc-list');
+    const heads = $$('#article h2[id], #article h3[id]');
+    $('#toc').classList.toggle('hidden', heads.length < 2);
+    list.replaceChildren(...heads.map((h) => {
+      const li = document.createElement('li');
+      li.className = h.tagName === 'H3' ? 'sub' : '';
+      const b = Object.assign(document.createElement('button'), { type: 'button', textContent: h.textContent.trim() });
+      b.addEventListener('click', () => {
+        h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (matchMedia('(max-width: 1100px)').matches) $('#toc').open = false;
+      });
+      li.append(b);
+      return li;
+    }));
+    $('#toc').open = !matchMedia('(max-width: 1100px)').matches;
   }
 
   // CC BY-SA 4.0 attribution for the article on screen (title, source, authors via history, licence,
@@ -679,6 +742,7 @@
     $('#article-title').textContent = built.title;
     $('#article').replaceChildren(...built.nodes);
     $('#article-credit').replaceChildren(...attribution(art.title));
+    renderToc();
     window.scrollTo(0, 0);
     $('#panel').classList.remove('open');
     updateHud();
@@ -1133,6 +1197,20 @@
   // Model of how everyone else did today. Calibrated to typical hard WikiRacer play: the shortest
   // route is 3–4 clicks, most finishers take 2–3 more than that (median ~6), a long tail wanders
   // past 12, and 14–26% run out of time or give up. Times scale with clicks (~25s per page + reading).
+  // Share of the day's players who have played by a given minute of the day. People play in a
+  // daily rhythm (quiet overnight, busiest afternoon and evening), so the count starts in the
+  // dozens at midnight and builds up, instead of jumping to hundreds as soon as the day resets.
+  const HOURLY_ACTIVITY = [0.25, 0.15, 0.1, 0.08, 0.08, 0.12, 0.3, 0.6, 0.9, 1.1, 1.2, 1.3,
+    1.4, 1.35, 1.3, 1.4, 1.55, 1.7, 1.8, 1.85, 1.7, 1.35, 0.9, 0.5];
+  const ACTIVITY_TOTAL = HOURLY_ACTIVITY.reduce((a, b) => a + b, 0);
+  function dayProgress(minute) {
+    const h = Math.min(23, Math.floor(minute / 60));
+    let done = 0;
+    for (let i = 0; i < h; i++) done += HOURLY_ACTIVITY[i];
+    done += HOURLY_ACTIVITY[h] * Math.min(1, (minute - h * 60) / 60);
+    return Math.min(1, done / ACTIVITY_TOTAL);
+  }
+
   function dailyStats(key) {
     const rnd = seeded(hashStr(`stats-${key}`));
     // The model's guess at the best route, never longer than a real route we've actually found.
@@ -1145,8 +1223,8 @@
     const sigma = 0.5 + rnd() * 0.15;
     const secPerClick = 20 + rnd() * 10;
     const now = new Date();
-    const dayFrac = key === dateKey(now) ? (now.getHours() * 60 + now.getMinutes()) / 1440 : 1;
-    const players = Math.round((5000 + rnd() * 9000) * (0.06 + 0.94 * Math.pow(dayFrac, 0.8))) + 37;
+    const minute = key === dateKey(now) ? now.getHours() * 60 + now.getMinutes() : 1440;
+    const players = Math.round((5000 + rnd() * 9000) * dayProgress(minute)) + 8 + Math.floor(rnd() * 10);
     const buckets = [];
     for (let k = 0; k <= 12; k++) {
       const lo = k === 0 ? 0 : lnCdf(k + 0.5, mu, sigma);
@@ -3163,6 +3241,7 @@
         `${j ? '<i>›</i>' : ''}<span class="${j === upto ? 'cur' : ''}${pop && j === upto ? ' pop' : ''}">${esc(n)}</span>`).join('');
       clicks.textContent = upto;
       trail.scrollLeft = trail.scrollWidth; // newest step always in view, no wrapping
+      trail.classList.toggle('overflow', trail.scrollWidth > trail.clientWidth + 1);
       if (pop) { clicks.classList.remove('bump'); void clicks.offsetWidth; clicks.classList.add('bump'); }
     };
     async function play() {
@@ -3201,6 +3280,56 @@
     play();
   }
 
+  async function onBack() {
+    if (ignoreNextPop) { ignoreNextPop = false; return; }
+    for (const o of ['#howto', '#feedback']) $(o).classList.add('hidden');
+    if (!historyPushed) return; // already home: let the browser go back normally
+    historyPushed = false;
+    const racing = game && !game.finished && game.startTime;
+    if (racing) {
+      const ok = await confirmDialog({ title: 'Leave the race?', body: game.mode === 'daily' ? "Your daily attempt will count as given up." : "You'll go back to the home screen.", ok: 'Leave', cancel: 'Keep racing', danger: true });
+      if (!ok) { history.pushState({ wr: 'game' }, ''); historyPushed = true; return; }
+    }
+    if (net.peer || net.code || net.isPublic) { leaveRoomAndGoHome(); return; }
+    matchToken++; // cancels a solo countdown that's still running
+    if (racing) finishGame('gaveup');
+    stopTimer();
+    closeResults();
+    closeSpectate();
+    window.MiniGame.close();
+    $('#countdown').classList.add('hidden');
+    game = null;
+    renderDailyCard();
+    show('home');
+  }
+  addEventListener('popstate', onBack);
+
+  function initFeedback() {
+    const box = $('#feedback'), form = $('#feedback-form'), text = $('#feedback-text');
+    const close = () => box.classList.add('hidden');
+    $('#feedback-open').addEventListener('click', () => { box.classList.remove('hidden'); text.focus(); });
+    $('#feedback-cancel').addEventListener('click', close);
+    box.addEventListener('click', (e) => { if (e.target === box) close(); });
+    box.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = text.value.trim();
+      if (!msg) return;
+      const btn = form.querySelector('[type=submit]');
+      btn.disabled = true;
+      try {
+        await sendFeedback(form.elements.kind.value, msg);
+        text.value = '';
+        close();
+        toast('Thanks! Sent.');
+      } catch {
+        toast("Couldn't send right now. Try again in a bit.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
   function initHowTo() {
     const box = $('#howto');
     ['#open-howto', '#open-howto-2'].forEach((sel) => $(sel) && $(sel).addEventListener('click', () => box.classList.remove('hidden')));
@@ -3213,6 +3342,7 @@
   function init() {
     runRouteDemo();
     initHowTo();
+    initFeedback();
     const nameInput = $('#name-input');
     nameInput.value = store.get('wr-name') || '';
     nameInput.addEventListener('change', () => store.set('wr-name', nameInput.value.trim()));

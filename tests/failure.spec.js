@@ -278,3 +278,75 @@ test('Leaving the tab hides the article (no click penalty), and it comes back on
   }
   expect(await page.evaluate(() => window.__wr.game().penalties)).toBe(0);
 });
+
+test('Contents list jumps to sections without costing a click', async ({ page }) => {
+  await mockWikipedia(page);
+  // give the fake article some sections (registered last, so it runs first and falls back to the mock)
+  await page.route('https://en.wikipedia.org/w/api.php**', (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    if (q.get('action') === 'parse' && /dog/i.test(q.get('page'))) {
+      const html = '<div class="mw-parser-output"><p>Dog links to <a href="/wiki/Canidae" title="Canidae">Canidae</a>.</p>'
+        + ['History', 'Breeds', 'Senses'].map((h) => `<div class="mw-heading mw-heading2"><h2 id="${h}">${h}</h2></div>${'<p>Text.</p>'.repeat(40)}`).join('') + '</div>';
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ parse: { title: 'Dog', displaytitle: 'Dog', text: html } }) });
+    }
+    return route.fallback();
+  });
+  await openHome(page, 'Reader');
+  await page.click('#solo-custom-toggle');
+  await page.fill('#solo-custom input[name=start]', 'Dog');
+  await page.fill('#solo-custom input[name=end]', 'Wolf');
+  await page.click('#solo-custom button[type=submit]');
+  await expect(page.locator('#article-title')).toHaveText('Dog', { timeout: 20000 });
+  await expect(page.locator('#toc-list button')).toHaveText(['History', 'Breeds', 'Senses']);
+  await page.locator('#toc-list button', { hasText: 'Senses' }).click();
+  await expect.poll(() => page.evaluate(() => Math.abs(document.getElementById('Senses').getBoundingClientRect().top) < 200), { timeout: 5000 }).toBe(true);
+  expect(await page.evaluate(() => window.__wr.game().clicks)).toBe(0);
+});
+
+test('Feedback is emailed (with a PostHog backup copy)', async ({ page }) => {
+  await mockWikipedia(page);
+  let mail = null, backup = null;
+  await page.route('https://formsubmit.co/**', (r) => { mail = { url: r.request().url(), body: r.request().postDataJSON() }; r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":"true"}' }); });
+  await page.route('https://*.posthog.com/**', (r) => { if (r.request().url().includes('/capture/')) backup = r.request().postDataJSON(); r.fulfill({ status: 200, body: '{}' }); });
+  await openHome(page);
+  await page.click('#feedback-open');
+  await page.click('.fb-kinds label:has(input[value=idea])');
+  await page.fill('#feedback-text', 'Add a team mode');
+  await page.click('#feedback-form button[type=submit]');
+  await expect(page.locator('#toast')).toContainText('Thanks');
+  expect(mail.url).toBe('https://formsubmit.co/ajax/jursolife@gmail.com');
+  expect(mail.body).toMatchObject({ type: 'Idea', message: 'Add a team mode', _subject: 'WikiRacer Idea' });
+  expect(backup.properties).toMatchObject({ kind: 'idea', message: 'Add a team mode' });
+  await expect(page.locator('#feedback')).toBeHidden();
+});
+
+test('Browser back during a race asks first, then returns home inside the game', async ({ page }) => {
+  await mockWikipedia(page);
+  await page.goto('/privacy/'); // a page visited before the game
+  await openHome(page, 'Backer');
+  await page.click('#solo-custom-toggle');
+  await page.fill('#solo-custom input[name=start]', 'Dog');
+  await page.fill('#solo-custom input[name=end]', 'Wolf');
+  await page.click('#solo-custom button[type=submit]');
+  await expect(page.locator('#article-title')).toHaveText('Dog', { timeout: 20000 });
+  await page.goBack();
+  await expect(page.locator('#confirm')).toBeVisible();
+  await page.click('#confirm-cancel'); // keep racing
+  await expect(page.locator('#game')).toHaveClass(/active/);
+  await page.goBack();
+  await page.click('#confirm-ok');
+  await expect(page.locator('#home')).toHaveClass(/active/);
+  expect(new URL(page.url()).pathname).toBe('/'); // still on the game, not the privacy page
+});
+
+test('Random pair uses familiar topics', async ({ page }) => {
+  await mockWikipedia(page);
+  await openHome(page);
+  const res = await page.evaluate(async () => {
+    const fam = new Set(window.POOL.familiar.map(([t]) => t));
+    const out = [];
+    for (let i = 0; i < 20; i++) { const p = await window.__wr.pickPair('random'); out.push(fam.has(p.start) && fam.has(p.end) && p.start !== p.end); }
+    return out.every(Boolean);
+  });
+  expect(res).toBe(true);
+});

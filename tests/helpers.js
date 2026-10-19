@@ -53,8 +53,9 @@ async function mockWikipedia(page, { fail = false, delayMs = 0 } = {}) {
     if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
     route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(wikiResponse(route.request().url())) });
   });
-  // Keep analytics out of test runs.
+  // Keep analytics and feedback emails out of test runs.
   await page.route('https://*.posthog.com/**', (r) => r.fulfill({ status: 200, body: '{}' }));
+  await page.route('https://formsubmit.co/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":"true"}' }));
 }
 
 // Collects uncaught page errors so a test can assert the app never crashed.
