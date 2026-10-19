@@ -1616,11 +1616,11 @@
   let net = freshNet();
   let matchToken = 0;
 
-  // Profile pictures: nine faces, mummy by default. Only ids from this list are ever rendered.
-  const PFPS = ['mummy', 'zombie', 'skeleton', 'devil', 'werewolf', 'goblin', 'ghost', 'witch', 'vampire'];
-  const cleanPfp = (v) => (PFPS.includes(v) ? v : 'mummy');
+  // Profile pictures: nine faces, ghost by default. Only ids from this list are ever rendered.
+  const PFPS = ['ghost', 'zombie', 'skeleton', 'devil', 'werewolf', 'goblin', 'mummy', 'witch', 'vampire'];
+  const cleanPfp = (v) => (PFPS.includes(v) ? v : 'ghost');
   const myPfp = () => cleanPfp(store.get('wr-pfp'));
-  const newPlayer = (name, color, pfp = 'mummy') => ({
+  const newPlayer = (name, color, pfp = 'ghost') => ({
     pfp: cleanPfp(pfp),
     name, color, status: 'lobby', clicks: 0, penalties: 0, tabLeaves: 0, title: '', time: 0, path: [],
     wins: 0, connected: true, inRound: false, verify: null, flagReason: '', ready: false, vote: null,
