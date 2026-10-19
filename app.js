@@ -2081,6 +2081,7 @@
     if (net.isPublic) {
       botsAfterRound();
       for (const id of net.bots.keys()) botMaybeVote(id);
+      botEarlyVote();
     }
     goToLobbyScreen();
     scheduleAutoStart();
@@ -2158,6 +2159,29 @@
     }, rand(2500, 9000));
   }
 
+  // With an odd number of fill-ins, (n-1)/2 of them vote early, before any real person has, so
+  // the room looks alive (3 bots → 1, 5 → 2). Always fewer than half, and bot votes never decide
+  // the difficulty anyway (tallyVotes only counts real players).
+  function botEarlyVote() {
+    if (!net.isHost || !net.isPublic || net.phase !== 'lobby' || net.timers.botEarlyVote) return;
+    const bots = [...net.bots.keys()].filter((id) => net.players[id]);
+    if (bots.length % 2 === 0 || Object.values(net.players).some((x) => x.vote)) return;
+    const voters = [...bots].sort(() => Math.random() - 0.5).slice(0, (bots.length - 1) / 2);
+    if (!voters.length) return;
+    let at = 0;
+    net.timers.botEarlyVote = setTimeout(() => { net.timers.botEarlyVote = null; }, 8000);
+    for (const id of voters) {
+      at += rand(1000, 3000);
+      setTimeout(() => {
+        const p = net.players[id];
+        const humanVoted = Object.entries(net.players).some(([pid, x]) => !isBot(pid) && x.vote);
+        if (!p || net.phase !== 'lobby' || p.vote || humanVoted) return;
+        p.vote = pickWeighted([{ v: 'easy', w: 0.42 }, { v: 'medium', w: 0.45 }, { v: 'hard', w: 0.13 }]).v;
+        broadcast();
+      }, at);
+    }
+  }
+
   function tallyVotes() {
     // Real players decide: fill-in racers' votes are only for show, so they can never outvote
     // a human. A tie between real votes is a fair coin flip. With no votes at all, public races
@@ -2176,6 +2200,7 @@
     net.bots.set(id, { tier: pickWeighted(BOT_TIERS), timers: [], view: { b: 0, p: 0 } });
     toast(`${net.players[id].name} joined`);
     botMaybeVote(id);
+    botEarlyVote();
     if (Object.entries(net.players).some(([pid, x]) => !isBot(pid) && x.ready)) botsFollowReady();
     scheduleAutoStart(true);
     broadcast();
