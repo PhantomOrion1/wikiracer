@@ -890,7 +890,7 @@ h3.sec { font-size: 18px; color: var(--text); }
 
 /* Contents list: a sticky column left of the article; a collapsible bar above it on smaller screens. */
 .toc { width: 200px; flex-shrink: 0; position: sticky; top: 80px; max-height: calc(100vh - 100px); overflow-y: auto;
-  border: 2px solid var(--ink-line); background: var(--surface); padding: 10px 12px; font-size: 13px; }
+  border: 2px solid var(--line); background: var(--surface); padding: 10px 12px; font-size: 13px; }
 .toc summary { font: 800 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); cursor: pointer; list-style: none; }
 .toc summary::-webkit-details-marker { display: none; }
 .toc ol { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 1px; }
