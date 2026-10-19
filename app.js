@@ -146,7 +146,7 @@
   const MAX_PLAYERS = 8;
   const COUNTDOWN_MS = 3300;
   const GRACE_MS = 4000;
-  const LIMITS = { easy: 150e3, medium: 300e3, hard: 600e3, random: 600e3, custom: 300e3, choose: 300e3, challenge: 300e3 };
+  const LIMITS = { easy: 150e3, medium: 300e3, hard: 600e3, random: 600e3, custom: 600e3, choose: 600e3, challenge: 300e3 };
   const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', random: 'Random', custom: 'Custom', choose: 'Picked', challenge: 'Challenge', daily: 'Daily' };
   const COLORS = ['#3355ff', '#f76707', '#2f9e44', '#d6336c', '#7048e8', '#0c8599', '#e8a400', '#8a5a44'];
   // Namespaces / interwiki prefixes that don't count as articles.
@@ -3110,7 +3110,8 @@
     $('#start-race').textContent = net.isHost && net.diff === 'choose' && !net.starting ? 'Play this race' : (net.starting ? 'Picking articles…' : 'Start race');
     if (!show) return;
     $('#choose-shuffle').classList.toggle('hidden', !net.isHost);
-    $('#choose-note').textContent = net.isHost ? 'Click a race to pick it, or shuffle for three new ones.' : 'The host is picking one of these.';
+    $('#choose-note').textContent = net.isHost ? '' : 'The host is picking one of these.';
+    $('#choose-note').classList.toggle('hidden', net.isHost);
     $('#choose-list').innerHTML = choices.map((c, i) => `<li><button type="button" class="choice${i === net.chosen ? ' selected' : ''}" data-choice="${i}" ${net.isHost ? '' : 'disabled'} aria-pressed="${i === net.chosen}">
       <span>${esc(c.start)}</span><i aria-hidden="true">→</i><b>${esc(c.end)}</b></button></li>`).join('');
   }
