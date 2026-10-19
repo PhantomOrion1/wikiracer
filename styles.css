@@ -943,3 +943,21 @@ h3.sec { font-size: 18px; color: var(--text); }
 .toc::-webkit-scrollbar { display: none; }
 .race-controls .icon-btn { display: inline-flex; align-items: center; justify-content: center; padding-left: 14px; padding-right: 14px; }
 .race-controls .icon-btn svg { display: block; }
+
+/* Profile pictures */
+.avatar.pfp { padding: 0; overflow: hidden; background: #111; box-shadow: none; }
+.avatar.pfp img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.pfp-wrap { position: relative; flex-shrink: 0; }
+.pfp-btn { all: unset; box-sizing: border-box; display: block; width: 42px; height: 42px; border: 2px solid var(--ink-line); background: #111; cursor: pointer; overflow: hidden; }
+.pfp-btn img { width: 100%; height: 100%; display: block; object-fit: cover; transition: transform .15s; }
+.pfp-btn:hover img { transform: scale(1.08); }
+.pfp-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pfp-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 40; display: grid; grid-template-columns: repeat(3, 64px); gap: 6px;
+  padding: 8px; background: var(--surface); border: 2px solid var(--ink-line); box-shadow: 6px 6px 0 var(--accent-fill); animation: pop-confirm .14s ease-out; }
+.pfp-pop.hidden { display: none; }
+.pfp-opt { all: unset; box-sizing: border-box; width: 64px; height: 64px; cursor: pointer; border: 2px solid transparent; background: #111; overflow: hidden; }
+.pfp-opt img { width: 100%; height: 100%; display: block; }
+.pfp-opt:hover { border-color: var(--ink-line); }
+.pfp-opt.selected { border-color: var(--accent-fill); }
+.pfp-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hero { position: relative; z-index: 10; } /* keeps the picture picker above the cards below */

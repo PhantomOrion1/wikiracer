@@ -925,6 +925,7 @@
   const PINK_CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ff2e93" d="M2.5 7.5l5 4.2L12 4.5l4.5 7.2 5-4.2-2.2 11.5H4.7z"/><rect x="4.7" y="19.6" width="14.6" height="2" fill="#ff2e93"/></svg>';
   function avatar(p) {
     if (String(p.name || '').trim().toLowerCase() === 'b') return `<span class="avatar crowned" style="--c:#ffd9ec" title="b">${PINK_CROWN}</span>`;
+    if (PFPS.includes(p.pfp)) return `<span class="avatar pfp"><img src="pfp/${p.pfp}.webp" alt="" width="40" height="40" loading="lazy" decoding="async"></span>`;
     return `<span class="avatar" style="--c:${esc(p.color || COLORS[0])}">${esc((p.name || '?').charAt(0).toUpperCase())}</span>`;
   }
 
@@ -1058,7 +1059,7 @@
       if (spectators.length) html += `<p class="muted small-print">Also here: ${spectators.map(([, p]) => esc(p.name)).join(', ')}</p>`;
       if (net.isPublic && done && net.nextAt) html += `<p class="center next-in" data-next-in>Next round in ${Math.ceil((net.nextAt - Date.now()) / 1000)}s</p>`;
     } else {
-      const me = { id: 'solo', name: $('#name-input').value.trim() || 'You', color: COLORS[0], status: g.result === 'finished' ? 'finished' : g.result, clicks: g.clicks, penalties: g.penalties, time: g.elapsed, tabLeaves: g.tabLeaves, path: g.path };
+      const me = { id: 'solo', name: $('#name-input').value.trim() || 'You', pfp: myPfp(), color: COLORS[0], status: g.result === 'finished' ? 'finished' : g.result, clicks: g.clicks, penalties: g.penalties, time: g.elapsed, tabLeaves: g.tabLeaves, path: g.path };
       if (g.result === 'finished' && (g.newBest || !g.prevBest) && confettiRound !== g) { confettiRound = g; burstConfetti(); }
       html += `<div class="res-head">
         <div class="res-kicker">${esc(DIFF_LABEL[g.difficulty] || '')} · ${esc(g.start)} → ${esc(g.end)}</div>
@@ -1615,7 +1616,12 @@
   let net = freshNet();
   let matchToken = 0;
 
-  const newPlayer = (name, color) => ({
+  // Profile pictures: nine faces, mummy by default. Only ids from this list are ever rendered.
+  const PFPS = ['mummy', 'zombie', 'skeleton', 'devil', 'werewolf', 'goblin', 'ghost', 'witch', 'vampire'];
+  const cleanPfp = (v) => (PFPS.includes(v) ? v : 'mummy');
+  const myPfp = () => cleanPfp(store.get('wr-pfp'));
+  const newPlayer = (name, color, pfp = 'mummy') => ({
+    pfp: cleanPfp(pfp),
     name, color, status: 'lobby', clicks: 0, penalties: 0, tabLeaves: 0, title: '', time: 0, path: [],
     wins: 0, connected: true, inRound: false, verify: null, flagReason: '', ready: false, vote: null,
   });
@@ -1668,7 +1674,7 @@
       const lastDiff = store.get('wr-room-diff');
       if (['easy', 'medium', 'hard', 'choose', 'custom'].includes(lastDiff)) net.diff = lastDiff;
       if (net.diff === 'choose') { net.choices = makeChoices(); net.chosen = 0; }
-      net.players.host = newPlayer(name, COLORS[0]);
+      net.players.host = newPlayer(name, COLORS[0], myPfp());
       net.send = (msg) => hostHandle('host', msg);
       const me = net;
       net.roomId = isPublic ? publicPeerId(slot) : PEER_PREFIX + code;
@@ -1819,6 +1825,7 @@
         if (p) {
           // Someone we already know: a rejoin after a host handover.
           p.name = cleanName(msg.name);
+          p.pfp = cleanPfp(msg.pfp);
           p.connected = true;
           p.awaiting = false;
           applySnapshot(id, p, msg.snapshot);
@@ -1831,7 +1838,7 @@
           setTimeout(() => conn && conn.close(), 400);
           return;
         }
-        net.players[id] = newPlayer(cleanName(msg.name), nextColor());
+        net.players[id] = newPlayer(cleanName(msg.name), nextColor(), msg.pfp);
         toast(`${net.players[id].name} joined`);
         scheduleAutoStart(true);
         botPolicy();
@@ -2165,7 +2172,7 @@
   function addBot() {
     if (!net.isHost || !net.isPublic || net.phase !== 'lobby' || activeCount() >= MAX_PLAYERS) return;
     const id = uuid();
-    net.players[id] = newPlayer(botName(), nextColor());
+    net.players[id] = newPlayer(botName(), nextColor(), anyOf(PFPS));
     net.bots.set(id, { tier: pickWeighted(BOT_TIERS), timers: [], view: { b: 0, p: 0 } });
     toast(`${net.players[id].name} joined`);
     botMaybeVote(id);
@@ -2570,7 +2577,7 @@
       me.migrating = false;
       me.lastHostAt = Date.now();
       startHeartbeat(me);
-      conn.send({ type: 'hello', name, snapshot: mySnapshot() });
+      conn.send({ type: 'hello', name, pfp: myPfp(), snapshot: mySnapshot() });
       if (spec.id) conn.send({ type: 'spectate', id: spec.id });
       if (!rejoin) track('room_joined', { public: !!me.isPublic });
       if (!rejoin) setLobbyStatus(me.isPublic ? 'Matched! Waiting for racers…' : "You're in! Waiting for the host to start.");
@@ -2838,7 +2845,7 @@
     for (const [id, p] of Object.entries(raw).slice(0, 16)) {
       if (!/^[\w-]{1,64}$/.test(id) || !p || typeof p !== 'object') continue;
       out[id] = {
-        name: cleanName(p.name),
+        name: cleanName(p.name), pfp: cleanPfp(p.pfp),
         color: /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : '#777777',
         status: STATUSES.includes(p.status) ? p.status : 'lobby',
         clicks: int(p.clicks, 0, 999), penalties: int(p.penalties, 0, 999), tabLeaves: int(p.tabLeaves, 0, 9999),
@@ -3350,6 +3357,32 @@
   }
   addEventListener('popstate', onBack);
 
+  // Face picker: the little square left of the name box. No label on purpose.
+  function initPfp() {
+    const btn = $('#pfp-btn'), pop = $('#pfp-pop');
+    const paint = () => { btn.querySelector('img').src = `pfp/${myPfp()}.webp`; };
+    pop.innerHTML = PFPS.map((id) => `<button type="button" class="pfp-opt" data-pfp="${id}" aria-label="${id}"><img src="pfp/${id}.webp" alt="" width="64" height="64"></button>`).join('');
+    const mark = () => $$('.pfp-opt', pop).forEach((b) => b.classList.toggle('selected', b.dataset.pfp === myPfp()));
+    const close = () => { pop.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = pop.classList.toggle('hidden') === false;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) { mark(); pop.querySelector('.selected')?.focus(); }
+    });
+    pop.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pfp]');
+      if (!b) return;
+      store.set('wr-pfp', b.dataset.pfp);
+      paint();
+      close();
+      btn.focus();
+    });
+    document.addEventListener('click', (e) => { if (!pop.contains(e.target) && e.target !== btn) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.classList.contains('hidden')) { close(); btn.focus(); } });
+    paint();
+  }
+
   function initFeedback() {
     const box = $('#feedback'), form = $('#feedback-form'), text = $('#feedback-text');
     const close = () => box.classList.add('hidden');
@@ -3389,6 +3422,7 @@
     runRouteDemo();
     initHowTo();
     initFeedback();
+    initPfp();
     const nameInput = $('#name-input');
     nameInput.value = store.get('wr-name') || '';
     nameInput.addEventListener('change', () => store.set('wr-name', nameInput.value.trim()));
