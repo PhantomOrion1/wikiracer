@@ -227,3 +227,36 @@ test('Votes: a tie between real players can go Hard, and bots never outvote a pe
   expect(results.solo).toEqual(['hard']); // two bots voting easy can't outvote one person voting hard
   await ctx.close();
 });
+
+test('Double-clicking a solo start only starts one game', async ({ page }) => {
+  await mockWikipedia(page);
+  await openHome(page, 'Clicky');
+  await page.click('#solo-custom-toggle');
+  await page.fill('#solo-custom input[name=start]', 'Dog');
+  await page.fill('#solo-custom input[name=end]', 'Wolf');
+  await page.locator('#solo-custom button[type=submit]').dblclick();
+  await page.locator('#solo-custom button[type=submit]').click({ force: true }).catch(() => {});
+  await expect(page.locator('#article-title')).toHaveText('Dog', { timeout: 20000 });
+  await page.waitForTimeout(5000); // give any second launch time to show up
+  expect(await page.evaluate(() => window.__wr.gamesStarted())).toBe(1);
+});
+
+test('Private room: the difficulty you pick is what you get, and new rooms remember it', async ({ browser }) => {
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [host, friend]) await mockWikipedia(p);
+  let code = await createPrivateRoom(host, 'Host');
+  await host.click('[data-diff=hard]');
+  // leave and make a new room: it should still be on Hard, and the buttons should say so
+  await host.click('#leave-lobby');
+  await host.click('#create-room');
+  await host.waitForFunction((old) => window.__wr.net().peer && window.__wr.net().peer.open && window.__wr.net().code !== old, code, { timeout: 20000 });
+  code = await host.evaluate(() => window.__wr.net().code);
+  await expect(host.locator('#room-code')).toHaveText(code);
+  expect(await host.evaluate(() => [window.__wr.net().diff, document.querySelector('#room-diff .selected').dataset.diff])).toEqual(['hard', 'hard']);
+  await joinPrivateRoom(friend, 'Friend', code);
+  await host.click('#start-race');
+  await host.waitForFunction(() => window.__wr.net().phase === 'playing', null, { timeout: 30000 });
+  expect(await friend.evaluate(() => window.__wr.net().round.difficulty)).toBe('hard');
+  await Promise.all(ctxs.map((c) => c.close()));
+});

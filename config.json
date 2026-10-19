@@ -7,12 +7,12 @@
     "maxHumans": 2,
     "secondChance": 0.5,
     "firstDelayMs": [
-      12000,
-      20000
+      3000,
+      7000
     ],
     "secondDelayMs": [
-      6000,
-      14000
+      4000,
+      9000
     ],
     "leaveChance": 0.2,
     "busyRoomsHalf": 3,

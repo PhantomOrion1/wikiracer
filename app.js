@@ -24,7 +24,7 @@
     publicSlots: 12,
     bots: {
       enabled: true, maxPerRoom: 2, maxHumans: 2, secondChance: 0.5,
-      firstDelayMs: [12000, 20000], secondDelayMs: [6000, 14000], leaveChance: 0.2,
+      firstDelayMs: [3000, 7000], secondDelayMs: [4000, 9000], leaveChance: 0.2,
       busyRoomsHalf: 3, busyRoomsOff: 6,
     },
     lobby: { soloWaitMs: 45000, groupWaitMs: 45000, readyGoMs: 8000, minAfterJoinMs: 12000, resultsMs: 10000 },
@@ -568,7 +568,9 @@
   // ---------- game ----------
   let game = null;
 
+  let gamesStarted = 0; // for tests
   function startGame(round, mode, extra = {}) {
+    gamesStarted++;
     stopTimer();
     closeResults();
     closeSpectate();
@@ -1045,17 +1047,53 @@
   }
 
   // ---------- solo ----------
-  async function startSolo(diff, custom) {
-    toast('Picking articles…', 1500);
-    try {
-      const pair = await pickPair(diff, custom);
-      const round = { ...pair, difficulty: diff, limit: limitFor(diff) };
-      if (pair.route) store.set(`wr-route:${pairKey(pair.start, pair.end)}`, pair.route);
-      await runCountdown(round);
-      startGame(round, 'solo');
-    } catch (e) {
-      toast(e.message);
-    }
+  // Only one race can be launching at a time: a double click used to start two games at once.
+  let launching = false;
+  async function launch(fn) {
+    if (launching || (game && !game.finished)) return;
+    launching = true;
+    try { await fn(); } finally { launching = false; }
+  }
+
+  // Pairs are picked in the background while you're on the home page, so pressing Easy/Medium/Hard
+  // goes straight to the countdown instead of waiting several seconds for Wikipedia.
+  const prepared = {};
+  function preparePair(diff) {
+    if (prepared[diff] || !['easy', 'medium', 'hard'].includes(diff)) return;
+    const p = pickPair(diff).catch(() => null);
+    prepared[diff] = p;
+    p.then((pair) => { if (!pair && prepared[diff] === p) delete prepared[diff]; });
+  }
+  async function takePair(diff, custom) {
+    const ready = prepared[diff];
+    delete prepared[diff];
+    let pair = ready ? await ready : null;
+    if (pair && (playedList().includes(pairKey(pair.start, pair.end)))) pair = null; // got played meanwhile
+    if (!pair) pair = await pickPair(diff, custom);
+    setTimeout(() => preparePair(diff), 1500); // get the next one ready
+    return pair;
+  }
+  function prepareAllPairs() {
+    ['easy', 'medium', 'hard'].forEach((d, i) => setTimeout(() => preparePair(d), i * 2500));
+  }
+
+  function startSolo(diff, custom) {
+    return launch(async () => {
+      const token = matchToken;
+      const quick = ['easy', 'medium', 'hard'].includes(diff) && prepared[diff];
+      if (!quick) toast('Picking articles…', 1500);
+      try {
+        const pair = ['easy', 'medium', 'hard'].includes(diff) ? await takePair(diff) : await pickPair(diff, custom);
+        if (token !== matchToken || game && !game.finished) return; // started something else meanwhile
+        const round = { ...pair, difficulty: diff, limit: limitFor(diff) };
+        if (pair.route) store.set(`wr-route:${pairKey(pair.start, pair.end)}`, pair.route);
+        await runCountdown(round);
+        if (token !== matchToken) return;
+        startGame(round, 'solo');
+      } catch (e) {
+        toast(e.message);
+      }
+    });
   }
 
   // ---------- shortest known route ----------
@@ -1191,7 +1229,8 @@
     }
   }
 
-  async function startDaily() {
+  function startDaily() { return launch(startDailyNow); }
+  async function startDailyNow() {
     const key = dateKey();
     if (dailyRecord(key)) return showDailyResults(key);
     const d = dailyPair(key);
@@ -1525,6 +1564,8 @@
     return new Promise((resolve, reject) => {
       net = freshNet();
       Object.assign(net, { isHost: true, isPublic, slot, code, myId: 'host' });
+      const lastDiff = store.get('wr-room-diff');
+      if (['easy', 'medium', 'hard', 'random', 'custom'].includes(lastDiff)) net.diff = lastDiff;
       net.players.host = newPlayer(name, COLORS[0]);
       net.send = (msg) => hostHandle('host', msg);
       const me = net;
@@ -1581,6 +1622,7 @@
     matchToken++;
     leaveRoom();
     show('lobby');
+    renderLobby(); // clear the previous room's code while the new one is created
     setLobbyStatus('Creating room…');
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -2535,7 +2577,7 @@
     const n = freshNet();
     Object.assign(n, {
       isHost: true, isPublic: old.isPublic, slot: old.slot, code: old.code, roomId: old.roomId, myId: 'host', peer,
-      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: old.diff,
+      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: (old.round && ['easy', 'medium', 'hard', 'random'].includes(old.round.difficulty)) ? old.round.difficulty : old.diff,
       joined: true, myName: old.myName,
     });
     const players = { host: { ...old.players[old.myId], connected: true, awaiting: false, name: old.myName || 'Host' } };
@@ -2938,8 +2980,16 @@
       ${canSpectate(p) ? `<button class="btn tiny" data-spectate="${esc(p.id)}">👁 Spectate</button>` : ''}</li>`;
   }
 
+  // The difficulty buttons always show the room's real setting (they used to keep the last room's
+  // highlight while a new room had quietly reset to Easy).
+  function syncRoomDiff() {
+    $$('#room-diff .btn').forEach((x) => x.classList.toggle('selected', x.dataset.diff === net.diff));
+    $('#room-custom').classList.toggle('hidden', net.diff !== 'custom');
+  }
+
   function renderLobby() {
     const pub = net.isPublic;
+    syncRoomDiff();
     const code = pub && net.slot != null ? pubCode(net.slot) : net.code || (pub ? '' : '');
     $('#room-label').textContent = pub ? 'Public Room' : 'Private Room';
     $('#room-code').textContent = net.matching ? 'Searching…' : code || '·····';
@@ -3179,8 +3229,8 @@
     $('#toggle-public').addEventListener('click', hostTogglePublic);
     $$('#room-diff .btn').forEach((b) => b.addEventListener('click', () => {
       net.diff = b.dataset.diff;
-      $$('#room-diff .btn').forEach((x) => x.classList.toggle('selected', x === b));
-      $('#room-custom').classList.toggle('hidden', net.diff !== 'custom');
+      store.set('wr-room-diff', net.diff);
+      syncRoomDiff();
     }));
     $('#start-race').addEventListener('click', hostStartRace);
     $('#ready-btn').addEventListener('click', () => {
@@ -3269,7 +3319,7 @@
         ${challenge.clicks ? `<p class="muted">Their score: <b>${plural(challenge.clicks, 'click')}</b>. Can you do better? You have ${fmtTime(limitFor(d))}.</p>` : ''}
         <button class="btn primary wide" id="banner-play">Accept challenge</button>`;
       banner.classList.remove('hidden');
-      $('#banner-play').addEventListener('click', async () => {
+      $('#banner-play').addEventListener('click', () => launch(async () => {
         try {
           const pair = await validatePair(s, e);
           const round = { ...pair, difficulty: d, limit: limitFor(d) };
@@ -3278,12 +3328,14 @@
         } catch (err) {
           toast(err.message);
         }
-      });
+      }));
     }
   }
 
   loadConfig();
   init();
+  // Have a solo pair of each difficulty ready shortly after the page settles.
+  addEventListener('load', () => setTimeout(prepareAllPairs, 1500));
   {
     const q = new URLSearchParams(location.search);
     track('app_open', {
@@ -3295,6 +3347,6 @@
   addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
   addEventListener('minigame-close', () => renderMiniGameButton());
   if (/[?&]debug\b/.test(location.search)) {
-    window.__wr = { loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
+    window.__wr = { gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
   }
 })();
