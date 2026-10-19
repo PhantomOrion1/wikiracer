@@ -1,5 +1,5 @@
 // Lane Rush: a tiny top-down racing game to play while you wait.
-// Three lanes, driving left → right; tap the top/bottom half (or ↑ ↓, W/S) to change lanes. Dodge traffic and cones,
+// Three lanes, driving left → right; tap the top/bottom half (or ↑ ↓, W/S) to change lanes. Dodge traffic,
 // grab checkered flags for bonus points. It speeds up the longer you last.
 window.MiniGame = (() => {
   'use strict';
@@ -46,7 +46,7 @@ window.MiniGame = (() => {
     const blocked = Math.random() < 0.35 ? 2 : 1;
     const lanes = [0, 1, 2].sort(() => Math.random() - 0.5);
     for (let i = 0; i < blocked; i++) {
-      s.things.push({ kind: Math.random() < 0.3 ? 'cone' : 'car', lane: lanes[i], x: W + CAR_L, hue: Math.random() < 0.5 ? 0 : 1 });
+      s.things.push({ kind: 'car', lane: lanes[i], x: W + CAR_L, hue: Math.random() < 0.5 ? 0 : 1 });
     }
     if (Math.random() < 0.35) s.things.push({ kind: 'flag', lane: lanes[blocked], x: W + CAR_L + 50 });
   }
@@ -70,7 +70,7 @@ window.MiniGame = (() => {
     s.streaks = s.streaks.filter((k) => k.x + k.len > 0);
     for (const o of s.things) {
       o.x -= (o.kind === 'car' ? s.speed * 0.55 : s.speed) * dt;
-      const len = o.kind === 'cone' ? 28 : o.kind === 'flag' ? 30 : CAR_L;
+      const len = o.kind === 'flag' ? 30 : CAR_L;
       const hitX = o.x < CAR_X + CAR_L - 8 && o.x + len > CAR_X + 8;
       const sameLane = Math.abs(laneY(o.lane) - s.y) < LANE_H * 0.55;
       if (hitX && sameLane && !o.gone) {
@@ -132,13 +132,7 @@ window.MiniGame = (() => {
     for (const o of s.things) {
       const cy = laneY(o.lane);
       if (o.kind === 'car') drawTraffic(o.x, cy, o.hue ? '#f4f2ed' : '#7a7a7a');
-      else if (o.kind === 'cone') {
-        // a traffic cone seen from above: orange base, white ring, orange tip
-        ctx.fillStyle = '#111'; ctx.fillRect(o.x, cy - 15, 30, 30);
-        ctx.fillStyle = '#ff8a1f'; ctx.beginPath(); ctx.arc(o.x + 15, cy, 13, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#f4f2ed'; ctx.beginPath(); ctx.arc(o.x + 15, cy, 8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#ff8a1f'; ctx.beginPath(); ctx.arc(o.x + 15, cy, 4, 0, Math.PI * 2); ctx.fill();
-      } else {
+      else {
         // checkered flag lying on the track
         for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) rect(o.x + i * 6, cy - 12 + j * 6, 6, 6, (i + j) % 2 ? '#111' : '#f4f2ed');
         ctx.strokeStyle = red; ctx.lineWidth = 2; ctx.strokeRect(o.x - 1, cy - 13, 32, 26);

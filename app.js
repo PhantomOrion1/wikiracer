@@ -2349,21 +2349,30 @@
     if (!net.isHost || net.phase !== 'playing' || !net.bots.size) return;
     const racing = Object.entries(net.players).filter(([, p]) => p.inRound && p.status === 'playing');
     if (!racing.length || racing.some(([id]) => !isBot(id))) return;
+    // Everyone real is done, so speed the fill-ins up, but keep it believable: a quick human
+    // still needs ~6–12s per page (sometimes a bit less), and one with a long way to go may
+    // give up rather than make everyone wait.
     const now = Date.now() - net.roundStartedAt;
-    let offset = rand(1500, 4500);
+    let offset = rand(3000, 7000);
     for (const [id] of racing.sort(() => Math.random() - 0.5)) {
       const b = net.bots.get(id);
       if (!b || !b.script || b.hurried) continue;
       b.hurried = true;
+      const left = b.script.steps.length - b.done + (b.script.end.type === 'finished' ? 1 : 0);
+      if (!b.holding && b.script.end.type === 'finished' && left >= 4 && Math.random() < 0.4) {
+        b.script.end = { type: 'gaveup', at: now + offset + rand(4000, 12000) };
+        b.script.steps = b.script.steps.filter((s, i) => i < b.done || s.at < b.script.end.at);
+      }
+      const [lo, hi] = Math.random() < 0.2 ? [3500, 6000] : [6000, 12000];
       let t = now + offset;
       b.script.steps.forEach((s, i) => {
         if (i < b.done) return;
-        t += rand(1800, 4200);
+        t += rand(lo, hi);
         s.at = Math.min(s.at, t);
       });
       b.script.end.at = b.holding
-        ? now + offset + rand(2500, 8000)
-        : Math.min(b.script.end.at, b.script.end.type === 'gaveup' ? now + offset + rand(2000, 9000) : t + rand(400, 1400));
+        ? now + offset + rand(4000, 9000)
+        : Math.min(b.script.end.at, b.script.end.type === 'gaveup' ? Math.max(t, now + offset) + rand(2000, 9000) : t + rand(lo, hi));
       if (b.script.penAt != null) b.script.penAt = null;
       runBotScript(id);
       offset += rand(2500, 7000);
