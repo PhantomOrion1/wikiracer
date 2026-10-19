@@ -3256,7 +3256,7 @@
   function miniGameAllowed() {
     if (!$('#countdown').classList.contains('hidden')) return false;
     if (game && !game.finished) return false;
-    if (net.isPublic && net.phase === 'lobby' && net.autoStartAt && net.autoStartAt - Date.now() < 10000) return false;
+    if (net.isPublic && net.phase === 'lobby' && net.autoStartAt && net.autoStartAt - Date.now() < 4000) return false; // playable until 4s before the race
     return true;
   }
   function renderMiniGameButton() {
