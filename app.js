@@ -27,7 +27,7 @@
       firstDelayMs: [12000, 20000], secondDelayMs: [6000, 14000], leaveChance: 0.2,
       busyRoomsHalf: 3, busyRoomsOff: 6,
     },
-    lobby: { soloWaitMs: 35000, groupWaitMs: 30000, readyGoMs: 5000, minAfterJoinMs: 8000, resultsMs: 15000 },
+    lobby: { soloWaitMs: 45000, groupWaitMs: 45000, readyGoMs: 8000, minAfterJoinMs: 12000, resultsMs: 10000 },
     peer: null,
     analytics: { posthogKey: '', posthogHost: 'https://us.i.posthog.com' },
   };
@@ -1144,7 +1144,11 @@
     const top = Math.max(0.1, (1 - beat) * 100);
     return top < 10 ? `Top ${top.toFixed(1)}%` : `Top ${Math.round(top)}%`;
   };
-  const dailyRecord = (key) => store.get(`wr-daily:${key}`);
+  const dailyRecord = (key) => {
+    const rec = store.get(`wr-daily:${key}`);
+    if (rec && rec.n <= window.WRDaily.NUMBER_OFFSET) rec.n += window.WRDaily.NUMBER_OFFSET; // saved before renumbering
+    return rec;
+  };
 
   function nextDailyIn() {
     const now = new Date();
@@ -1250,13 +1254,12 @@
   }
 
   function shareDaily(rec, beat) {
-    const squares = rec.path.slice(1).map((s, i, arr) => (s.back ? '🟨' : i === arr.length - 1 && rec.result === 'finished' ? '🟩' : '🟦')).join('')
-      + '🟥'.repeat(rec.penalties || 0) + (rec.result === 'finished' ? '' : '⬛');
     const line = rec.result === 'finished'
-      ? `🖱 ${plural(rec.score, 'click')} · ⏱ ${fmtTime(rec.time)} · ${topLabel(beat)}`
+      ? `🖱 ${plural(rec.score, 'click')} ⏱ ${fmtTime(rec.time)}`
       : rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up';
     track('share', { kind: 'daily' });
-    const text = `WikiRacer Daily #${rec.n} 🏁\n${rec.start} → ${rec.end}\n${line}\n${squares}\n${baseUrl()}`;
+    // Spoiler-free: no pair, no route.
+    const text = `WikiRacer #${rec.n}\n${line}`;
     if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
     else copyText(text);
   }
@@ -1948,9 +1951,9 @@
   // they back off as real players arrive, so they fade out naturally as the site gets busier.
   // Clients can't tell them apart: ids look like normal peer ids and the bot flag never leaves the host.
   const BOT_TIERS = [
-    { w: 0.28, detours: [1, 3], secPerClick: [20, 36], warmup: [8, 16], giveUp: 0.16, pen: 0.12 }, // new to it
-    { w: 0.38, detours: [0, 2], secPerClick: [14, 25], warmup: [6, 13], giveUp: 0.08, pen: 0.06 }, // casual
-    { w: 0.25, detours: [0, 1], secPerClick: [9, 16], warmup: [4, 9], giveUp: 0.03, pen: 0.02 },   // good
+    { w: 0.28, detours: [0, 1], secPerClick: [20, 36], warmup: [8, 16], giveUp: 0.16, pen: 0.12 }, // new to it
+    { w: 0.38, detours: [0, 1], secPerClick: [14, 25], warmup: [6, 13], giveUp: 0.08, pen: 0.06 }, // casual
+    { w: 0.25, detours: [0, 0], secPerClick: [9, 16], warmup: [4, 9], giveUp: 0.03, pen: 0.02 },   // good
     { w: 0.09, detours: [0, 0], secPerClick: [6, 11], warmup: [3, 7], giveUp: 0.01, pen: 0 },      // sharp
   ];
   const DIFF_MUL = { easy: 0.6, medium: 1, hard: 1.45, random: 1.6, custom: 1 };
@@ -2003,13 +2006,14 @@
   }
 
   function tallyVotes() {
+    // Real players decide: fill-in racers' votes are only for show, so they can never outvote
+    // a human. A tie between real votes is a fair coin flip. With no votes at all, public races
+    // lean easy/medium and only occasionally go hard.
     const counts = { easy: 0, medium: 0, hard: 0 };
-    for (const p of Object.values(net.players)) if (p.connected && p.vote) counts[p.vote]++;
+    for (const [id, p] of Object.entries(net.players)) if (p.connected && p.vote && !isBot(id)) counts[p.vote]++;
     const top = Math.max(...Object.values(counts));
-    // Public races lean easy/medium: no votes or a tie is a weighted pick, hard only now and then.
-    const W = { easy: 0.45, medium: 0.45, hard: 0.1 };
-    const pool = (top ? Object.keys(counts).filter((k) => counts[k] === top) : Object.keys(counts)).map((v) => ({ v, w: W[v] }));
-    return pickWeighted(pool).v;
+    if (top) return anyOf(Object.keys(counts).filter((k) => counts[k] === top));
+    return pickWeighted([{ v: 'easy', w: 0.45 }, { v: 'medium', w: 0.45 }, { v: 'hard', w: 0.1 }]).v;
   }
 
   function addBot() {
@@ -2179,12 +2183,15 @@
     const sorted = [...routes].sort((a, c) => a.length - c.length);
     const fresh = sorted.filter((r) => !used.has(r.join('|')));
     const options = fresh.length ? fresh : sorted;
-    const route = options.length ? options[tier.giveUp < 0.05 ? 0 : Math.floor(Math.random() * options.length)] : null;
+    // Sharp racers take the shortest route they know; off-form ones often pick a longer one.
+    const route = options.length ? options[tier.giveUp < 0.05 || sharp ? 0 : options.length - 1 - Math.floor(Math.random() * Math.ceil(options.length / 2))] : null;
     b.routeKey = route ? route.join('|') : null;
     if (route) {
       const pool = plan.startLinks.filter((t) => !route.some((r) => sameTitle(r, t)));
-      const extra = sharp ? 0 : randInt(1, 2);
-      const detours = Math.min(pool.length, (sharp ? tier.detours[0] : randInt(tier.detours[0], tier.detours[1] + (dm > 1.2 ? 1 : 0))) + extra);
+      // Real players rarely back-track: at most one wrong turn, occasionally two on Hard. Off-form
+      // racers mostly lose time by reading slower and taking a longer route, not by going back.
+      const extra = !sharp && Math.random() < 0.3 ? 1 : 0;
+      const detours = Math.min(pool.length, dm > 1.2 ? 2 : 1, (sharp ? 0 : randInt(tier.detours[0], tier.detours[1])) + extra);
       for (let k = 0; k < detours; k++) {
         const w = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
         path.push({ t: w, via: w, back: false }, { t: round.start, via: round.start, back: true });
@@ -2216,8 +2223,9 @@
         if (t >= quitAt) return;
         let step = null;
         if (route && i + 1 < path.length - 1) step = path[i + 1];
-        else if (!route && wander.length) {
-          step = i % 2 === 0 ? { t: wander[(i * 7 + 3) % wander.length], via: '', back: false } : { t: round.start, via: round.start, back: true };
+        else if (!route && wander.length && i < 3) {
+          // No route found: try one link, come back once, try another, then stop.
+          step = i === 1 ? { t: round.start, via: round.start, back: true } : { t: wander[(i * 7 + 3) % wander.length], via: '', back: false };
         }
         if (step) script.steps.push({ at: t, step: { ...step, via: step.via || step.t } });
       });
@@ -2615,21 +2623,55 @@
       toast(message, 4000);
       leaveRoomAndGoHome();
     };
-    setTimeout(() => { if (!me.joined) fail("Couldn't reach that room. Check the code and that the host still has it open."); }, 15000);
+    // Keep trying for a while instead of failing on the first miss: a host who just switched apps
+    // to send the code (phones pause background tabs) drops off the signalling server for a few
+    // seconds, and a slow network can take a while to connect.
+    const JOIN_FOR_MS = 30000, ATTEMPT_MS = 9000, t0 = Date.now();
+    let attempts = 0, pending = null, retryTimer = null, lastErr = '';
+    const giveUp = () => {
+      track('issue', { kind: 'join_failed', error: lastErr || 'timeout', attempts });
+      fail(lastErr === 'peer-unavailable'
+        ? `Room ${code} wasn't found. Check the code, and ask the host to keep the game open.`
+        : "Couldn't connect to that room. Check your connection and try again.");
+    };
+    const retry = (why) => {
+      if (net !== me || me.joined) return;
+      lastErr = why || lastErr;
+      if (pending) { try { pending.close(); } catch {} pending = null; }
+      clearTimeout(retryTimer);
+      if (Date.now() - t0 > JOIN_FOR_MS) return giveUp();
+      setLobbyStatus(`Waiting for room ${code}… (the host needs the game open)`);
+      retryTimer = setTimeout(attempt, 2000);
+    };
+    const attempt = () => {
+      if (net !== me || me.joined) return;
+      attempts++;
+      if (peer.disconnected) { try { peer.reconnect(); } catch {} }
+      const conn = peer.connect(net.roomId, { reliable: true });
+      pending = conn;
+      const t = setTimeout(() => { if (pending === conn) retry('timeout'); }, ATTEMPT_MS);
+      conn.on('open', () => {
+        clearTimeout(t);
+        if (net !== me || pending !== conn) { try { conn.close(); } catch {} return; }
+        pending = null;
+        attachGuest(conn, name, me, fail);
+      });
+      conn.on('error', () => { clearTimeout(t); if (pending === conn) retry('conn-error'); });
+    };
 
     const peer = new Peer(peerOpts());
     net.peer = peer;
     peer.on('open', () => {
       if (net !== me) return;
       net.myId = peer.id;
-      attachGuest(peer.connect(net.roomId, { reliable: true }), name, me, fail);
+      attempt();
     });
     peer.on('error', (err) => {
       if (me.joined) return; // after joining, errors are handled by the host handover
-      track('issue', { kind: 'join_failed', error: err.type });
-      if (err.type === 'peer-unavailable') fail(`Room ${code} wasn't found. It may have closed.`);
-      else fail('Connection problem: ' + err.type);
+      if (['peer-unavailable', 'network', 'server-error', 'socket-error', 'socket-closed', 'disconnected'].includes(err.type)) retry(err.type);
+      else { track('issue', { kind: 'join_failed', error: err.type }); fail('Connection problem: ' + err.type); }
     });
+    setTimeout(() => { if (net === me && !me.joined && !peer.open) { lastErr = 'signalling'; giveUp(); } }, JOIN_FOR_MS + 5000);
   }
 
   // Never trust the host's copy of the room: a modified client could send anything. Rebuild every
@@ -3253,6 +3295,6 @@
   addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
   addEventListener('minigame-close', () => renderMiniGameButton());
   if (/[?&]debug\b/.test(location.search)) {
-    window.__wr = { loadPeer, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
+    window.__wr = { loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
   }
 })();

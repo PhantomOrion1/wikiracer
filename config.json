@@ -23,10 +23,10 @@
     "posthogHost": "https://us.i.posthog.com"
   },
   "lobby": {
-    "soloWaitMs": 35000,
-    "groupWaitMs": 30000,
-    "readyGoMs": 5000,
-    "minAfterJoinMs": 8000,
-    "resultsMs": 15000
+    "soloWaitMs": 45000,
+    "groupWaitMs": 45000,
+    "readyGoMs": 8000,
+    "minAfterJoinMs": 12000,
+    "resultsMs": 10000
   }
 }

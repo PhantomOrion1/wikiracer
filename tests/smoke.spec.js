@@ -22,13 +22,12 @@ test('home, solo race and Lane Rush work without errors', async ({ page }) => {
   // Lane Rush draws real pixels
   await page.click('#results-actions .btn.ghost');
   await page.evaluate(() => window.MiniGame.open());
-  await page.waitForTimeout(500);
-  const painted = await page.evaluate(() => {
+  // Poll: slower CI machines can take a moment to draw the first frame.
+  await expect.poll(() => page.evaluate(() => {
     const c = document.getElementById('flappy-canvas');
     const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
     let n = 0; for (let i = 0; i < d.length; i += 4000) if (d[i] || d[i + 1] || d[i + 2]) n++;
     return n;
-  });
-  expect(painted).toBeGreaterThan(10);
+  }), { timeout: 5000 }).toBeGreaterThan(10);
   expect(errors).toEqual([]);
 });

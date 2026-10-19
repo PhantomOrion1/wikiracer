@@ -187,3 +187,43 @@ test('Quick match opens more public rooms when every room is full', async ({ bro
   await player.waitForFunction(() => window.__wr.net().isHost && window.__wr.net().slot === 1, null, { timeout: 40000 });
   await Promise.all(ctxs.map((c) => c.close()));
 });
+
+test('Joining by code keeps trying until the host shows up (e.g. host switched apps)', async ({ browser }) => {
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [host, friend]) await mockWikipedia(p);
+  const code = 'Q' + Math.random().toString(36).slice(2, 6).toUpperCase().replace(/[^A-Z]/g, 'Z').padEnd(4, 'Z');
+  await openHome(host, 'Host');
+  await openHome(friend, 'Friend');
+  await friend.fill('#join-code', code);
+  await friend.click('#join-form button[type=submit]');
+  await friend.waitForTimeout(6000); // the room doesn't exist yet
+  expect(await friend.evaluate(() => window.__wr.net().joined)).toBeFalsy();
+  await expect(friend.locator('#lobby')).toHaveClass(/active/); // still trying, not bounced home
+  await expect(friend.locator('#lobby')).toContainText(/Waiting for room/);
+  await host.evaluate((c) => window.__wr.hostRoom({ name: 'Host', code: c }), code);
+  await friend.waitForFunction(() => window.__wr.net().joined, null, { timeout: 30000 });
+  await host.waitForFunction(() => Object.keys(window.__wr.net().players).length === 2);
+  await Promise.all(ctxs.map((c) => c.close()));
+});
+
+test('Votes: a tie between real players can go Hard, and bots never outvote a person', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await mockWikipedia(page);
+  await openHome(page);
+  const results = await page.evaluate(() => {
+    const net = window.__wr.net();
+    net.isHost = true;
+    net.players = { host: { connected: true, vote: 'hard' }, friend: { connected: true, vote: 'easy' }, b1: { connected: true, vote: 'easy' }, b2: { connected: true, vote: 'easy' } };
+    net.bots = new Map([['b1', {}], ['b2', {}]]);
+    const tie = {}; for (let i = 0; i < 400; i++) { const v = window.__wr.tallyVotes(); tie[v] = (tie[v] || 0) + 1; }
+    net.players.friend.vote = null;
+    const solo = new Set(); for (let i = 0; i < 50; i++) solo.add(window.__wr.tallyVotes());
+    return { tie, solo: [...solo] };
+  });
+  expect(results.tie.hard).toBeGreaterThan(140); // ~50%, was ~18%
+  expect(results.tie.medium || 0).toBe(0);
+  expect(results.solo).toEqual(['hard']); // two bots voting easy can't outvote one person voting hard
+  await ctx.close();
+});

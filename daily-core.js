@@ -1,7 +1,10 @@
 // Daily challenge core, shared by the game (browser) and tools/build-pages.js (Node), so the
 // daily archive pages always show exactly the pair the game served that day.
 (function (root) {
-  const DAILY_EPOCH = Date.UTC(2026, 9, 17); // Daily #1
+  const DAILY_EPOCH = Date.UTC(2026, 9, 17); // first day of the pair schedule
+  // Shown numbers start higher than the internal day index, so 19 Oct 2026 displays as #214.
+  // Display only: which pair a day gets is still decided by the day index.
+  const NUMBER_OFFSET = 211;
   const dateKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const dailyNumber = (key) => {
     const [y, m, d] = key.split('-').map(Number);
@@ -33,7 +36,7 @@
       const [start, g1] = F[Math.floor(rnd() * F.length)];
       let end = F[Math.floor(rnd() * F.length)];
       for (let k = 0; k < 8 && (end[1] === g1 || end[0] === start); k++) end = F[Math.floor(rnd() * F.length)];
-      return { start, end: end[0], n, key };
+      return { start, end: end[0], n: n + NUMBER_OFFSET, key };
     }
     const i = (((n - 1) % pool.length) + pool.length) % pool.length;
     const cycle = Math.floor((n - 1) / pool.length);
@@ -44,8 +47,8 @@
       [order[k], order[j]] = [order[j], order[k]];
     }
     const [start, end] = pool[order[i]];
-    return { start, end, n, key };
+    return { start, end, n: n + NUMBER_OFFSET, key };
   }
 
-  root.WRDaily = { DAILY_EPOCH, dateKey, dailyNumber, hashStr, seeded, dailyPair };
+  root.WRDaily = { DAILY_EPOCH, NUMBER_OFFSET, dateKey, dailyNumber, hashStr, seeded, dailyPair };
 })(typeof window !== 'undefined' ? window : globalThis);
