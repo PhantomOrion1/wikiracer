@@ -61,10 +61,10 @@ Then open http://localhost:8000.
 - `app.js`: Wikipedia fetching and link handling, game logic, and duel networking
 - `minigame.js`: the Lane Rush mini-game
 - `pairs.js`: curated start → target pairs per difficulty
-- `daily-core.js`: daily challenge picker, shared with the archive builder
+- `daily-core.js`: daily challenge picker
 - `styles.css`, `pages.css`: styles for the game and the static pages
 - `vendor/peerjs.min.js`: PeerJS 1.5.4, self-hosted and loaded on demand (SRI-pinned)
-- `tools/build-pages.js`: builds the how-to, FAQ, ideas, privacy/terms and daily archive pages, plus `sitemap.xml` (a daily GitHub Action reruns it)
+- `tools/build-pages.js`: builds the how-to, multiplayer, FAQ, ideas, speedrun and privacy & terms pages, plus `sitemap.xml`
 - `tools/render-images.js`: renders `og.png` and the app icons
 
 ## Tests
@@ -82,4 +82,4 @@ The suite runs on every push (`.github/workflows/ci.yml`) and covers:
 
 Wikipedia is mocked in tests, so they're repeatable and don't hit rate limits. Multiplayer tests use the real PeerJS signalling server. CI also runs gitleaks over the full git history.
 
-Article content comes from Wikipedia under CC BY-SA 4.0. WikiRacer Live is an independent fan project, not affiliated with the Wikimedia Foundation.
+Article content comes from Wikipedia under CC BY-SA 4.0.

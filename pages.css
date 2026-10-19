@@ -34,6 +34,7 @@ main { max-width: 860px; margin: 0 auto; padding: 28px 16px 48px; }
 h1 { font: 400 clamp(32px, 7vw, 54px)/1 "Bungee", system-ui, sans-serif; letter-spacing: -1px; margin: 0 0 14px; }
 h2 { font-size: 26px; line-height: 1.2; margin: 40px 0 10px; font-stretch: 90%; }
 h3 { font-size: 19px; margin: 24px 0 6px; }
+h2.part { font-size: 32px; margin-top: 56px; padding-top: 24px; border-top: 2px solid var(--ink); }
 .lead { font-size: 20px; color: var(--text); margin: 0 0 22px; max-width: 62ch; }
 p, li { max-width: 68ch; }
 .muted { color: var(--muted); }

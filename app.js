@@ -1121,7 +1121,7 @@
   // One hard pair per calendar day, the same for everyone. Players are ranked by clicks, then time.
   // There's no server, so the "everyone else" numbers come from a statistical model seeded by the
   // date: everyone sees the same spread for the same day, and it fills up as the day goes on.
-  // Day numbering, seeded RNG and the pair picker live in daily-core.js (shared with the archive builder).
+  // Day numbering, seeded RNG and the pair picker live in daily-core.js.
   const { dateKey, dailyNumber, hashStr, seeded, dailyPair } = window.WRDaily;
   // Standard normal CDF (Abramowitz–Stegun approximation).
   function phi(x) {

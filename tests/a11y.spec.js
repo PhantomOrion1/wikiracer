@@ -27,7 +27,7 @@ for (const scheme of ['light', 'dark']) {
       await expect(page.locator('#article-title')).toHaveText('Dog', { timeout: 20000 });
       expect(await scan(page)).toEqual([]);
     });
-    for (const url of ['/how-to-play/', '/multiplayer/', '/faq/', '/wiki-race-ideas/', '/wikipedia-speedrun/', '/classroom/', '/alternatives/', '/daily/', '/privacy/', '/terms/', '/404.html']) {
+    for (const url of ['/how-to-play/', '/multiplayer/', '/faq/', '/wiki-race-ideas/', '/wikipedia-speedrun/', '/privacy/', '/404.html']) {
       test(`${url} has no WCAG A/AA violations`, async ({ page }) => {
         await page.goto(url);
         expect(await scan(page)).toEqual([]);

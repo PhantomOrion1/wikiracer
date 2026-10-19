@@ -1,5 +1,4 @@
-// Daily challenge core, shared by the game (browser) and tools/build-pages.js (Node), so the
-// daily archive pages always show exactly the pair the game served that day.
+// Daily challenge core: which pair each day gets, and its number. Works in the browser and Node.
 (function (root) {
   const DAILY_EPOCH = Date.UTC(2026, 9, 17); // first day of the pair schedule
   // Shown numbers start higher than the internal day index, so 19 Oct 2026 displays as #214.
