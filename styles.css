@@ -961,3 +961,8 @@ h3.sec { font-size: 18px; color: var(--text); }
 .pfp-opt.selected { border-color: var(--accent-fill); }
 .pfp-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .hero { position: relative; z-index: 10; } /* keeps the picture picker above the cards below */
+/* Picture square, name box and How to play line up at one height. */
+.hero-controls { align-items: center; }
+.hero-controls .pfp-btn, .hero-controls input, .hero-controls .sq { height: 44px; box-sizing: border-box; }
+.hero-controls .pfp-btn { width: 44px; }
+.hero-controls .sq { display: inline-flex; align-items: center; }
