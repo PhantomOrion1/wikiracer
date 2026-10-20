@@ -10,25 +10,25 @@ const base = `
   * { margin: 0; box-sizing: border-box; }
   html, body { overflow: hidden; } body { background: #f4f2ed; color: #111; font-family: Archivo, sans-serif; }`;
 
-const face = (n) => `data:image/webp;base64,${require('fs').readFileSync(path.join(root, 'pfp', n + '.webp')).toString('base64')}`;
-// Share/search preview: dark card, logo big and centred so Google's square crop still reads.
-const preview = (w, h) => {
-  const k = Math.min(w, h) / 630; // scale everything off the shorter side
-  return `<style>${base}
-  .c { width: ${w}px; height: ${h}px; background: #111; color: #f4f2ed; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: ${Math.round(26 * k)}px; position: relative; }
-  .c::after { content: ""; position: absolute; inset: ${Math.round(18 * k)}px; border: ${Math.max(4, Math.round(6 * k))}px solid #f4f2ed; }
-  h1 { font-family: Bungee; font-size: ${Math.round(150 * k)}px; line-height: .86; letter-spacing: -2px; text-align: center; }
-  h1 span { color: #e63323; display: block; }
-  .sub { font-size: ${Math.round(34 * k)}px; font-weight: 700; color: #d8d3c8; }
-  .faces { display: flex; gap: ${Math.round(16 * k)}px; }
-  .faces img { width: ${Math.round(92 * k)}px; height: ${Math.round(92 * k)}px; border: ${Math.max(2, Math.round(3 * k))}px solid #4a4a4a; display: block; }
+const card = `<style>${base}
+  .c { width: 1200px; height: 630px; padding: 64px 72px; display: flex; flex-direction: column; justify-content: space-between; border: 14px solid #111; }
+  h1 { font-family: Bungee; font-size: 150px; line-height: .86; letter-spacing: -2px; }
+  h1 span { color: #e63323; }
+  .sub { font-size: 40px; font-weight: 600; margin-top: 18px; }
+  .route { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 700; }
+  .pill { border: 3px solid #111; padding: 10px 18px; background: #fff; }
+  .pill.end { background: #e63323; color: #fff; border-color: #e63323; }
+  .arrow { color: #e63323; font-weight: 900; }
+  .row { display: flex; justify-content: space-between; align-items: flex-end; }
+  .url { font-size: 30px; font-weight: 800; }
 </style>
 <div class="c">
-  <div class="faces"><img src="${face('ghost')}"><img src="${face('vampire')}"><img src="${face('witch')}"><img src="${face('werewolf')}"></div>
-  <h1>Wiki<span>Racer</span></h1>
-  <p class="sub">Race friends through Wikipedia</p>
+  <div><h1>Wiki<br><span>Racer</span></h1><p class="sub">Race friends through Wikipedia, one link at a time.</p></div>
+  <div class="row">
+    <div class="route"><span class="pill">Pizza</span><span class="arrow">→</span><span class="pill">Italy</span><span class="arrow">→</span><span class="pill end">Roman Empire</span></div>
+    <span class="url">wikiracer.live</span>
+  </div>
 </div>`;
-};
 
 const icon = (size, pad) => `<style>${base}
   body { background: #e63323; }
@@ -46,9 +46,7 @@ const icon = (size, pad) => `<style>${base}
     await page.close();
     console.log('wrote', out);
   };
-  await shot(preview(1200, 630), 1200, 630, 'og.png');
-  await shot(preview(1200, 1200), 1200, 1200, 'og-square.png');
-  await shot(preview(1200, 900), 1200, 900, 'og-4x3.png');
+  await shot(card, 1200, 630, 'og.png');
   for (const s of [16, 32, 48, 96, 180, 192, 512]) await shot(icon(s, 0), s, s, `icons/icon-${s}.png`);
   await shot(icon(512, 60), 512, 512, 'icons/maskable-512.png');
   // favicon.ico at the site root (Google and old browsers look there): 16, 32 and 48px PNGs inside one ICO.
