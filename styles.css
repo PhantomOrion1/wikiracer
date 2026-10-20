@@ -643,7 +643,7 @@ input { border-radius: 0; font-family: var(--sans); }
    so the box's bottom lines up exactly with the bottom of the letters at any size. */
 .headline.brand .live-tag { display: inline-block; overflow: hidden; vertical-align: baseline; margin-left: .43em; padding: .2em .3em .16em;
   font-family: var(--display); font-weight: 900; font-stretch: 75%; font-size: .17em; line-height: 1; letter-spacing: .06em;
-  background: var(--accent); color: #fff; }
+  background: var(--accent-fill); color: #fff; }
 .hero-sub.big { font-size: clamp(19px, 1.8vw, 24px); font-weight: 700; max-width: 520px; margin-top: 18px; color: var(--text); }
 .hero-sub.big em { font-style: normal; color: var(--accent); }
 .hero-sub.small { margin-top: 6px; color: var(--muted); font-size: 16px; }
