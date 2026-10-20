@@ -49,7 +49,13 @@ function wikiResponse(url) {
 
 // Local PeerJS matchmaking server started by playwright.config.js, so multiplayer tests don't
 // depend on (or get rate-limited by) the shared public one.
-const TEST_PEER = { host: 'localhost', port: 9010, path: '/', secure: false };
+// SIGNAL=1 runs the suite against our own signalling server (signal/, via `wrangler dev` on :8787).
+// SIGNAL=prod runs it against the deployed one.
+const TEST_PEER = process.env.SIGNAL === 'prod'
+  ? { host: 'wikiracer-signal.jursolife.workers.dev', port: 443, path: '/', secure: true }
+  : process.env.SIGNAL
+    ? { host: '127.0.0.1', port: 8787, path: '/', secure: false }
+    : { host: 'localhost', port: 9010, path: '/', secure: false };
 async function mockWikipedia(page, { fail = false, delayMs = 0 } = {}) {
   await page.addInitScript((peer) => { window.__WR_TEST_PEER = peer; }, TEST_PEER);
   await page.route('https://en.wikipedia.org/w/api.php**', async (route) => {

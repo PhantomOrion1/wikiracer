@@ -1,0 +1,13 @@
+# WikiRacer's own matchmaking (WebRTC signalling) server: a PeerJS-compatible PeerServer on
+# Cloudflare Workers + a Durable Object. Deploy: cd signal && npx wrangler deploy
+name = "wikiracer-signal"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[[durable_objects.bindings]]
+name = "SIGNAL"
+class_name = "Signal"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Signal"]

@@ -65,8 +65,8 @@ test('PeerJS unreachable: quick match fails gracefully back to home', async ({ p
   const errors = trackErrors(page);
   await mockWikipedia(page);
   await page.route('**/*peerjs.com/**', (r) => r.abort('failed'));
-  await page.routeWebSocket(/peerjs\.com|localhost:9010/, (ws) => ws.close());
-  await page.route('http://localhost:9010/**', (r) => r.abort('failed'));
+  await page.routeWebSocket(/peerjs\.com|localhost:9010|127\.0\.0\.1:8787|workers\.dev/, (ws) => ws.close());
+  await page.route(/localhost:9010|127\.0\.0\.1:8787/, (r) => r.abort('failed'));
   await openHome(page, 'NoNet');
   await page.click('#quick-match');
   await expect(page.locator('#toast')).toContainText(/matchmaking|try again|connection/i, { timeout: 60000 });

@@ -267,7 +267,11 @@
       webrtc: "Couldn't connect to the other players. Work or school networks often block this: try home Wi-Fi or a phone hotspot.",
     })[type] || 'Something went wrong connecting. Try again.';
   }
+  // Settings (including which matchmaking server to use) must be loaded before connecting, or an
+  // early click could land on a different server from everyone else.
+  let configReady = null;
   const peerReady = async () => {
+    await Promise.race([configReady || Promise.resolve(), new Promise((r) => setTimeout(r, 4000))]);
     if (!(await loadPeer())) { toast('Multiplayer failed to load, check your connection'); return false; }
     await iceReady();
     return true;
@@ -1829,10 +1833,12 @@
     startHeartbeat(me);
     peer.on('connection', (conn) => { conn.viaPublic = viaPublic; hostAccept(conn, me); });
     peer.on('disconnected', () => { if (net === me && !peer.destroyed) peer.reconnect(); });
+    peer.on('open', () => { peer.wrWasOpen = true; });
     peer.on('error', (err) => {
       // Back from the background (phone app switch) to find another player already took the room
-      // over: rejoin it as a guest instead of sitting alone in a dead copy.
-      if (err.type === 'unavailable-id' && net === me && me.isHost && !viaPublic) { rejoinAsGuest(me); return; }
+      // over: rejoin it as a guest instead of sitting alone in a dead copy. Only for a room we
+      // actually had: losing a race to create a brand-new room is handled by quick match itself.
+      if (err.type === 'unavailable-id' && peer.wrWasOpen && net === me && me.isHost && !viaPublic) { rejoinAsGuest(me); return; }
       if (net === me && peer.open && err.type !== 'peer-unavailable') toast(friendlyError(err.type));
     });
   }
@@ -3071,6 +3077,7 @@
     if (!d || typeof d !== 'object') return;
     if (d.type === 'state' && d.players && typeof d.players === 'object') {
       const prevPhase = net.phase;
+      net.gotState = true;
       net.players = sanitizePlayers(d.players);
       net.phase = ['lobby', 'playing', 'results'].includes(d.phase) ? d.phase : 'lobby';
       const r = d.round && typeof d.round === 'object' ? d.round : null;
@@ -3160,7 +3167,11 @@
     });
   }
 
-  async function quickMatch() {
+  // Quick match retries itself when the room it picked fills up before it got in (lots of
+  // people searching at once); a fresh search by the player resets the count.
+  let qmAutoRetries = 0;
+  async function quickMatch(auto = false) {
+    if (auto !== true) qmAutoRetries = 0;
     const name = getName();
     if (!name || !(await peerReady())) return;
     const token = ++matchToken;
@@ -3201,7 +3212,12 @@
       }
       if (res.conn) {
         Object.assign(net, { peer: res.peer, myId: res.peer.id, slot: res.slot, matching: false, roomId: publicPeerId(res.slot) });
-        const fail = (message) => { if (net === me) { toast(message, 4000); leaveRoomAndGoHome(); } };
+        const fail = (message) => {
+          if (net !== me) return;
+          if (!me.gotState && /full/i.test(message) && qmAutoRetries < 4) { qmAutoRetries++; setLobbyStatus('🔎 That room just filled up, finding another…'); quickMatch(true); return; }
+          toast(message, 4000);
+          leaveRoomAndGoHome();
+        };
         res.peer.on('error', (err) => { if (err.type !== 'peer-unavailable' && !me.joined) fail(friendlyError(err.type)); });
         me.myName = name;
         track('quick_match', { outcome: 'joined', search_ms: Date.now() - qmStart, busy_rooms: res.busy || 0, room_count: res.count || null });
@@ -3681,11 +3697,11 @@
     $$('#solo-custom input, #room-custom input').forEach(attachSuggest);
 
     renderDailyCard();
-    $('#quick-match').addEventListener('click', quickMatch);
+    $('#quick-match').addEventListener('click', () => quickMatch());
     $('#create-room').addEventListener('click', createRoom);
     $('#join-form').addEventListener('submit', (e) => { e.preventDefault(); joinRoom($('#join-code').value); });
     $('#leave-lobby').addEventListener('click', leaveRoomAndGoHome);
-    $('#skip-room').addEventListener('click', quickMatch);
+    $('#skip-room').addEventListener('click', () => quickMatch());
     $('#copy-invite').addEventListener('click', () => copyText($('#invite-link').value || inviteLink()));
     $('#toggle-public').addEventListener('click', hostTogglePublic);
     $$('#room-diff .btn').forEach((b) => b.addEventListener('click', () => {
@@ -3803,7 +3819,7 @@
     }
   }
 
-  loadConfig();
+  configReady = loadConfig();
   init();
   // Have a solo pair of each difficulty ready shortly after the page settles.
   // Pre-pick solo pairs only once someone shows interest in Solo (hover, focus or tap on the card),
