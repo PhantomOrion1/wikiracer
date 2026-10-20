@@ -639,6 +639,11 @@ input { border-radius: 0; font-family: var(--sans); }
 :root { --brand: "Bungee", "Archivo", system-ui, sans-serif; }
 .headline.brand { font-family: var(--brand); font-stretch: 100%; font-weight: 400; font-size: clamp(64px, 8.6vw, 124px); line-height: .92; letter-spacing: -.01em; }
 .headline.brand span { color: var(--accent); }
+/* Red LIVE box after RACER. overflow:hidden puts an inline-block's baseline at its bottom edge,
+   so the box's bottom lines up exactly with the bottom of the letters at any size. */
+.headline.brand .live-tag { display: inline-block; overflow: hidden; vertical-align: baseline; margin-left: .35em; padding: .27em .36em .22em;
+  font-family: var(--display); font-weight: 900; font-stretch: 75%; font-size: .21em; line-height: 1; letter-spacing: .06em;
+  background: var(--accent); color: #fff; }
 .hero-sub.big { font-size: clamp(19px, 1.8vw, 24px); font-weight: 700; max-width: 520px; margin-top: 18px; color: var(--text); }
 .hero-sub.big em { font-style: normal; color: var(--accent); }
 .hero-sub.small { margin-top: 6px; color: var(--muted); font-size: 16px; }
