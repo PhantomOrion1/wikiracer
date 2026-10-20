@@ -53,7 +53,9 @@ function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noi
   <meta property="og:image:alt" content="WikiRacer: race friends through Wikipedia, one link at a time">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#f4f2ed">
-  <link rel="icon" href="/icons/icon-32.png" sizes="32x32" type="image/png">
+  <meta name="application-name" content="${NAME}">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/icons/icon-96.png" sizes="96x96" type="image/png">
   <link rel="apple-touch-icon" href="/icons/icon-180.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>

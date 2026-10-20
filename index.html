@@ -6,12 +6,12 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.posthog.com https://formsubmit.co https://*.metered.live https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>WikiRacer Live: Multiplayer Wikipedia Race Game</title>
-  <meta name="description" content="Race friends through Wikipedia from one article to another in the fewest clicks. Free multiplayer wiki race with quick match, private rooms for up to 8, solo and a daily challenge.">
+  <meta name="description" content="Race your friends through Wikipedia in real time. Fewest clicks wins. Free, no sign-up, up to 8 players and a new daily challenge every day.">
   <link rel="canonical" href="https://wikiracer.live/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="WikiRacer Live">
   <meta property="og:title" content="WikiRacer Live: Multiplayer Wikipedia Race Game">
-  <meta property="og:description" content="Race friends through Wikipedia, one link at a time. Free, no sign-up, up to 8 players.">
+  <meta property="og:description" content="Race your friends through Wikipedia in real time. Fewest clicks wins. Free, no sign-up.">
   <meta property="og:url" content="https://wikiracer.live/">
   <meta property="og:image" content="https://wikiracer.live/og.png">
   <meta property="og:image:width" content="1200">
@@ -19,15 +19,19 @@
   <meta property="og:image:alt" content="WikiRacer: race friends through Wikipedia, one link at a time">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#f4f2ed">
-  <link rel="icon" href="/icons/icon-32.png" sizes="32x32" type="image/png">
+  <meta name="application-name" content="WikiRacer Live">
+  <meta name="apple-mobile-web-app-title" content="WikiRacer Live">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/icons/icon-96.png" sizes="96x96" type="image/png">
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="/icons/icon-180.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"WikiRacer Live","alternateName":["WikiRacer","Wiki Racer Live"],"url":"https://wikiracer.live/"}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"WikiRacer Live","url":"https://wikiracer.live/","description":"A free multiplayer wiki race game. Start on one Wikipedia article and race friends to a target article in the fewest clicks.","image":"https://wikiracer.live/og.png","applicationCategory":"GameApplication","operatingSystem":"Any (web browser)","genre":["Puzzle","Trivia","Party"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"numberOfPlayers":{"@type":"QuantitativeValue","minValue":1,"maxValue":8},"isAccessibleForFree":true,"inLanguage":"en","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"WikiRacer Live","alternateName":["WikiRacer","Wiki Racer Live","wikiracer.live"],"url":"https://wikiracer.live/"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"WikiRacer Live","url":"https://wikiracer.live/","description":"Race your friends through Wikipedia in real time. Fewest clicks wins. Free, no sign-up, up to 8 players and a new daily challenge every day.","image":["https://wikiracer.live/og-square.png","https://wikiracer.live/og-4x3.png","https://wikiracer.live/og.png"],"applicationCategory":"GameApplication","operatingSystem":"Any (web browser)","genre":["Puzzle","Trivia","Party"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"numberOfPlayers":{"@type":"QuantitativeValue","minValue":1,"maxValue":8},"isAccessibleForFree":true,"inLanguage":"en","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css">
-  <link rel="stylesheet" href="styles.css?v=92">
+  <link rel="stylesheet" href="styles.css?v=93">
 </head>
 <body>
   <!-- HOME -->
@@ -355,11 +359,11 @@
   <datalist id="suggest-start"></datalist>
   <datalist id="suggest-end"></datalist>
 
-  <script src="pairs.js?v=92" defer></script>
-  <script src="bots.js?v=92" defer></script>
-  <script src="vital.js?v=92" defer></script>
-  <script src="minigame.js?v=92" defer></script>
-  <script src="daily-core.js?v=92" defer></script>
-  <script src="app.js?v=92" defer></script>
+  <script src="pairs.js?v=93" defer></script>
+  <script src="bots.js?v=93" defer></script>
+  <script src="vital.js?v=93" defer></script>
+  <script src="minigame.js?v=93" defer></script>
+  <script src="daily-core.js?v=93" defer></script>
+  <script src="app.js?v=93" defer></script>
 </body>
 </html>
