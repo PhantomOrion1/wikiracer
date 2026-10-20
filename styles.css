@@ -641,8 +641,8 @@ input { border-radius: 0; font-family: var(--sans); }
 .headline.brand span { color: var(--accent); }
 /* Red LIVE box after RACER. overflow:hidden puts an inline-block's baseline at its bottom edge,
    so the box's bottom lines up exactly with the bottom of the letters at any size. */
-.headline.brand .live-tag { display: inline-block; overflow: hidden; vertical-align: baseline; margin-left: .35em; padding: .27em .36em .22em;
-  font-family: var(--display); font-weight: 900; font-stretch: 75%; font-size: .21em; line-height: 1; letter-spacing: .06em;
+.headline.brand .live-tag { display: inline-block; overflow: hidden; vertical-align: baseline; margin-left: .43em; padding: .2em .3em .16em;
+  font-family: var(--display); font-weight: 900; font-stretch: 75%; font-size: .17em; line-height: 1; letter-spacing: .06em;
   background: var(--accent); color: #fff; }
 .hero-sub.big { font-size: clamp(19px, 1.8vw, 24px); font-weight: 700; max-width: 520px; margin-top: 18px; color: var(--text); }
 .hero-sub.big em { font-style: normal; color: var(--accent); }
