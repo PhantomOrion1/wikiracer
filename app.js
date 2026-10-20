@@ -1,8 +1,8 @@
 (() => {
   'use strict';
 
-  // GitHub Pages can't send X-Frame-Options / frame-ancestors, so refuse to run inside someone
-  // else's frame (clickjacking) by breaking out of it.
+  // Backup to the X-Frame-Options / frame-ancestors headers (see _headers): refuse to run inside
+  // someone else's frame (clickjacking) by breaking out of it.
   if (window.top !== window.self) {
     // Browsers often block a framed page from navigating the top window, so also blank ourselves.
     try { window.top.location = window.self.location.href; } catch { /* blocked */ }

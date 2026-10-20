@@ -45,7 +45,7 @@ Events: `app_open`, `race_start`, `race_end`, `daily_end`, `quick_match`, `room_
 
 No browser extension is needed. Articles are fetched from the Wikipedia API and rendered inside the game, so every link click goes through the game and is counted. Search, external links, and category/file/help pages are blocked. The in-game Back button costs a click.
 
-Duels are peer-to-peer over WebRTC using [PeerJS](https://peerjs.com/). The host's browser acts as the room server, so there's no backend to run, and the whole thing is a static site on GitHub Pages.
+Duels are peer-to-peer over WebRTC using [PeerJS](https://peerjs.com/). The host's browser acts as the room server, so there's no backend to run, and the whole thing is a static site on Cloudflare Pages (deploys automatically from `main`). Players who can't connect directly go through a TURN relay: Cloudflare's, via the small Worker in `tools/cloudflare-turn-worker.js`, with Metered as a backup.
 
 ## Run locally
 

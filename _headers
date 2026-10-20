@@ -1,5 +1,4 @@
-# HTTP security headers. GitHub Pages ignores this file; Cloudflare Pages and Netlify apply it as-is.
-# (On GitHub Pages the same protections come from the CSP <meta> tag and the frame-buster in app.js.)
+# HTTP security headers, applied by Cloudflare Pages to every response.
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Content-Security-Policy: frame-ancestors 'none'; base-uri 'none'; object-src 'none'
