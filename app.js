@@ -2246,6 +2246,7 @@
       botsAfterRound();
       for (const id of net.bots.keys()) botMaybeVote(id);
       botEarlyVote();
+      botEarlyReady();
     }
     goToLobbyScreen();
     scheduleAutoStart();
@@ -2314,6 +2315,25 @@
     }
   }
 
+  // One real player with two fill-ins: one bot readies up on its own so the room doesn't look
+  // frozen. 1 of 3 ready isn't a majority, so this never starts the race early.
+  function botEarlyReady() {
+    if (!net.isHost || !net.isPublic || net.phase !== 'lobby') return;
+    const bots = [...net.bots.keys()].filter((id) => net.players[id]);
+    if (humanCount() !== 1 || bots.length !== 2) return;
+    if (bots.some((id) => net.players[id].ready || net.bots.get(id).readyTimer)) return;
+    const id = anyOf(bots);
+    const b = net.bots.get(id);
+    b.readyTimer = setTimeout(() => {
+      b.readyTimer = null;
+      const p = net.players[id];
+      if (net.phase !== 'lobby' || !p || p.ready) return;
+      p.ready = true;
+      scheduleAutoStart();
+      broadcast();
+    }, rand(2500, 7000));
+  }
+
   // Fill-ins vote about half the time, usually siding with what real people picked.
   function botMaybeVote(id) {
     if (Math.random() > 0.5) return;
@@ -2369,6 +2389,7 @@
     toast(`${net.players[id].name} joined`);
     botMaybeVote(id);
     botEarlyVote();
+    botEarlyReady();
     if (Object.entries(net.players).some(([pid, x]) => !isBot(pid) && x.ready)) botsFollowReady();
     scheduleAutoStart(true);
     broadcast();
@@ -3843,6 +3864,6 @@
   addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
   addEventListener('minigame-close', () => { renderMiniGameButton(); renderResults(); });
   if (/[?&]debug\b/.test(location.search)) {
-    window.__wr = { kick, loadIceServers, iceServers: () => iceServers, gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
+    window.__wr = { kick, addBot, loadIceServers, iceServers: () => iceServers, gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
   }
 })();

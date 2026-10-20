@@ -1021,12 +1021,3 @@ h3.sec { font-size: 18px; color: var(--text); }
 @media (max-width: 760px) {
   .feedback-btn { position: static; display: block; margin: 0 auto 28px; }
 }
-
-/* Very large screens only: scale the home page up so it doesn't sit tiny in the middle.
-   Laptops (up to ~1680px wide) and phones are untouched. */
-@media (min-width: 1700px) and (min-height: 900px) {
-  #home .home-wrap { zoom: 1.18; min-height: calc(100dvh / 1.18); }
-}
-@media (min-width: 2300px) and (min-height: 1200px) {
-  #home .home-wrap { zoom: 1.5; min-height: calc(100dvh / 1.5); }
-}
