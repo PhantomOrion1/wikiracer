@@ -1,10 +1,19 @@
-# gitleaks config: default rules plus a documented allowlist.
+# gitleaks config: default rules plus documented allowlists for values that are public by design.
 [extend]
 useDefault = true
 
-[allowlist]
-description = "Known-public values"
+[[allowlists]]
+description = "PostHog project keys"
 # PostHog *project* API keys (phc_) are write-only ingestion keys designed to be embedded in public
 # web pages; every PostHog site exposes theirs. Personal API keys (phx_) are secret and must never be
 # committed: they are NOT allowlisted.
 regexes = ['''phc_[A-Za-z0-9]{40,}''']
+
+[[allowlists]]
+description = "TURN relay logins in config.json"
+# WebRTC relay (TURN) credentials have to be handed to every player's browser, so they are public by
+# design; abuse is limited by the provider's allowed-domains setting. Only the "credential" lines in
+# config.json are exempt, so a real secret anywhere else still fails the scan.
+paths = ['''^config\.json$''']
+regexTarget = "line"
+regexes = ['''"credential":\s*"''']
