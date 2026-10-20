@@ -11,12 +11,12 @@ const base = `
   html, body { overflow: hidden; } body { background: #f4f2ed; color: #111; font-family: Archivo, sans-serif; }`;
 
 const card = `<style>${base}
-  .c { width: 1200px; height: 630px; padding: 64px 72px; display: flex; flex-direction: column; justify-content: space-between; border: 14px solid #111; }
+  .c { width: 1200px; height: 630px; padding: 64px 72px; display: flex; flex-direction: column; justify-content: space-between; border: 14px solid #f4f2ed; background: #111; color: #f4f2ed; }
   h1 { font-family: Bungee; font-size: 150px; line-height: .86; letter-spacing: -2px; }
   h1 span { color: #e63323; }
   .sub { font-size: 40px; font-weight: 600; margin-top: 18px; }
   .route { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 700; }
-  .pill { border: 3px solid #111; padding: 10px 18px; background: #fff; }
+  .pill { border: 3px solid #f4f2ed; padding: 10px 18px; background: #1a1a1a; }
   .pill.end { background: #e63323; color: #fff; border-color: #e63323; }
   .arrow { color: #e63323; font-weight: 900; }
   .row { display: flex; justify-content: space-between; align-items: flex-end; }
