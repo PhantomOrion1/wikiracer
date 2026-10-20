@@ -453,3 +453,42 @@ test('Opening the site inside an app (e.g. Teams) suggests a real browser', asyn
   await openHome(normal);
   await expect(normal.locator('#inapp-note')).toBeHidden();
 });
+
+test('Work-network case: players connect through the relay using only TLS on port 443', async ({ browser }) => {
+  test.setTimeout(90000);
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [host, friend]) {
+    await mockWikipedia(p);
+    // keep only the TLS-on-443 relay, like a firewall that only allows HTTPS
+    await p.route('**/config.json*', async (r) => {
+      const res = await r.fetch(); const j = await res.json();
+      j.turn = { iceServers: (j.turn.iceServers || []).filter((s) => String(s.urls).startsWith('turns:')) };
+      r.fulfill({ response: res, json: j });
+    });
+  }
+  await host.goto('/?debug&relay');
+  await host.waitForFunction(() => window.__wr && JSON.stringify(window.__wr.iceServers()).includes('turns:'));
+  await host.evaluate(() => window.__wr.loadPeer());
+  await host.fill('#name-input', 'Host');
+  await host.click('#create-room');
+  await expect(host.locator('#room-code')).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 20000 });
+  const code = (await host.locator('#room-code').textContent()).trim();
+  await friend.goto('/?debug&relay');
+  await friend.waitForFunction(() => window.__wr && JSON.stringify(window.__wr.iceServers()).includes('turns:'));
+  await friend.fill('#name-input', 'Friend');
+  await friend.fill('#join-code', code);
+  await friend.click('#join-form button[type=submit]');
+  await friend.waitForFunction(() => window.__wr.net().joined, null, { timeout: 60000 });
+  await host.waitForFunction(() => Object.keys(window.__wr.net().players).length === 2, null, { timeout: 20000 });
+  // and the connection really is relayed
+  const type = await friend.evaluate(async () => {
+    const pc = window.__wr.net().hostConn.peerConnection;
+    const stats = await pc.getStats(); let pair = null;
+    stats.forEach((s) => { if (s.type === 'transport' && s.selectedCandidatePairId) pair = stats.get(s.selectedCandidatePairId); });
+    if (!pair) stats.forEach((s) => { if (s.type === 'candidate-pair' && s.nominated && s.state === 'succeeded') pair = s; });
+    return pair ? stats.get(pair.localCandidateId).candidateType : 'unknown';
+  });
+  expect(type).toBe('relay');
+  await Promise.all(ctxs.map((c) => c.close()));
+});

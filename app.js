@@ -138,7 +138,9 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushAnalytics(); });
   addEventListener('error', (e) => track('client_error', { message: String(e.message || '').slice(0, 200), source: String(e.filename || '').split('/').pop(), line: e.lineno }));
   addEventListener('unhandledrejection', (e) => track('client_error', { message: String((e.reason && e.reason.message) || e.reason || '').slice(0, 200), kind: 'promise' }));
-  const peerOpts = () => ({ debug: 0, config: { iceServers }, ...(CONFIG.peer || {}) });
+  // ?debug&relay forces every connection through the relay, to check it works on a blocked network.
+  const FORCE_RELAY = /[?&]debug\b/.test(location.search) && /[?&]relay\b/.test(location.search);
+  const peerOpts = () => ({ debug: 0, config: { iceServers, ...(FORCE_RELAY ? { iceTransportPolicy: 'relay' } : {}) }, ...(CONFIG.peer || {}) });
   // ?debug uses a separate set of public rooms so testing never lands in real players' races.
   const PUBLIC_NS = /[?&]debug\b/.test(location.search) ? 'test-public-' : 'public-';
   const publicPeerId = (i) => `${PEER_PREFIX}${PUBLIC_NS}${i}`;
