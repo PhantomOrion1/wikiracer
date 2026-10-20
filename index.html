@@ -31,7 +31,7 @@
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css">
-  <link rel="stylesheet" href="styles.css?v=94">
+  <link rel="stylesheet" href="styles.css?v=96">
 </head>
 <body>
   <!-- HOME -->
@@ -97,8 +97,8 @@
           </div>
           <div class="solo-more"><button class="textlink" data-solo="random">Random pair</button><button class="textlink" id="solo-custom-toggle">Pick your own</button></div>
           <form id="solo-custom" class="custom-form hidden">
-            <input name="start" list="suggest-start" placeholder="Start article" required>
-            <input name="end" list="suggest-end" placeholder="Target article" required>
+            <input name="start" placeholder="Start article" autocomplete="off" required>
+            <input name="end" placeholder="Target article" autocomplete="off" required>
             <button class="sq" type="submit">Go</button>
           </form>
         </div>
@@ -179,10 +179,12 @@
         <ul id="lobby-players" class="player-list"></ul>
       </div>
 
-      <div class="card hidden" id="choose-panel">
+      <div id="choose-guest-slot">
+        <div class="card hidden" id="choose-panel">
         <div class="choose-head"><h2>Pick a race</h2><button class="btn small ghost" type="button" id="choose-shuffle">Shuffle</button></div>
         <ol class="choose-list" id="choose-list"></ol>
         <p class="muted choose-note" id="choose-note"></p>
+      </div>
       </div>
       <div class="card" id="host-controls">
         <h2>Next race</h2>
@@ -193,9 +195,10 @@
           <button class="btn ghost" data-diff="choose">Choose</button>
           <button class="btn ghost" data-diff="custom">Custom</button>
         </div>
+        <div id="choose-host-slot"></div>
         <div id="room-custom" class="custom-form hidden">
-          <input id="room-start" list="suggest-start" placeholder="Start article">
-          <input id="room-end" list="suggest-end" placeholder="Target article">
+          <input id="room-start" placeholder="Start article" autocomplete="off">
+          <input id="room-end" placeholder="Target article" autocomplete="off">
         </div>
         <button class="btn primary wide" id="start-race">Start race</button>
       </div>
@@ -356,14 +359,12 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <datalist id="suggest-start"></datalist>
-  <datalist id="suggest-end"></datalist>
 
-  <script src="pairs.js?v=94" defer></script>
-  <script src="bots.js?v=94" defer></script>
-  <script src="vital.js?v=94" defer></script>
-  <script src="minigame.js?v=94" defer></script>
-  <script src="daily-core.js?v=94" defer></script>
-  <script src="app.js?v=94" defer></script>
+  <script src="pairs.js?v=96" defer></script>
+  <script src="bots.js?v=96" defer></script>
+  <script src="vital.js?v=96" defer></script>
+  <script src="minigame.js?v=96" defer></script>
+  <script src="daily-core.js?v=96" defer></script>
+  <script src="app.js?v=96" defer></script>
 </body>
 </html>

@@ -998,3 +998,16 @@ h3.sec { font-size: 18px; color: var(--text); }
 .inapp-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 14px; padding: 8px 12px; max-width: 520px;
   border: 2px solid var(--medium-fill); font-size: 13.5px; color: var(--text); }
 .inapp-note .textlink { color: var(--text); font-weight: 700; }
+.hero-text { position: relative; z-index: 3; } /* picture picker opens over the demo board (phones stack it right below) */
+
+/* Choose pairs inside the host's box: same spot as the Custom fields, no second card. */
+#choose-panel.in-host { border: 0; background: none; padding: 0; margin: 4px 0 12px; box-shadow: none; }
+#choose-panel.in-host .choose-head h2 { font-size: 15px; font-family: var(--mono); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* Article suggestions (custom start/target) */
+.suggest-wrap { position: relative; }
+.suggest-wrap input { width: 100%; box-sizing: border-box; }
+.suggest-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; margin: 0; padding: 4px; list-style: none;
+  background: var(--surface); border: 2px solid var(--ink-line); box-shadow: 4px 4px 0 var(--accent-fill); max-height: 260px; overflow-y: auto; }
+.suggest-list li { padding: 8px 10px; cursor: pointer; font: 600 14px var(--sans); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggest-list li:hover, .suggest-list li.active { background: var(--ink-line); color: var(--bg); }

@@ -346,21 +346,54 @@
     return j.query.random.map((r) => r.title);
   }
 
+  // Article suggestions under the custom start/target boxes, styled like the rest of the site
+  // (the browser's own <datalist> dropdown can't be styled).
   function attachSuggest(input) {
-    const list = document.getElementById(input.getAttribute('list'));
-    let timer;
+    const wrap = document.createElement('div');
+    wrap.className = 'suggest-wrap';
+    input.replaceWith(wrap);
+    wrap.append(input);
+    const list = document.createElement('ul');
+    list.className = 'suggest-list hidden';
+    list.setAttribute('role', 'listbox');
+    wrap.append(list);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    let timer, items = [], active = -1, seq = 0;
+    const close = () => { list.classList.add('hidden'); input.setAttribute('aria-expanded', 'false'); active = -1; };
+    const paint = () => {
+      list.innerHTML = items.map((t, i) => `<li role="option" class="${i === active ? 'active' : ''}" aria-selected="${i === active}" data-i="${i}">${esc(t)}</li>`).join('');
+      const show = items.length > 0 && document.activeElement === input;
+      list.classList.toggle('hidden', !show);
+      input.setAttribute('aria-expanded', String(show));
+    };
+    const pick = (i) => { if (items[i] == null) return; input.value = items[i]; close(); input.dispatchEvent(new Event('change', { bubbles: true })); };
     input.addEventListener('input', () => {
       clearTimeout(timer);
       const q = input.value.trim();
-      if (q.length < 2) return;
+      if (q.length < 2) { items = []; close(); return; }
+      const my = ++seq;
       timer = setTimeout(async () => {
         try {
-          const r = await fetch(API + '?' + new URLSearchParams({ action: 'opensearch', search: q, limit: '8', namespace: '0', format: 'json', origin: '*' }));
+          const r = await fetch(API + '?' + new URLSearchParams({ action: 'opensearch', search: q, limit: '6', namespace: '0', format: 'json', origin: '*' }));
           const j = await r.json();
-          list.innerHTML = j[1].map((t) => `<option value="${esc(t)}">`).join('');
+          if (my !== seq) return;
+          items = Array.isArray(j[1]) ? j[1] : [];
+          active = -1;
+          paint();
         } catch {}
-      }, 200);
+      }, 180);
     });
+    input.addEventListener('keydown', (e) => {
+      if (list.classList.contains('hidden')) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = (active + 1) % items.length; paint(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = (active - 1 + items.length) % items.length; paint(); }
+      else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); pick(active); }
+      else if (e.key === 'Escape') close();
+    });
+    list.addEventListener('mousedown', (e) => { const li = e.target.closest('li'); if (li) { e.preventDefault(); pick(+li.dataset.i); } });
+    input.addEventListener('blur', () => setTimeout(close, 120));
   }
 
   // Checks a reported route against Wikipedia: every forward step must be a real link on the
@@ -3182,6 +3215,11 @@
 
   function renderChoices(pub) {
     const panel = $('#choose-panel');
+    // The host sees the pairs right under the difficulty buttons (where Custom opens too);
+    // guests see them in their own panel since they don't get the host controls.
+    const slot = net.isHost ? $('#choose-host-slot') : $('#choose-guest-slot');
+    if (panel.parentElement !== slot) slot.append(panel);
+    panel.classList.toggle('in-host', net.isHost);
     const choices = net.choices || [];
     const show = !pub && net.phase === 'lobby' && choices.length > 0 && (!net.isHost || net.diff === 'choose');
     panel.classList.toggle('hidden', !show);
