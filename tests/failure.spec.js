@@ -65,10 +65,12 @@ test('PeerJS unreachable: quick match fails gracefully back to home', async ({ p
   const errors = trackErrors(page);
   await mockWikipedia(page);
   await page.route('**/*peerjs.com/**', (r) => r.abort('failed'));
-  await page.routeWebSocket(/peerjs\.com/, (ws) => ws.close());
+  await page.routeWebSocket(/peerjs\.com|localhost:9010/, (ws) => ws.close());
+  await page.route('http://localhost:9010/**', (r) => r.abort('failed'));
   await openHome(page, 'NoNet');
   await page.click('#quick-match');
-  await expect(page.locator('#toast')).toContainText(/failed|problem|busy|try again/i, { timeout: 60000 });
+  await expect(page.locator('#toast')).toContainText(/matchmaking|try again|connection/i, { timeout: 60000 });
+  await expect(page.locator('#toast')).not.toContainText(/socket|network\b/);
   await expect(page.locator('#home')).toHaveClass(/active/, { timeout: 60000 });
   expect(errors).toEqual([]);
 });
@@ -127,6 +129,7 @@ test('8 players across two rooms race at the same time', async ({ browser }) => 
 });
 
 test('A guest whose browser crashes is dropped by the host (heartbeat)', async ({ browser }) => {
+  test.setTimeout(90000);
   const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
   const [host, g] = await Promise.all(ctxs.map((c) => c.newPage()));
   for (const p of [host, g]) await mockWikipedia(p);
@@ -134,7 +137,9 @@ test('A guest whose browser crashes is dropped by the host (heartbeat)', async (
   await joinPrivateRoom(g, 'Ghost', code);
   await host.waitForFunction(() => Object.keys(window.__wr.net().players).length === 2);
   await ctxs[1].close(); // no clean goodbye
-  await host.waitForFunction(() => Object.keys(window.__wr.net().players).length === 1, null, { timeout: 25000 });
+  // Marked as reconnecting first (a short grace period), then removed.
+  await host.waitForFunction(() => Object.values(window.__wr.net().players).some((p) => p.awaiting), null, { timeout: 25000 });
+  await host.waitForFunction(() => Object.keys(window.__wr.net().players).length === 1, null, { timeout: 40000 });
   await expect(host.locator('#lobby')).not.toContainText('Ghost');
   await ctxs[0].close();
 });
@@ -177,7 +182,7 @@ test('Quick match opens more public rooms when every room is full', async ({ bro
   });
   await openHome(full);
   await full.evaluate(async () => {
-    const peer = new Peer('wikirace-room-v1-test-public-0', { debug: 0 });
+    const peer = new Peer('wikirace-room-v1-test-public-0', { debug: 0, ...(window.__WR_TEST_PEER || {}) });
     await new Promise((res, rej) => { peer.on('open', res); peer.on('error', rej); });
     peer.on('connection', (c) => c.on('data', (d) => { if (d && d.type === 'probe') c.send({ type: 'lobbyinfo', count: 8, phase: 'playing', accepting: false }); }));
     window.__fullRoom = peer;
@@ -437,6 +442,7 @@ test('Relay (TURN) credentials from config are fetched and used for connections'
   let asked = null;
   await page.route('https://wikiracertest.metered.live/**', (r) => { asked = r.request().url(); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ urls: 'turns:relay.example:443?transport=tcp', username: 'u', credential: 'c' }]) }); });
   await openHome(page);
+  await page.evaluate(() => window.__wr.loadIceServers());
   await expect.poll(() => page.evaluate(() => JSON.stringify(window.__wr.iceServers()))).toContain('turns:relay.example:443');
   expect(asked).toContain('apiKey=test-key');
 });
@@ -468,14 +474,18 @@ test('Work-network case: players connect through the relay using only TLS on por
     });
   }
   await host.goto('/?debug&relay');
-  await host.waitForFunction(() => window.__wr && JSON.stringify(window.__wr.iceServers()).includes('turns:'));
+  await host.waitForFunction(() => window.__wr);
+  await host.evaluate(() => window.__wr.loadIceServers());
+  await host.waitForFunction(() => JSON.stringify(window.__wr.iceServers()).includes('turns:'));
   await host.evaluate(() => window.__wr.loadPeer());
   await host.fill('#name-input', 'Host');
   await host.click('#create-room');
   await expect(host.locator('#room-code')).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 20000 });
   const code = (await host.locator('#room-code').textContent()).trim();
   await friend.goto('/?debug&relay');
-  await friend.waitForFunction(() => window.__wr && JSON.stringify(window.__wr.iceServers()).includes('turns:'));
+  await friend.waitForFunction(() => window.__wr);
+  await friend.evaluate(() => window.__wr.loadIceServers());
+  await friend.waitForFunction(() => JSON.stringify(window.__wr.iceServers()).includes('turns:'));
   await friend.fill('#name-input', 'Friend');
   await friend.fill('#join-code', code);
   await friend.click('#join-form button[type=submit]');
@@ -507,7 +517,9 @@ test('Cloudflare relay on its own: players connect through it (relay-only)', asy
   }
   for (const p of [host, friend]) {
     await p.goto('/?debug&relay');
-    await p.waitForFunction(() => window.__wr && JSON.stringify(window.__wr.iceServers()).includes('turn.cloudflare.com'), null, { timeout: 15000 });
+    await p.waitForFunction(() => window.__wr);
+    await p.evaluate(() => window.__wr.loadIceServers());
+    await p.waitForFunction(() => JSON.stringify(window.__wr.iceServers()).includes('turn.cloudflare.com'), null, { timeout: 15000 });
   }
   await host.evaluate(() => window.__wr.loadPeer());
   await host.fill('#name-input', 'Host'); await host.click('#create-room');
@@ -516,4 +528,96 @@ test('Cloudflare relay on its own: players connect through it (relay-only)', asy
   await friend.fill('#name-input', 'Friend'); await friend.fill('#join-code', code); await friend.click('#join-form button[type=submit]');
   await friend.waitForFunction(() => window.__wr.net().joined, null, { timeout: 60000 });
   await Promise.all(ctxs.map((c) => c.close()));
+});
+
+
+test('Quick match skips a public room whose host never answers', async ({ browser }) => {
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [ghost, player] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [ghost, player]) await mockWikipedia(p);
+  await openHome(ghost);
+  // Holds public slot 0 but never replies to probes (like a frozen phone tab).
+  await ghost.evaluate(async () => {
+    const peer = new Peer('wikirace-room-v1-test-public-0', { debug: 0, ...(window.__WR_TEST_PEER || {}) });
+    await new Promise((res, rej) => { peer.on('open', res); peer.on('error', rej); });
+    window.__silent = peer;
+  });
+  await openHome(player, 'Skipper');
+  await player.click('#quick-match');
+  await player.waitForFunction(() => window.__wr.net().isHost && window.__wr.net().slot >= 1, null, { timeout: 40000 });
+  await Promise.all(ctxs.map((c) => c.close()));
+});
+
+test('Multiplayer hardening: no answer route in state, fake "host" refused, kick ends the round, short drop keeps your spot', async ({ browser }) => {
+  test.setTimeout(120000);
+  const ctxs = await Promise.all([0, 1, 2].map(() => browser.newContext()));
+  const [host, friend, evil] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [host, friend, evil]) await mockWikipedia(p);
+  const code = await createPrivateRoom(host, 'Host');
+  await joinPrivateRoom(friend, 'Friend', code);
+  // someone connecting with the peer ID "host" is refused
+  await openHome(evil);
+  const refused = await evil.evaluate(async (roomId) => {
+    const peer = new Peer('host', { debug: 0, ...(window.__WR_TEST_PEER || {}) });
+    await new Promise((res) => { peer.on('open', res); peer.on('error', res); });
+    if (!peer.open) return 'id-taken';
+    const conn = peer.connect(roomId, { reliable: true });
+    return new Promise((res) => { conn.on('close', () => res('closed')); setTimeout(() => res(conn.open ? 'still-open' : 'never-opened'), 6000); });
+  }, `wikirace-room-v1-${code}`);
+  expect(['closed', 'never-opened', 'id-taken']).toContain(refused);
+  expect(await host.evaluate(() => window.__wr.net().players.host.name)).toBe('Host');
+  // the planned route never reaches guests
+  await hostStartCustom(host, 'Dog', 'Wolf');
+  await friend.waitForFunction(() => window.__wr.net().round, null, { timeout: 20000 });
+  expect(await friend.evaluate(() => 'route' in window.__wr.net().round)).toBe(false);
+  // kicking the only other racer ends the round once the host finishes
+  await expect(host.locator('#article-title')).toHaveText('Dog', { timeout: 20000 });
+  await host.waitForTimeout(2500);
+  await host.locator('#article a[data-wr="Canidae"]').click();
+  await expect(host.locator('#article-title')).toHaveText('Canidae');
+  await host.locator('#article a[data-wr="Wolf"]').click();
+  const friendId = await friend.evaluate(() => window.__wr.net().myId);
+  await host.evaluate((id) => document.querySelector(`[data-kick="${id}"]`) ? document.querySelector(`[data-kick="${id}"]`).click() : null, friendId);
+  await host.evaluate((id) => { if (window.__wr.net().players[id]) window.__wr.kick(id); }, friendId);
+  await host.waitForFunction(() => window.__wr.net().phase === 'results', null, { timeout: 15000 });
+  await Promise.all(ctxs.map((c) => c.close()));
+});
+
+test('A player who drops in the lobby keeps their spot for a moment', async ({ browser }) => {
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [host, friend]) await mockWikipedia(p);
+  const code = await createPrivateRoom(host, 'Host');
+  await joinPrivateRoom(friend, 'Friend', code);
+  const id = await friend.evaluate(() => window.__wr.net().myId);
+  await friend.evaluate(() => window.__wr.net().hostConn.close());
+  await host.waitForFunction((pid) => window.__wr.net().players[pid] && window.__wr.net().players[pid].awaiting, id, { timeout: 15000 });
+  expect(await host.evaluate((pid) => !!window.__wr.net().players[pid], id)).toBe(true); // not deleted straight away
+  await Promise.all(ctxs.map((c) => c.close()));
+});
+
+test('Leaving during "Picking articles…" never starts a ghost race', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const host = await ctx.newPage();
+  await mockWikipedia(host, { delayMs: 2500 });
+  await createPrivateRoom(host, 'Host');
+  await host.click('[data-diff=custom]');
+  await host.fill('#room-start', 'Dog'); await host.fill('#room-end', 'Wolf');
+  await host.click('#start-race');
+  await host.click('#leave-lobby');
+  await host.waitForTimeout(6000);
+  expect(await host.evaluate(() => ({ phase: window.__wr.net().phase, game: !!window.__wr.game(), home: document.getElementById('home').classList.contains('active') })))
+    .toEqual({ phase: 'lobby', game: false, home: true });
+  await ctx.close();
+});
+
+test('An idle home visit makes no Wikipedia or relay calls; hovering Solo pre-picks', async ({ page }) => {
+  let wiki = 0, relay = 0;
+  page.on('request', (r) => { if (r.url().includes('wikipedia.org/w/api.php')) wiki++; if (r.url().includes('workers.dev') || r.url().includes('metered.live')) relay++; });
+  await mockWikipedia(page);
+  await page.goto('/?debug');
+  await page.waitForTimeout(6000);
+  expect({ wiki, relay }).toEqual({ wiki: 0, relay: 0 });
+  await page.hover('#solo-card');
+  await expect.poll(() => wiki, { timeout: 10000 }).toBeGreaterThan(0);
 });

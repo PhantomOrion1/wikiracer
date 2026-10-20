@@ -185,7 +185,7 @@ test.describe('Malicious host (a real guest joins it)', () => {
     await openHome(evil);
     const code = 'Q' + Math.random().toString(36).slice(2, 6).toUpperCase().replace(/[^A-Z]/g, 'Z').padEnd(4, 'Z');
     await evil.evaluate(async (roomId) => {
-      const peer = new Peer(roomId, { debug: 0 });
+      const peer = new Peer(roomId, { debug: 0, ...(window.__WR_TEST_PEER || {}) });
       await new Promise((res, rej) => { peer.on('open', res); peer.on('error', rej); });
       peer.on('connection', (conn) => {
         conn.on('open', () => {

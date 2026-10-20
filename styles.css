@@ -1011,3 +1011,22 @@ h3.sec { font-size: 18px; color: var(--text); }
   background: var(--surface); border: 2px solid var(--ink-line); box-shadow: 4px 4px 0 var(--accent-fill); max-height: 260px; overflow-y: auto; }
 .suggest-list li { padding: 8px 10px; cursor: pointer; font: 600 14px var(--sans); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .suggest-list li:hover, .suggest-list li.active { background: var(--ink-line); color: var(--bg); }
+
+/* ---------- audit fixes ---------- */
+/* Very long unbroken names (e.g. "Llanfairpwllgwyngyll…") wrap instead of being cut off or spilling out. */
+.article-title, #path li, .node, .route-big, .res-kicker, .spec-top, .lane .pname { overflow-wrap: anywhere; }
+.lane .node { max-width: 100%; }
+
+/* Phones: the Feedback button sits at the end of the home page instead of floating over the cards. */
+@media (max-width: 760px) {
+  .feedback-btn { position: static; display: block; margin: 0 auto 28px; }
+}
+
+/* Very large screens only: scale the home page up so it doesn't sit tiny in the middle.
+   Laptops (up to ~1680px wide) and phones are untouched. */
+@media (min-width: 1700px) and (min-height: 900px) {
+  #home .home-wrap { zoom: 1.18; min-height: calc(100dvh / 1.18); }
+}
+@media (min-width: 2300px) and (min-height: 1200px) {
+  #home .home-wrap { zoom: 1.5; min-height: calc(100dvh / 1.5); }
+}

@@ -47,7 +47,6 @@
       if (j.analytics && typeof j.analytics === 'object') Object.assign(CONFIG.analytics, j.analytics);
     } catch {}
     flushAnalytics();
-    loadIceServers();
   }
 
   // ICE servers handed to every WebRTC connection. PeerJS's built-in relay no longer exists, so
@@ -56,6 +55,7 @@
   let iceServers = STUN;
   let iceLoading = null;
   function loadIceServers() {
+    if (iceLoading) return iceLoading; // once per visit, and only when multiplayer is used
     // Static relays from config (Metered) plus, if set, short-lived logins from our Cloudflare
     // Worker (turn.credentialsUrl). Every relay found is offered; the browser uses whichever works.
     const t = CONFIG.turn || {};
@@ -72,7 +72,7 @@
     iceLoading = Promise.all(jobs).then((lists) => { const extra = lists.flat(); if (extra.length) iceServers = [...STUN, ...extra, ...fixed]; });
     return iceLoading;
   }
-  const iceReady = () => Promise.race([iceLoading || Promise.resolve(), new Promise((r) => setTimeout(r, 3000))]);
+  const iceReady = () => Promise.race([loadIceServers(), new Promise((r) => setTimeout(r, 3000))]);
 
   // ---------- analytics ----------
   // Anonymous product analytics sent straight to PostHog's capture API (no third-party script).
@@ -143,11 +143,22 @@
     return Promise.any([email, backup]);
   }
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushAnalytics(); });
-  addEventListener('error', (e) => track('client_error', { message: String(e.message || '').slice(0, 200), source: String(e.filename || '').split('/').pop(), line: e.lineno }));
-  addEventListener('unhandledrejection', (e) => track('client_error', { message: String((e.reason && e.reason.message) || e.reason || '').slice(0, 200), kind: 'promise' }));
+  // Each distinct error is reported once per visit (max 20), so one error repeating on every
+  // update can't flood analytics.
+  const reportedErrors = new Set();
+  const reportError = (props) => {
+    const key = `${props.message}|${props.source || ''}|${props.line || ''}`;
+    if (reportedErrors.has(key) || reportedErrors.size >= 20) return;
+    reportedErrors.add(key);
+    track('client_error', props);
+  };
+  addEventListener('error', (e) => reportError({ message: String(e.message || '').slice(0, 200), source: String(e.filename || '').split('/').pop(), line: e.lineno }));
+  addEventListener('unhandledrejection', (e) => reportError({ message: String((e.reason && e.reason.message) || e.reason || '').slice(0, 200), kind: 'promise' }));
   // ?debug&relay forces every connection through the relay, to check it works on a blocked network.
   const FORCE_RELAY = /[?&]debug\b/.test(location.search) && /[?&]relay\b/.test(location.search);
-  const peerOpts = () => ({ debug: 0, config: { iceServers, ...(FORCE_RELAY ? { iceTransportPolicy: 'relay' } : {}) }, ...(CONFIG.peer || {}) });
+  // Automated tests (?debug) can point at a local matchmaking server via window.__WR_TEST_PEER.
+  const TEST_PEER = /[?&]debug\b/.test(location.search) && window.__WR_TEST_PEER;
+  const peerOpts = () => ({ debug: 0, config: { iceServers, ...(FORCE_RELAY ? { iceTransportPolicy: 'relay' } : {}) }, ...(TEST_PEER || CONFIG.peer || {}) });
   // ?debug uses a separate set of public rooms so testing never lands in real players' races.
   const PUBLIC_NS = /[?&]debug\b/.test(location.search) ? 'test-public-' : 'public-';
   const publicPeerId = (i) => `${PEER_PREFIX}${PUBLIC_NS}${i}`;
@@ -241,7 +252,21 @@
     }));
   }
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => loadPeer(), { once: true, passive: true });
+  // Fetch relay logins as soon as someone heads for multiplayer (not for every visitor).
+  const warmMultiplayer = () => { loadPeer(); loadIceServers(); };
   addEventListener('load', () => setTimeout(() => (window.requestIdleCallback || setTimeout)(() => loadPeer(), { timeout: 5000 }), 6000));
+  // Plain-English versions of PeerJS error codes (players used to see "Connection problem: socket-error").
+  function friendlyError(type) {
+    const offline = "Couldn't reach the matchmaking server. Check your connection and try again.";
+    return ({
+      network: offline, 'socket-error': offline, 'socket-closed': offline, disconnected: offline,
+      'server-error': 'Matchmaking is having trouble right now. Try again in a minute.',
+      'unavailable-id': 'That room is already taken. Try again.',
+      'peer-unavailable': "That room isn't there any more.",
+      'browser-incompatible': "Your browser can't do live multiplayer. Try Chrome, Edge, Safari or Firefox.",
+      webrtc: "Couldn't connect to the other players. Work or school networks often block this: try home Wi-Fi or a phone hotspot.",
+    })[type] || 'Something went wrong connecting. Try again.';
+  }
   const peerReady = async () => {
     if (!(await loadPeer())) { toast('Multiplayer failed to load, check your connection'); return false; }
     await iceReady();
@@ -255,6 +280,11 @@
     t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+  }
+  // Clear a message early, but only if it's still the one we showed.
+  function clearToast(msg) {
+    const t = $('#toast');
+    if (t.textContent === msg) { clearTimeout(toastTimer); t.classList.remove('show'); }
   }
 
   // The game is one page, so the browser's back button used to leave the site (e.g. to the
@@ -1220,10 +1250,13 @@
   // Pairs are picked in the background while you're on the home page, so pressing Easy/Medium/Hard
   // goes straight to the countdown instead of waiting several seconds for Wikipedia.
   const prepared = {};
+  const preparedReady = {};
   function preparePair(diff) {
     if (prepared[diff] || !['easy', 'medium', 'hard'].includes(diff)) return;
     const p = pickPair(diff).catch(() => null);
     prepared[diff] = p;
+    preparedReady[diff] = false;
+    p.then(() => { if (prepared[diff] === p) preparedReady[diff] = true; });
     p.then((pair) => { if (!pair && prepared[diff] === p) delete prepared[diff]; });
   }
   async function takePair(diff, custom) {
@@ -1236,16 +1269,19 @@
     return pair;
   }
   function prepareAllPairs() {
-    ['easy', 'medium', 'hard'].forEach((d, i) => setTimeout(() => preparePair(d), i * 2500));
+    ['easy', 'medium', 'hard'].forEach((d, i) => setTimeout(() => preparePair(d), i * 1500));
   }
 
   function startSolo(diff, custom) {
     return launch(async () => {
       const token = matchToken;
-      const quick = ['easy', 'medium', 'hard'].includes(diff) && prepared[diff];
-      if (!quick) toast('Picking articles…', 1500);
+      // Only skip the message when a pre-picked pair is actually ready; otherwise say we're on it
+      // (it can take a while when Wikipedia is slow).
+      const quick = ['easy', 'medium', 'hard'].includes(diff) && prepared[diff] && preparedReady[diff];
+      if (!quick) toast('Picking articles…', 8000);
       try {
         const pair = ['easy', 'medium', 'hard'].includes(diff) ? await takePair(diff) : await pickPair(diff, custom);
+        clearToast('Picking articles…');
         if (token !== matchToken || game && !game.finished) return; // started something else meanwhile
         const round = { ...pair, difficulty: diff, limit: limitFor(diff) };
         if (pair.route) store.set(`wr-route:${pairKey(pair.start, pair.end)}`, pair.route);
@@ -1794,8 +1830,19 @@
     peer.on('connection', (conn) => { conn.viaPublic = viaPublic; hostAccept(conn, me); });
     peer.on('disconnected', () => { if (net === me && !peer.destroyed) peer.reconnect(); });
     peer.on('error', (err) => {
-      if (net === me && peer.open && err.type !== 'peer-unavailable') toast('Connection problem: ' + err.type);
+      // Back from the background (phone app switch) to find another player already took the room
+      // over: rejoin it as a guest instead of sitting alone in a dead copy.
+      if (err.type === 'unavailable-id' && net === me && me.isHost && !viaPublic) { rejoinAsGuest(me); return; }
+      if (net === me && peer.open && err.type !== 'peer-unavailable') toast(friendlyError(err.type));
     });
+  }
+
+  function rejoinAsGuest(me) {
+    const code = me.isPublic && me.slot != null && !me.publicFromPrivate ? pubCode(me.slot) : me.code;
+    if (!code) { leaveRoomAndGoHome(); return; }
+    track('issue', { kind: 'host_rejoined_as_guest', public: !!me.isPublic });
+    toast('You were away for a bit, so someone else is hosting now. Rejoining…', 4000);
+    joinRoom(code);
   }
 
   async function createRoom() {
@@ -1815,7 +1862,7 @@
         return;
       } catch (e) {
         leaveRoom();
-        if (!e || e.type !== 'unavailable-id') { toast("Couldn't create a room: " + (e && e.type || 'error')); show('home'); return; }
+        if (!e || e.type !== 'unavailable-id') { toast(friendlyError(e && e.type)); show('home'); return; }
       }
     }
     toast("Couldn't create a room, try again");
@@ -1832,6 +1879,12 @@
 
   function hostAccept(conn, me) {
     guardConn(conn);
+    // Players are keyed by their connection's peer ID, which the other side chooses. Refuse IDs
+    // that would let someone act as the host or take over a fill-in racer.
+    if (conn.peer === 'host' || /^gone-/.test(conn.peer) || (me.bots && me.bots.has(conn.peer)) || !/^[\w-]{1,64}$/.test(conn.peer)) {
+      setTimeout(() => { try { conn.close(); } catch {} }, 0);
+      return;
+    }
     const rate = { hits: [], strikes: 0 };
     conn.on('open', () => {
       if (net !== me) { conn.close(); return; }
@@ -1857,13 +1910,29 @@
     });
     conn.on('close', () => {
       if (net !== me) return;
+      // A dead old connection can close long after the player reconnected on a new one.
+      if (net.conns.get(conn.peer) !== conn) return;
       net.conns.delete(conn.peer);
       for (const set of net.watchers.values()) set.delete(conn.peer);
       net.watchers.delete(conn.peer);
-      const p = net.players[conn.peer];
+      const id = conn.peer;
+      const p = net.players[id];
       if (!p) return;
-      if (net.phase === 'lobby' || !p.inRound) delete net.players[conn.peer];
-      else {
+      if (net.phase === 'lobby' || !p.inRound) {
+        // Keep their spot (and wins) for a bit: a phone that slept or switched networks reconnects
+        // with the same ID within seconds.
+        p.connected = false;
+        p.awaiting = true;
+        p.ready = false;
+        clearTimeout(net.timers[`gone-${id}`]);
+        net.timers[`gone-${id}`] = setTimeout(() => {
+          if (net !== me || !net.players[id] || net.players[id].connected) return;
+          delete net.players[id];
+          scheduleAutoStart();
+          botPolicy();
+          broadcast();
+        }, 20000);
+      } else {
         p.connected = false;
         if (p.status === 'playing') p.status = 'left';
         checkRoundOver();
@@ -1898,11 +1967,14 @@
         }
         if (p) {
           // Someone we already know: a rejoin after a host handover.
+          const wasAwaiting = p.awaiting;
           p.name = cleanName(msg.name);
           p.pfp = cleanPfp(msg.pfp);
           p.connected = true;
           p.awaiting = false;
-          applySnapshot(id, p, msg.snapshot);
+          clearTimeout(net.timers[`gone-${id}`]);
+          // Only someone reconnecting after a host handover may report progress made while away.
+          if (wasAwaiting) applySnapshot(id, p, msg.snapshot);
           checkRoundOver();
           break;
         }
@@ -2027,6 +2099,9 @@
 
   // Each player gets their own view of the state: while you're racing you can't see where
   // anyone else is or which route they took.
+  // The round as other players may see it: never the planned answer route.
+  const publicRound = (r) => (r ? { start: r.start, end: r.end, difficulty: r.difficulty, n: r.n, limit: r.limit } : null);
+
   function stateFor(viewerId) {
     const viewer = net.players[viewerId];
     // Pages and routes of people still racing only go to those who raced this round and are done.
@@ -2037,7 +2112,8 @@
       players[id] = racing && id !== viewerId ? { ...p, title: '', path: [], livePath: [], watchers } : { ...p, watchers };
     }
     return {
-      type: 'state', players, phase: net.phase, round: net.round, isPublic: net.isPublic,
+      type: 'state', players, phase: net.phase, round: publicRound(net.round), isPublic: net.isPublic,
+      succ: Object.keys(net.players).filter((id) => id !== 'host' && !isBot(id) && net.players[id].connected !== false),
       slot: net.slot, publicFromPrivate: !!net.publicFromPrivate,
       roundElapsed: net.phase !== 'lobby' && net.roundStartedAt ? Date.now() - net.roundStartedAt : 0,
       autoStartIn: net.autoStartAt ? Math.max(0, net.autoStartAt - Date.now()) : 0,
@@ -2087,13 +2163,17 @@
 
   async function hostStartRace() {
     if (!net.isHost || net.starting) return;
-    net.starting = true;
+    const me = net;
+    me.starting = true;
     const btn = $('#start-race');
     btn.disabled = true;
     btn.textContent = 'Picking articles…';
     try {
       if (net.isPublic) net.diff = tallyVotes();
       const pair = await pickPair(net.diff, [$('#room-start').value, $('#room-end').value]);
+      // Picking can take seconds; if the host left the room meanwhile, don't start a race in
+      // whatever they're doing now.
+      if (net !== me || !me.isHost || me.phase !== 'lobby') return;
       net.roundNum++;
       const round = { ...pair, difficulty: net.diff, n: net.roundNum, limit: limitFor(net.diff) };
       for (const [id, p] of Object.entries(net.players)) {
@@ -2115,21 +2195,25 @@
         if (net.phase !== 'playing' || net.round !== round) return;
         for (const p of Object.values(net.players)) {
           if (p.inRound && p.status === 'playing') { p.status = 'timeout'; p.time = round.limit; }
+          if (p.verify === 'pending') p.verify = null; // never let a stuck check freeze the round
         }
         checkRoundOver();
         broadcast();
       }, COUNTDOWN_MS + round.limit + GRACE_MS);
-      for (const [id, conn] of net.conns) if (conn.open && net.players[id]) conn.send({ type: 'start', round });
+      for (const [id, conn] of net.conns) if (conn.open && net.players[id]) conn.send({ type: 'start', round: publicRound(round) });
       broadcast();
       beginRound(round);
       startBots(round);
     } catch (e) {
+      if (net !== me) return;
       toast(e.message);
-      if (net.isPublic) scheduleAutoStart();
+      // Wait before the next automatic try (e.g. Wikipedia rate-limiting us) instead of retrying at once.
+      if (net.isPublic) { net.fallbackAt = Date.now() + 10000; scheduleAutoStart(); }
     } finally {
-      net.starting = false;
+      me.starting = false;
       btn.disabled = false;
       btn.textContent = 'Start race';
+      if (net === me) renderLobby();
     }
   }
 
@@ -2169,6 +2253,9 @@
     if (conn && conn.open) conn.send({ type: 'kicked' });
     setTimeout(() => conn && conn.close(), 300);
     delete net.players[id];
+    checkRoundOver();
+    scheduleAutoStart();
+    botPolicy();
     broadcast();
   }
 
@@ -2728,10 +2815,15 @@
         // capped by how long the round has actually been running.
         p.time = Math.min(int(s.time, 0, net.round.limit), Math.max(0, Date.now() - net.roundStartedAt));
         p.status = s.status;
-        if (s.status === 'finished') { p.verify = 'pending'; verifyPlayer(id); }
+        if (s.status === 'finished') {
+          if (p.time < Math.max(1500, p.clicks * 700)) { p.verify = 'failed'; p.flagReason = 'Finished faster than the pages could be read'; }
+          else { p.verify = 'pending'; verifyPlayer(id); }
+        }
       }
     } else if (p.status === 'finished' && (!p.path || !p.path.length) && path.length) {
       p.path = path;
+      // A new host may not have been able to check this route yet (it had no copy of it).
+      if (p.verify == null || p.verify === 'pending') { p.verify = 'pending'; verifyPlayer(id); }
     }
   }
 
@@ -2759,14 +2851,17 @@
     if (me.migrating) return;
     me.migrating = true;
     me.send = () => {};
-    const order = Object.keys(me.players).filter((id) => id !== 'host' && me.players[id].connected !== false);
+    // The host told everyone the order of real players (fill-in racers excluded), so a person
+    // never waits behind bots and every guest agrees on who takes over.
+    const order = (me.succ && me.succ.length ? me.succ : Object.keys(me.players)).filter((id) => id !== 'host' && me.players[id] && me.players[id].connected !== false);
     const rank = order.indexOf(me.myId);
     const oldHost = me.players.host ? me.players.host.name : 'The host';
     toast(rank === 0 ? `${oldHost} left. You're taking over as host…` : `${oldHost} left. Switching to a new host…`, 3500);
     setLobbyStatus('Host left. Handing the room over…');
     const t0 = Date.now();
     (async () => {
-      while (net === me && Date.now() - t0 < 45000) {
+      // Long enough to outlast the matchmaking server holding a frozen host's room (~60s).
+      while (net === me && Date.now() - t0 < 80000) {
         // Next in line claims straight away; the rest step in only if those ahead don't show up.
         if (rank >= 0 && Date.now() - t0 >= rank * 10000) {
           const peer = await tryClaim(me.roomId);
@@ -2807,6 +2902,11 @@
         if (p.inRound && n.phase !== 'lobby') players[`gone-${Date.now()}`] = { ...p, connected: false, status: p.status === 'playing' ? 'left' : p.status };
         continue;
       }
+      // Fill-in racers lived in the old host's browser and can't come back.
+      if (old.succ && old.succ.length && !old.succ.includes(id)) {
+        if (p.inRound && n.phase !== 'lobby') players[id] = { ...p, connected: false, awaiting: false, status: p.status === 'playing' ? 'left' : p.status };
+        continue;
+      }
       players[id] = { ...p, connected: false, awaiting: true };
     }
     n.players = players;
@@ -2825,13 +2925,18 @@
     }
 
     for (const [id, p] of Object.entries(players)) {
-      if (p.status === 'finished' && p.verify === 'pending' && p.path && p.path.length) verifyPlayer(id);
+      if (p.status !== 'finished' || p.verify !== 'pending') continue;
+      // Re-check routes we have; without a route we can't check, so don't hold the round up.
+      if (p.path && p.path.length) verifyPlayer(id); else p.verify = null;
     }
     if (n.phase === 'playing' && n.round) {
       const round = n.round;
       n.timers.deadline = setTimeout(() => {
         if (net !== n || n.phase !== 'playing' || n.round !== round) return;
-        for (const p of Object.values(n.players)) if (p.inRound && p.status === 'playing') { p.status = 'timeout'; p.time = round.limit; }
+        for (const p of Object.values(n.players)) {
+          if (p.inRound && p.status === 'playing') { p.status = 'timeout'; p.time = round.limit; }
+          if (p.verify === 'pending') p.verify = null; // never let a stuck check freeze the round
+        }
         checkRoundOver();
         broadcast();
       }, Math.max(1000, n.roundStartedAt + round.limit + GRACE_MS - Date.now()));
@@ -2933,7 +3038,7 @@
     peer.on('error', (err) => {
       if (me.joined) return; // after joining, errors are handled by the host handover
       if (['peer-unavailable', 'network', 'server-error', 'socket-error', 'socket-closed', 'disconnected'].includes(err.type)) retry(err.type);
-      else { track('issue', { kind: 'join_failed', error: err.type }); fail('Connection problem: ' + err.type); }
+      else { track('issue', { kind: 'join_failed', error: err.type }); fail(friendlyError(err.type)); }
     });
     setTimeout(() => { if (net === me && !me.joined && !peer.open) { lastErr = 'signalling'; giveUp(); } }, JOIN_FOR_MS + 5000);
   }
@@ -2968,7 +3073,9 @@
       const prevPhase = net.phase;
       net.players = sanitizePlayers(d.players);
       net.phase = ['lobby', 'playing', 'results'].includes(d.phase) ? d.phase : 'lobby';
-      net.round = d.round || null;
+      const r = d.round && typeof d.round === 'object' ? d.round : null;
+      net.round = r ? { start: str(r.start, 300), end: str(r.end, 300), difficulty: str(r.difficulty, 20), n: int(r.n, 0, 1e9), limit: int(r.limit, 30e3, 30 * 60e3) } : null;
+      net.succ = Array.isArray(d.succ) ? d.succ.filter((x) => typeof x === 'string' && /^[\w-]{1,64}$/.test(x)).slice(0, 16) : null;
       net.isPublic = !!d.isPublic;
       net.slot = Number.isInteger(d.slot) ? d.slot : null;
       net.publicFromPrivate = !!d.publicFromPrivate;
@@ -3001,23 +3108,27 @@
     return new Promise((resolve) => {
       const peer = new Peer(peerOpts());
       me.peer = peer;
-      const results = new Map();
+      const results = new Map(); // slot → { conn, info } (answered) or null (nobody there)
+      const probes = [];
       let done = false;
-      const finish = () => {
+      const finish = (error) => {
         if (done) return;
         done = true;
         clearTimeout(timer);
         const open = [...results].filter(([, r]) => r && r.info.accepting)
           .sort((a, b) => (a[1].info.phase === 'lobby' ? 0 : 1) - (b[1].info.phase === 'lobby' ? 0 : 1) || b[1].info.count - a[1].info.count);
         const best = open[0];
-        for (const [, r] of results) if (r && (!best || r !== best[1])) r.conn.close();
+        // Close every probe except the room we're joining, including ones that never answered.
+        for (const c of probes) if (!best || c !== best[1].conn) { try { c.close(); } catch {} }
         const busy = [...results.values()].filter((r) => r && r.info.count > 0).length;
         if (best) resolve({ peer, conn: best[1].conn, slot: best[0], busy });
         else {
+          // Only slots the server confirmed are empty count as free. A slot whose host never
+          // answered (frozen phone tab, blocked network) is skipped, not treated as free.
           const free = [];
-          for (let i = base; i < base + size; i++) if (!results.get(i)) free.push(i);
+          for (let i = base; i < base + size; i++) if (results.has(i) && results.get(i) === null) free.push(i);
           peer.destroy();
-          resolve({ free, busy });
+          resolve({ free, busy, error });
         }
       };
       const timer = setTimeout(finish, 6000);
@@ -3025,6 +3136,7 @@
       peer.on('open', () => {
         for (let i = base; i < base + size; i++) {
           const conn = guardConn(peer.connect(publicPeerId(i), { reliable: true }));
+          probes.push(conn);
           const onData = (d) => {
             if (d && d.type === 'lobbyinfo') {
               conn.off('data', onData);
@@ -3042,7 +3154,7 @@
           if (!results.has(+m[1])) results.set(+m[1], null);
           check();
         } else if (!peer.open) {
-          finish();
+          finish(err.type || 'network');
         }
       });
     });
@@ -3064,22 +3176,33 @@
     renderLobby();
 
     const qmStart = Date.now();
-    for (let attempt = 0; attempt < 3; attempt++) {
+    let lastError = '';
+    for (let attempt = 0; attempt < 4; attempt++) {
       const me = net;
       let res, base = 0, busy = 0;
       for (;;) {
         res = await findPublicRoom(me, base);
         if (token !== matchToken) { if (res.peer) res.peer.destroy(); return; }
         busy += res.busy || 0;
-        if (res.conn || res.free.length || base + CONFIG.publicSlots >= MAX_PUBLIC_SLOTS) break;
+        if (res.error || res.conn || res.free.length || base + CONFIG.publicSlots >= MAX_PUBLIC_SLOTS) break;
         base += CONFIG.publicSlots; // every room on this page is full: open up the next page
         setLobbyStatus('🔎 Busy right now, finding you a room…');
       }
       res.busy = busy;
+      if (res.error) {
+        // Couldn't reach the matchmaking server: wait a moment and try again rather than giving up.
+        lastError = res.error;
+        setLobbyStatus('🔎 Connecting to matchmaking…');
+        await sleep(1500 + attempt * 1500);
+        if (token !== matchToken) return;
+        net = freshNet();
+        Object.assign(net, { isPublic: true, matching: true });
+        continue;
+      }
       if (res.conn) {
         Object.assign(net, { peer: res.peer, myId: res.peer.id, slot: res.slot, matching: false, roomId: publicPeerId(res.slot) });
         const fail = (message) => { if (net === me) { toast(message, 4000); leaveRoomAndGoHome(); } };
-        res.peer.on('error', (err) => { if (err.type !== 'peer-unavailable' && !me.joined) fail('Connection problem: ' + err.type); });
+        res.peer.on('error', (err) => { if (err.type !== 'peer-unavailable' && !me.joined) fail(friendlyError(err.type)); });
         me.myName = name;
         track('quick_match', { outcome: 'joined', search_ms: Date.now() - qmStart, busy_rooms: res.busy || 0, room_count: res.count || null });
         attachGuest(res.conn, name, me, fail);
@@ -3101,17 +3224,18 @@
           leaveRoom();
           net = freshNet();
           Object.assign(net, { isPublic: true, matching: true });
-          if (e && e.type === 'unavailable-id') { retry = true; break; } // someone just took it: search again
-          track('issue', { kind: 'matchmaking', error: e && e.type });
-          toast('Matchmaking failed: ' + (e && e.type || 'error'));
-          show('home');
-          return;
+          if (e && e.type === 'unavailable-id') { retry = true; continue; } // someone just took it: try the next free slot
+          lastError = (e && e.type) || 'error';
+          track('issue', { kind: 'matchmaking', error: lastError });
+          retry = true;
+          break;
         }
       }
       if (!retry) break;
     }
     if (token !== matchToken) return;
-    track('issue', { kind: 'all_rooms_busy' });
+    track('issue', { kind: lastError ? 'matchmaking_failed' : 'all_rooms_busy', error: lastError || undefined });
+    if (lastError) { toast(friendlyError(lastError), 4500); leaveRoomAndGoHome(); return; }
     toast('All public rooms are busy, try again in a moment', 4000);
     leaveRoomAndGoHome();
   }
@@ -3682,7 +3806,16 @@
   loadConfig();
   init();
   // Have a solo pair of each difficulty ready shortly after the page settles.
-  addEventListener('load', () => setTimeout(prepareAllPairs, 1500));
+  // Pre-pick solo pairs only once someone shows interest in Solo (hover, focus or tap on the card),
+  // instead of ~26 Wikipedia requests for every visitor.
+  {
+    const solo = document.getElementById('solo-card');
+    const once = () => { prepareAllPairs(); ['pointerenter', 'focusin', 'touchstart'].forEach((ev) => solo.removeEventListener(ev, once)); };
+    if (solo) ['pointerenter', 'focusin', 'touchstart'].forEach((ev) => solo.addEventListener(ev, once, { passive: true }));
+    // Multiplayer blocks warm up the connection and relay logins the same way.
+    $$('#quick-match, #create-room, #join-form, #join-code').forEach((el) => ['pointerenter', 'focusin', 'touchstart'].forEach((ev) => el.addEventListener(ev, warmMultiplayer, { once: true, passive: true })));
+    if (/[?&]room=/.test(location.search)) warmMultiplayer();
+  }
   {
     const q = new URLSearchParams(location.search);
     track('app_open', {
@@ -3694,6 +3827,6 @@
   addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
   addEventListener('minigame-close', () => { renderMiniGameButton(); renderResults(); });
   if (/[?&]debug\b/.test(location.search)) {
-    window.__wr = { iceServers: () => iceServers, gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
+    window.__wr = { kick, loadIceServers, iceServers: () => iceServers, gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
   }
 })();

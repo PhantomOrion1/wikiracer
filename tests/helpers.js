@@ -47,7 +47,11 @@ function wikiResponse(url) {
   return { error: { code: 'unknown', info: 'not mocked' } };
 }
 
+// Local PeerJS matchmaking server started by playwright.config.js, so multiplayer tests don't
+// depend on (or get rate-limited by) the shared public one.
+const TEST_PEER = { host: 'localhost', port: 9010, path: '/', secure: false };
 async function mockWikipedia(page, { fail = false, delayMs = 0 } = {}) {
+  await page.addInitScript((peer) => { window.__WR_TEST_PEER = peer; }, TEST_PEER);
   await page.route('https://en.wikipedia.org/w/api.php**', async (route) => {
     if (fail) return route.abort('failed');
     if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
@@ -99,7 +103,7 @@ async function hostStartCustom(page, start = 'Dog', end = 'Wolf') {
 async function rawConnect(page, code) {
   await page.evaluate(async (roomId) => {
     window.__evil = { got: [], closed: false };
-    const peer = new Peer({ debug: 0 });
+    const peer = new Peer({ debug: 0, ...(window.__WR_TEST_PEER || {}) });
     await new Promise((res, rej) => { peer.on('open', res); peer.on('error', rej); });
     const conn = peer.connect(roomId, { reliable: true });
     await new Promise((res, rej) => { conn.on('open', res); conn.on('error', rej); setTimeout(() => rej(new Error('connect timeout')), 20000); });

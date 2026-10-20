@@ -10,7 +10,10 @@ module.exports = defineConfig({
   reporter: [['list'], ['json', { outputFile: 'test-results/results.json' }]],
   // bypassCSP lets the test harness poll page state; the CSP test opens its own context without it.
   use: { baseURL: 'http://localhost:8799', trace: 'retain-on-failure', bypassCSP: true },
-  webServer: { command: 'python3 -m http.server 8799 --directory ..', port: 8799, reuseExistingServer: true },
+  webServer: [
+    { command: 'python3 -m http.server 8799 --directory ..', port: 8799, reuseExistingServer: true },
+    { command: 'npx peerjs --port 9010 --path / --allow_discovery false', port: 9010, reuseExistingServer: true },
+  ],
   projects: [
     { name: 'chrome', use: { channel: 'chrome' }, testIgnore: /smoke\.spec/ },
     { name: 'smoke-chrome', use: { channel: 'chrome' }, testMatch: /smoke\.spec/ },
