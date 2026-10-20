@@ -56,13 +56,20 @@
   let iceServers = STUN;
   let iceLoading = null;
   function loadIceServers() {
+    // Static relays from config (Metered) plus, if set, short-lived logins from our Cloudflare
+    // Worker (turn.credentialsUrl). Every relay found is offered; the browser uses whichever works.
     const t = CONFIG.turn || {};
-    if (Array.isArray(t.iceServers) && t.iceServers.length) { iceServers = [...STUN, ...t.iceServers]; return (iceLoading = Promise.resolve()); }
-    if (!t.meteredApp || !t.apiKey || !/^[\w-]+$/.test(t.meteredApp)) return (iceLoading = Promise.resolve());
-    iceLoading = fetch(`https://${t.meteredApp}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.apiKey)}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((list) => { if (Array.isArray(list) && list.length) iceServers = [...STUN, ...list]; })
-      .catch(() => {});
+    const fixed = Array.isArray(t.iceServers) ? t.iceServers : [];
+    iceServers = [...STUN, ...fixed];
+    const jobs = [];
+    if (t.credentialsUrl && /^https:\/\//.test(t.credentialsUrl)) {
+      jobs.push(fetch(t.credentialsUrl).then((r) => (r.ok ? r.json() : {})).then((j) => (Array.isArray(j.iceServers) ? j.iceServers : [])).catch(() => []));
+    }
+    if (t.meteredApp && t.apiKey && /^[\w-]+$/.test(t.meteredApp)) {
+      jobs.push(fetch(`https://${t.meteredApp}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.apiKey)}`)
+        .then((r) => (r.ok ? r.json() : [])).then((l) => (Array.isArray(l) ? l : [])).catch(() => []));
+    }
+    iceLoading = Promise.all(jobs).then((lists) => { const extra = lists.flat(); if (extra.length) iceServers = [...STUN, ...extra, ...fixed]; });
     return iceLoading;
   }
   const iceReady = () => Promise.race([iceLoading || Promise.resolve(), new Promise((r) => setTimeout(r, 3000))]);
