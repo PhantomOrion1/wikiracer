@@ -426,3 +426,30 @@ test('Lane Rush on the results screen expands inline and carries on into the lob
   expect(await host.evaluate(() => window.MiniGame.isOpen())).toBe(true);
   await Promise.all(ctxs.map((c) => c.close()));
 });
+
+test('Relay (TURN) credentials from config are fetched and used for connections', async ({ page }) => {
+  await mockWikipedia(page);
+  await page.route('**/config.json*', async (r) => {
+    const res = await r.fetch(); const j = await res.json();
+    j.turn = { meteredApp: 'wikiracertest', apiKey: 'test-key' };
+    r.fulfill({ response: res, json: j });
+  });
+  let asked = null;
+  await page.route('https://wikiracertest.metered.live/**', (r) => { asked = r.request().url(); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ urls: 'turns:relay.example:443?transport=tcp', username: 'u', credential: 'c' }]) }); });
+  await openHome(page);
+  await expect.poll(() => page.evaluate(() => JSON.stringify(window.__wr.iceServers()))).toContain('turns:relay.example:443');
+  expect(asked).toContain('apiKey=test-key');
+});
+
+test('Opening the site inside an app (e.g. Teams) suggests a real browser', async ({ browser }) => {
+  const ctx = await browser.newContext({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36 Teams/24000.0 Electron/27' });
+  const page = await ctx.newPage();
+  await mockWikipedia(page);
+  await openHome(page);
+  await expect(page.locator('#inapp-note')).toBeVisible();
+  await ctx.close();
+  const normal = await (await browser.newContext()).newPage();
+  await mockWikipedia(normal);
+  await openHome(normal);
+  await expect(normal.locator('#inapp-note')).toBeHidden();
+});

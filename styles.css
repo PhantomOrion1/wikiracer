@@ -994,3 +994,7 @@ h3.sec { font-size: 18px; color: var(--text); }
 .article .tsingle img, .article .thumbimage img { max-width: 100%; height: auto; }
 /* Last resort: anything still too wide is cut off at the edge rather than spilling over. */
 .article { overflow-x: clip; }
+
+.inapp-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 14px; padding: 8px 12px; max-width: 520px;
+  border: 2px solid var(--medium-fill); font-size: 13.5px; color: var(--text); }
+.inapp-note .textlink { color: var(--text); font-weight: 700; }

@@ -29,6 +29,9 @@
     },
     lobby: { soloWaitMs: 45000, groupWaitMs: 45000, readyGoMs: 8000, minAfterJoinMs: 12000, resultsMs: 10000 },
     peer: null,
+    // Relay (TURN) for players whose networks block direct connections (work/school Wi-Fi).
+    // Either a Metered app name + API key (credentials fetched at runtime) or explicit iceServers.
+    turn: { meteredApp: '', apiKey: '', iceServers: null },
     analytics: { posthogKey: '', posthogHost: 'https://us.i.posthog.com' },
   };
   async function loadConfig() {
@@ -40,10 +43,29 @@
       if (j.bots && typeof j.bots === 'object') Object.assign(CONFIG.bots, j.bots);
       if (j.lobby && typeof j.lobby === 'object') Object.assign(CONFIG.lobby, j.lobby);
       if (j.peer && typeof j.peer === 'object') CONFIG.peer = j.peer;
+      if (j.turn && typeof j.turn === 'object') Object.assign(CONFIG.turn, j.turn);
       if (j.analytics && typeof j.analytics === 'object') Object.assign(CONFIG.analytics, j.analytics);
     } catch {}
     flushAnalytics();
+    loadIceServers();
   }
+
+  // ICE servers handed to every WebRTC connection. PeerJS's built-in relay no longer exists, so
+  // without a TURN relay here, players on networks that block direct connections can't connect.
+  const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
+  let iceServers = STUN;
+  let iceLoading = null;
+  function loadIceServers() {
+    const t = CONFIG.turn || {};
+    if (Array.isArray(t.iceServers) && t.iceServers.length) { iceServers = [...STUN, ...t.iceServers]; return (iceLoading = Promise.resolve()); }
+    if (!t.meteredApp || !t.apiKey || !/^[\w-]+$/.test(t.meteredApp)) return (iceLoading = Promise.resolve());
+    iceLoading = fetch(`https://${t.meteredApp}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.apiKey)}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => { if (Array.isArray(list) && list.length) iceServers = [...STUN, ...list]; })
+      .catch(() => {});
+    return iceLoading;
+  }
+  const iceReady = () => Promise.race([iceLoading || Promise.resolve(), new Promise((r) => setTimeout(r, 3000))]);
 
   // ---------- analytics ----------
   // Anonymous product analytics sent straight to PostHog's capture API (no third-party script).
@@ -116,7 +138,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushAnalytics(); });
   addEventListener('error', (e) => track('client_error', { message: String(e.message || '').slice(0, 200), source: String(e.filename || '').split('/').pop(), line: e.lineno }));
   addEventListener('unhandledrejection', (e) => track('client_error', { message: String((e.reason && e.reason.message) || e.reason || '').slice(0, 200), kind: 'promise' }));
-  const peerOpts = () => ({ debug: 0, ...(CONFIG.peer || {}) });
+  const peerOpts = () => ({ debug: 0, config: { iceServers }, ...(CONFIG.peer || {}) });
   // ?debug uses a separate set of public rooms so testing never lands in real players' races.
   const PUBLIC_NS = /[?&]debug\b/.test(location.search) ? 'test-public-' : 'public-';
   const publicPeerId = (i) => `${PEER_PREFIX}${PUBLIC_NS}${i}`;
@@ -213,6 +235,7 @@
   addEventListener('load', () => setTimeout(() => (window.requestIdleCallback || setTimeout)(() => loadPeer(), { timeout: 5000 }), 6000));
   const peerReady = async () => {
     if (!(await loadPeer())) { toast('Multiplayer failed to load, check your connection'); return false; }
+    await iceReady();
     return true;
   };
 
@@ -2829,7 +2852,9 @@
       track('issue', { kind: 'join_failed', error: lastErr || 'timeout', attempts });
       fail(lastErr === 'peer-unavailable'
         ? `Room ${code} wasn't found. Check the code, and ask the host to keep the game open.`
-        : "Couldn't connect to that room. Check your connection and try again.");
+        : peer.open
+          ? "Found the room but couldn't connect to the other players. Work or school networks often block this: try home Wi-Fi or a phone hotspot."
+          : "Couldn't connect to that room. Check your connection and try again.");
     };
     const retry = (why) => {
       if (net !== me || me.joined) return;
@@ -3420,6 +3445,16 @@
     paint();
   }
 
+  // Built-in browsers inside apps (Teams, Outlook, Instagram…) often block or break the direct
+  // connections multiplayer needs, so suggest opening the link in a real browser.
+  const IN_APP_UA = /Teams\/|MicrosoftTeams|Outlook-|; wv\)|FBAN|FBAV|Instagram|Line\/|Slack\/|LinkedInApp|Snapchat|MicroMessenger|BytedanceWebview|musical_ly/i;
+  function initInAppNote() {
+    if (!IN_APP_UA.test(navigator.userAgent)) return;
+    $('#inapp-note').classList.remove('hidden');
+    $('#inapp-copy').addEventListener('click', () => copyText(location.href));
+    track('in_app_browser', { ua: navigator.userAgent.slice(0, 160) });
+  }
+
   function initFeedback() {
     const box = $('#feedback'), form = $('#feedback-form'), text = $('#feedback-text');
     const close = () => box.classList.add('hidden');
@@ -3460,6 +3495,7 @@
     initHowTo();
     initFeedback();
     initPfp();
+    initInAppNote();
     const nameInput = $('#name-input');
     nameInput.value = store.get('wr-name') || '';
     nameInput.addEventListener('change', () => store.set('wr-name', nameInput.value.trim()));
@@ -3611,6 +3647,6 @@
   addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
   addEventListener('minigame-close', () => { renderMiniGameButton(); renderResults(); });
   if (/[?&]debug\b/.test(location.search)) {
-    window.__wr = { gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
+    window.__wr = { iceServers: () => iceServers, gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
   }
 })();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.posthog.com https://formsubmit.co https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.posthog.com https://formsubmit.co https://*.metered.live https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>WikiRacer Live: Multiplayer Wikipedia Race Game</title>
   <meta name="description" content="Race friends through Wikipedia from one article to another in the fewest clicks. Free multiplayer wiki race with quick match, private rooms for up to 8, solo and a daily challenge.">
@@ -27,7 +27,7 @@
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css">
-  <link rel="stylesheet" href="styles.css?v=90">
+  <link rel="stylesheet" href="styles.css?v=91">
 </head>
 <body>
   <!-- HOME -->
@@ -38,6 +38,10 @@
         <div class="hero-text rise" style="--i:1">
           <h1 class="headline brand">Wiki<br><span>Racer</span></h1>
           <p class="hero-sub big">Race through Wikipedia, <em>one link at a time.</em></p>
+          <div class="inapp-note hidden" id="inapp-note" role="note">
+            <span>Opened inside an app? Multiplayer works best in Chrome, Edge or Safari.</span>
+            <button type="button" class="textlink" id="inapp-copy">Copy link</button>
+          </div>
           <div class="hero-controls">
             <div class="pfp-wrap">
               <button type="button" class="pfp-btn" id="pfp-btn" aria-label="Choose your picture" aria-haspopup="true" aria-expanded="false"><img src="pfp/ghost.webp" alt="" width="40" height="40"></button>
@@ -351,11 +355,11 @@
   <datalist id="suggest-start"></datalist>
   <datalist id="suggest-end"></datalist>
 
-  <script src="pairs.js?v=90" defer></script>
-  <script src="bots.js?v=90" defer></script>
-  <script src="vital.js?v=90" defer></script>
-  <script src="minigame.js?v=90" defer></script>
-  <script src="daily-core.js?v=90" defer></script>
-  <script src="app.js?v=90" defer></script>
+  <script src="pairs.js?v=91" defer></script>
+  <script src="bots.js?v=91" defer></script>
+  <script src="vital.js?v=91" defer></script>
+  <script src="minigame.js?v=91" defer></script>
+  <script src="daily-core.js?v=91" defer></script>
+  <script src="app.js?v=91" defer></script>
 </body>
 </html>
