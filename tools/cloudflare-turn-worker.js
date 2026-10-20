@@ -13,7 +13,7 @@ const ALLOWED = ['https://wikiracer.live', 'https://www.wikiracer.live', 'http:/
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
-    const ok = ALLOWED.includes(origin) || /^https:\/\/[\w-]+\.wikiracer\.pages\.dev$/.test(origin);
+    const ok = ALLOWED.includes(origin) || /^https:\/\/[\w-]+\.wikiracer\.pages\.dev$/.test(origin) || origin === 'https://wikiracer.pages.dev';
     const cors = { 'Access-Control-Allow-Origin': ok ? origin : ALLOWED[0], Vary: 'Origin', 'Cache-Control': 'no-store' };
     if (request.method === 'OPTIONS') return new Response(null, { headers: { ...cors, 'Access-Control-Allow-Methods': 'GET' } });
     if (!ok) return new Response('Forbidden', { status: 403, headers: cors });

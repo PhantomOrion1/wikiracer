@@ -492,3 +492,28 @@ test('Work-network case: players connect through the relay using only TLS on por
   expect(type).toBe('relay');
   await Promise.all(ctxs.map((c) => c.close()));
 });
+
+test('Cloudflare relay on its own: players connect through it (relay-only)', async ({ browser }) => {
+  test.setTimeout(90000);
+  const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
+  const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
+  for (const p of [host, friend]) {
+    await mockWikipedia(p);
+    await p.route('**/config.json*', async (r) => {
+      const res = await r.fetch(); const j = await res.json();
+      j.turn = { credentialsUrl: j.turn.credentialsUrl }; // Cloudflare only, no Metered backup
+      r.fulfill({ response: res, json: j });
+    });
+  }
+  for (const p of [host, friend]) {
+    await p.goto('/?debug&relay');
+    await p.waitForFunction(() => window.__wr && JSON.stringify(window.__wr.iceServers()).includes('turn.cloudflare.com'), null, { timeout: 15000 });
+  }
+  await host.evaluate(() => window.__wr.loadPeer());
+  await host.fill('#name-input', 'Host'); await host.click('#create-room');
+  await expect(host.locator('#room-code')).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 20000 });
+  const code = (await host.locator('#room-code').textContent()).trim();
+  await friend.fill('#name-input', 'Friend'); await friend.fill('#join-code', code); await friend.click('#join-form button[type=submit]');
+  await friend.waitForFunction(() => window.__wr.net().joined, null, { timeout: 60000 });
+  await Promise.all(ctxs.map((c) => c.close()));
+});
