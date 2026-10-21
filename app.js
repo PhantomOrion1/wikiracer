@@ -1752,6 +1752,11 @@
     return pubSlotFromCode(code) != null ? makeCode() : code;
   };
   const inviteLink = () => `${baseUrl()}?room=${net.code}`;
+  // Streamer mode: hide the private room code (and invite link) on screen so viewers can't join.
+  // Remembered on this device only; copying the invite link still copies the real one.
+  let hideCode = false;
+  try { hideCode = localStorage.getItem('wr-hide-code') === '1'; } catch {}
+  const shownCode = (c) => (hideCode && c ? '•••••' : c);
   const validFinish = (p) => p.status === 'finished' && p.verify !== 'failed';
 
   function getName() {
@@ -3005,7 +3010,7 @@
     net = freshNet();
     net.code = code;
     show('lobby');
-    setLobbyStatus(`Joining room ${code}…`);
+    setLobbyStatus(`Joining room ${shownCode(code)}…`);
     renderLobby();
 
     const pubSlot = pubSlotFromCode(code);
@@ -3025,7 +3030,7 @@
     const giveUp = () => {
       track('issue', { kind: 'join_failed', error: lastErr || 'timeout', attempts });
       fail(lastErr === 'peer-unavailable'
-        ? `Room ${code} wasn't found. Check the code, and ask the host to keep the game open.`
+        ? `Room ${shownCode(code)} wasn't found. Check the code, and ask the host to keep the game open.`
         : peer.open
           ? "Found the room but couldn't connect to the other players. Work or school networks often block this: try home Wi-Fi or a phone hotspot."
           : "Couldn't connect to that room. Check your connection and try again.");
@@ -3036,7 +3041,7 @@
       if (pending) { try { pending.close(); } catch {} pending = null; }
       clearTimeout(retryTimer);
       if (Date.now() - t0 > JOIN_FOR_MS) return giveUp();
-      setLobbyStatus(`Waiting for room ${code}… (the host needs the game open)`);
+      setLobbyStatus(`Waiting for room ${shownCode(code)}… (the host needs the game open)`);
       retryTimer = setTimeout(attempt, 2000);
     };
     const attempt = () => {
@@ -3399,10 +3404,19 @@
     renderChoices(pub);
     const code = pub && net.slot != null ? pubCode(net.slot) : net.code || (pub ? '' : '');
     $('#room-label').textContent = pub ? 'Public Room' : 'Private Room';
-    $('#room-code').textContent = net.matching ? 'Searching…' : code || '·····';
+    const canHide = !pub && !!code && !net.matching;
+    $('#room-code').textContent = net.matching ? 'Searching…' : (canHide ? shownCode(code) : code) || '·····';
+    const hc = $('#hide-code');
+    hc.classList.toggle('hidden', !canHide);
+    // Like a password box: open eye while the code shows, crossed-out eye once it's hidden.
+    const eyeLabel = hideCode ? 'Show room code' : 'Hide room code';
+    hc.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>${hideCode ? '<path d="M3 3l18 18"/>' : ''}</svg>`;
+    hc.setAttribute('aria-label', eyeLabel);
+    hc.title = eyeLabel;
+    hc.setAttribute('aria-pressed', String(hideCode));
     $('#room-code').classList.toggle('pub', !!net.matching);
     $('#invite').classList.toggle('hidden', !code || net.matching || pub);
-    $('#invite-link').value = code ? `${baseUrl()}?room=${code}` : '';
+    $('#invite-link').value = code ? `${baseUrl()}?room=${canHide ? shownCode(code) : code}` : '';
     $('#skip-room').classList.toggle('hidden', !pub || net.matching || !!net.publicFromPrivate);
     const tp = $('#toggle-public');
     tp.classList.toggle('hidden', !net.isHost || (pub && !net.publicFromPrivate) || net.phase !== 'lobby');
@@ -3723,7 +3737,12 @@
     $('#join-form').addEventListener('submit', (e) => { e.preventDefault(); joinRoom($('#join-code').value); });
     $('#leave-lobby').addEventListener('click', leaveRoomAndGoHome);
     $('#skip-room').addEventListener('click', () => quickMatch());
-    $('#copy-invite').addEventListener('click', () => copyText($('#invite-link').value || inviteLink()));
+    $('#copy-invite').addEventListener('click', () => copyText(inviteLink()));
+    $('#hide-code').addEventListener('click', () => {
+      hideCode = !hideCode;
+      try { localStorage.setItem('wr-hide-code', hideCode ? '1' : '0'); } catch {}
+      renderLobby();
+    });
     $('#toggle-public').addEventListener('click', hostTogglePublic);
     $$('#room-diff .btn').forEach((b) => b.addEventListener('click', () => {
       net.diff = b.dataset.diff;

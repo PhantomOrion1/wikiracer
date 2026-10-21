@@ -1026,3 +1026,8 @@ h3.sec { font-size: 18px; color: var(--text); }
 @media (max-width: 760px) {
   .feedback-btn { position: static; display: block; margin: 0 auto 28px; }
 }
+
+/* Streamer mode: Hide code / Show code link beside the private room code. */
+.room-code-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.icon-eye { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; background: none; border: 0; color: var(--muted); cursor: pointer; }
+.icon-eye:hover, .icon-eye:focus-visible { color: var(--text); }
