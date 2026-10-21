@@ -621,3 +621,18 @@ test('An idle home visit makes no Wikipedia or relay calls; hovering Solo pre-pi
   await page.hover('#solo-card');
   await expect.poll(() => wiki, { timeout: 10000 }).toBeGreaterThan(0);
 });
+
+test('Relay logins still load when multiplayer is touched before config.json arrives', async ({ page }) => {
+  await mockWikipedia(page);
+  await page.route('**/config.json*', async (r) => {
+    const res = await r.fetch(); const j = await res.json();
+    j.turn = { meteredApp: 'wikiracertest', apiKey: 'test-key' };
+    await new Promise((ok) => setTimeout(ok, 2500)); // slow network: config arrives late
+    r.fulfill({ response: res, json: j });
+  });
+  await page.route('https://wikiracertest.metered.live/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ urls: 'turns:relay.example:443?transport=tcp', username: 'u', credential: 'c' }]) }));
+  await page.goto('/?debug=1');
+  await page.waitForFunction(() => window.__wr);
+  await page.evaluate(() => { window.__wr.loadIceServers(); }); // before config has loaded
+  await expect.poll(() => page.evaluate(() => JSON.stringify(window.__wr.iceServers())), { timeout: 10000 }).toContain('turns:relay.example:443');
+});

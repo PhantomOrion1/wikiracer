@@ -58,6 +58,12 @@
     if (iceLoading) return iceLoading; // once per visit, and only when multiplayer is used
     // Static relays from config (Metered) plus, if set, short-lived logins from our Cloudflare
     // Worker (turn.credentialsUrl). Every relay found is offered; the browser uses whichever works.
+    // Waits for config.json first: reading it too early (someone hovering Quick Match while the page
+    // is still loading) used to lock in "no relay" for the whole visit.
+    iceLoading = Promise.race([configReady || Promise.resolve(), new Promise((r) => setTimeout(r, 4000))]).then(fetchIceServers);
+    return iceLoading;
+  }
+  function fetchIceServers() {
     const t = CONFIG.turn || {};
     const fixed = Array.isArray(t.iceServers) ? t.iceServers : [];
     iceServers = [...STUN, ...fixed];
@@ -69,8 +75,7 @@
       jobs.push(fetch(`https://${t.meteredApp}.metered.live/api/v1/turn/credentials?apiKey=${encodeURIComponent(t.apiKey)}`)
         .then((r) => (r.ok ? r.json() : [])).then((l) => (Array.isArray(l) ? l : [])).catch(() => []));
     }
-    iceLoading = Promise.all(jobs).then((lists) => { const extra = lists.flat(); if (extra.length) iceServers = [...STUN, ...extra, ...fixed]; });
-    return iceLoading;
+    return Promise.all(jobs).then((lists) => { const extra = lists.flat(); if (extra.length) iceServers = [...STUN, ...extra, ...fixed]; });
   }
   const iceReady = () => Promise.race([loadIceServers(), new Promise((r) => setTimeout(r, 3000))]);
 
