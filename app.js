@@ -107,9 +107,27 @@
     if (!id) { id = uuid(); store.set('wr-aid', id); }
     return id;
   }
+  // High-volume events are only recorded for a share of visitors (the same visitors every time, so
+  // their sessions stay complete). Each one carries sample_rate, so totals can be scaled back up
+  // (multiply counts by sample_rate). Everything else (visits, finished races, dailies, rooms,
+  // shares, errors) is always recorded.
+  const SAMPLED = { race_start: 0.25, round_start: 0.25, minigame_game: 0.25, spectate_open: 0.5, issue: 0.5 };
+  let sampleBucket = null;
+  const inSample = (share) => {
+    if (sampleBucket == null) {
+      let h = 2166136261;
+      for (const ch of String(anonId())) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+      sampleBucket = (h >>> 0) / 4294967296;
+    }
+    return sampleBucket < share;
+  };
   function track(event, props = {}) {
     try {
       if (navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+      if (SAMPLED[event] != null) {
+        if (!inSample(SAMPLED[event])) return;
+        props = { ...props, sample_rate: 1 / SAMPLED[event] };
+      }
       aQueue.push({
         event,
         timestamp: new Date().toISOString(),
@@ -194,10 +212,11 @@
     return out;
   }
   const pubCode = (slot) => codeFor(slot, utcDay());
-  // Public rooms grow with demand: quick match searches slots in pages of CONFIG.publicSlots and
-  // only looks at the next page when every room on this one is full. A slot costs nothing until
-  // someone hosts it, so quiet times stay at one or two rooms. 120 slots × 8 players = 960 at once.
-  const MAX_PUBLIC_SLOTS = 120;
+  // Public rooms grow with demand: quick match checks the first CONFIG.publicSlots slots and only
+  // looks further when every room there is full, doubling the batch each time (12, 24, 48…) so even
+  // the last room is found in a handful of steps. A slot costs nothing until someone hosts it, so
+  // quiet times stay at one or two rooms. 400 slots × 8 players = 3,200 at once.
+  const MAX_PUBLIC_SLOTS = 400;
   function pubSlotFromCode(code) {
     for (const day of [utcDay(), utcDay(-1)]) {
       for (let i = 0; i < MAX_PUBLIC_SLOTS; i++) if (codeFor(i, day) === code) return i;
@@ -3486,8 +3505,8 @@
   }
 
   // --- quick match: finds an open public room, or opens one for others to find ---
-  function findPublicRoom(me, base = 0) {
-    const size = Math.min(CONFIG.publicSlots, MAX_PUBLIC_SLOTS - base);
+  function findPublicRoom(me, base = 0, want = CONFIG.publicSlots) {
+    const size = Math.min(want, MAX_PUBLIC_SLOTS - base);
     return new Promise((resolve) => {
       const peer = new Peer(peerOpts());
       me.peer = peer;
@@ -3566,13 +3585,14 @@
     let lastError = '';
     for (let attempt = 0; attempt < 4; attempt++) {
       const me = net;
-      let res, base = 0, busy = 0;
+      let res, base = 0, busy = 0, size = CONFIG.publicSlots;
       for (;;) {
-        res = await findPublicRoom(me, base);
+        res = await findPublicRoom(me, base, size);
         if (token !== matchToken) { if (res.peer) res.peer.destroy(); return; }
         busy += res.busy || 0;
-        if (res.error || res.conn || res.free.length || base + CONFIG.publicSlots >= MAX_PUBLIC_SLOTS) break;
-        base += CONFIG.publicSlots; // every room on this page is full: open up the next page
+        if (res.error || res.conn || res.free.length || base + size >= MAX_PUBLIC_SLOTS) break;
+        base += size; // every room in this batch is full: check the next, twice as many
+        size *= 2;
         setLobbyStatus('🔎 Busy right now, finding you a room…');
       }
       res.busy = busy;
