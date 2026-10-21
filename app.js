@@ -709,8 +709,10 @@
     const list = $('#toc-list');
     const heads = $$('#article h2[id], #article h3[id]');
     $('#toc').classList.toggle('hidden', heads.length < 2);
+    tocItems = [];
     list.replaceChildren(...heads.map((h) => {
       const li = document.createElement('li');
+      tocItems.push({ h, li });
       li.className = h.tagName === 'H3' ? 'sub' : '';
       const b = Object.assign(document.createElement('button'), { type: 'button', textContent: h.textContent.trim() });
       b.addEventListener('click', () => {
@@ -721,7 +723,32 @@
       return li;
     }));
     $('#toc').open = !matchMedia('(max-width: 1100px)').matches;
+    markTocSection();
   }
+
+  // The contents list follows the page: the section you're reading (the last heading above the
+  // middle of the screen) is highlighted, and its entry is kept in view inside the list.
+  let tocItems = [];
+  let tocCurrent = null;
+  function markTocSection() {
+    if (!tocItems.length) return;
+    const line = window.innerHeight * 0.35;
+    let cur = null;
+    for (const it of tocItems) if (it.h.getBoundingClientRect().top <= line) cur = it;
+    if (cur === tocCurrent) return;
+    if (tocCurrent) tocCurrent.li.classList.remove('current');
+    tocCurrent = cur;
+    if (!cur) return;
+    cur.li.classList.add('current');
+    const box = $('#toc-list').parentElement;
+    if (box && box.scrollHeight > box.clientHeight) cur.li.scrollIntoView({ block: 'nearest' });
+  }
+  let tocTicking = false;
+  window.addEventListener('scroll', () => {
+    if (tocTicking) return;
+    tocTicking = true;
+    requestAnimationFrame(() => { tocTicking = false; markTocSection(); });
+  }, { passive: true });
 
   // CC BY-SA 4.0 attribution for the article on screen (title, source, authors via history, licence,
   // and a note that it was changed). Opens outside the game, so it's not a shortcut.
@@ -1035,7 +1062,7 @@
     if (p.status === 'finished') {
       if (p.verify === 'pending') return '<span class="chip-s pending">⏳ verifying</span>';
       if (p.verify === 'failed') return `<span class="chip-s bad" title="${esc(p.flagReason)}">🚩 flagged</span>`;
-      if (p.verify === 'ok') return '<span class="chip-s ok">✔ verified</span>';
+      if (p.verify === 'ok') return '<span class="chip-s ok">✔ completed</span>';
       return '<span class="chip-s ok">✔ finished</span>';
     }
     if (p.status === 'timeout') return '<span class="chip-s bad">⏰ out of time</span>';
@@ -1502,7 +1529,7 @@
       $('#daily-results').onclick = () => showDailyResults(key);
     } else {
       card.innerHTML = `<h2 class="blk-title">Daily #${d.n}</h2>
-        <p class="blk-sub">Hard · <b>? ? ? → ? ? ?</b> · one try</p>
+        <p class="blk-sub"><b>? ? ? → ? ? ?</b> · one try</p>
         <button class="sq" id="daily-play">Start</button>
         ${meta}`;
       $('#daily-play').onclick = startDaily;
@@ -1532,7 +1559,7 @@
     shortestRoute(pair.start, pair.end).then(() => {
       if (!game && !$('#results').classList.contains('hidden') && dailyRecord(key)) showDailyResults(key);
     });
-    await runCountdown(round, `📅 Daily #${d.n} · Hard · ${fmtTime(LIMITS.hard)} on the clock`);
+    await runCountdown(round, `📅 Daily #${d.n} · ${fmtTime(LIMITS.hard)} on the clock`);
     startGame(round, 'daily', { dailyKey: key, dailyN: d.n });
   }
 
@@ -1598,7 +1625,7 @@
     else verdict = `You beat <b>${Math.round(beat * 100)}%</b> of players (${playersBeaten.toLocaleString()} of ${stats.players.toLocaleString()})${sameClicks ? `. ${Math.round(sameClicks.share * 100)}% also took ${rec.score} clicks, and your time broke the tie` : ''}.`;
 
     $('#results-body').innerHTML = `<div class="res-head">
-        <div class="res-kicker">Daily #${rec.n} · Hard · ${esc(rec.start)} → ${esc(rec.end)}</div>
+        <div class="res-kicker">Daily #${rec.n} · ${esc(rec.start)} → ${esc(rec.end)}</div>
         <h2>${finished ? '🎉 Daily complete!' : rec.result === 'timeout' ? "⏰ Time's up!" : rec.abandoned ? '🚪 You left mid-challenge' : '🏳️ You gave up'}</h2></div>
       <div class="big-stats">
         <div><b>${finished ? rec.score : '—'}</b><small>clicks${rec.penalties ? ` (incl. +${rec.penalties})` : ''}</small></div>
@@ -3481,7 +3508,7 @@
     renderChoices(pub);
     const code = pub && net.slot != null ? pubCode(net.slot) : net.code || (pub ? '' : '');
     $('#room-label').textContent = pub ? 'Public Room' : 'Private Room';
-    const canHide = !pub && !!code && !net.matching;
+    const canHide = !!code && !net.matching;
     $('#room-code').textContent = net.matching ? 'Searching…' : (canHide ? shownCode(code) : code) || '·····';
     const hc = $('#hide-code');
     hc.classList.toggle('hidden', !canHide);
