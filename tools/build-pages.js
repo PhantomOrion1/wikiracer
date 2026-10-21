@@ -24,16 +24,26 @@ const FOOT_LINKS = [
   ['/wikipedia-speedrun/', 'Wikipedia speedrun'], ['/faq/', 'FAQ'], ['/privacy/', 'Privacy & terms'],
 ];
 
-function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noindex = false }) {
+// Pages that also exist in Spanish, Portuguese, German and French (tools/i18n/pages.js).
+const TR = require('./i18n/pages');
+const TR_LANGS = Object.keys(TR);
+const TRANSLATED = new Set(['/how-to-play/', '/multiplayer/', '/party-modes/', '/wiki-bingo/', '/wikipedia-fog-of-war/', '/wikipedia-speed-race/', '/wikipedia-battle-royale/']);
+
+function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noindex = false, lang = 'en' }) {
   const canonical = SITE + url;
-  const trail = [['/', 'Home'], ...crumbs];
+  const L = lang === 'en' ? null : TR[lang];
+  const home = L ? `/${lang}/` : '/';
+  const trail = [[home, L ? L.ui.home : 'Home'], ...crumbs];
+  const base = L ? url.replace(`/${lang}/`, '/') : url;
+  const alts = TRANSLATED.has(base) ? [['en', base], ...TR_LANGS.map((l) => [TR[l].htmlLang, `/${l}${base}`]), ['x-default', base]] : [];
+  const foot = L ? [[home, L.ui.playNow], [`/${lang}/how-to-play/`, L.ui.howToPlay], [`/${lang}/multiplayer/`, L.ui.playWithFriends], [`/${lang}/party-modes/`, L.ui.partyModes]] : FOOT_LINKS;
   const breadcrumb = url === '/404.html' ? null : {
     '@context': 'https://schema.org', '@type': 'BreadcrumbList',
     itemListElement: [...trail, [url, h1]].map(([u, n], i) => ({ '@type': 'ListItem', position: i + 1, name: n, item: SITE + u })),
   };
   const ld = [breadcrumb, ...jsonld].filter(Boolean).map((o) => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`).join('\n  ');
   return `<!doctype html>
-<html lang="en">
+<html lang="${L ? L.htmlLang : 'en'}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -42,6 +52,7 @@ function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noi
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
   ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" href="${canonical}">`}
+  ${alts.map(([h, u]) => `<link rel="alternate" hreflang="${h}" href="${SITE}${u}">`).join('\n  ')}
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${NAME}">
   <meta property="og:title" content="${esc(title)}">
@@ -65,8 +76,8 @@ function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noi
 </head>
 <body>
   <header class="top"><div class="in">
-    <a class="logo" href="/">Wiki<span>Racer</span></a>
-    <a class="play" href="/">Play now</a>
+    <a class="logo" href="${home}">Wiki<span>Racer</span></a>
+    <a class="play" href="${home}">${L ? esc(L.ui.playNow) : 'Play now'}</a>
   </div></header>
   <main>
     ${crumbs.length ? `<p class="crumbs">${trail.map(([u, n]) => `<a href="${u}">${esc(n)}</a>`).join(' / ')} / ${esc(h1)}</p>` : ''}
@@ -74,7 +85,7 @@ function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noi
     ${body}
   </main>
   <footer class="foot"><div class="in">
-    <nav aria-label="Site">${FOOT_LINKS.map(([u, n]) => `<a href="${u}">${n}</a>`).join('')}</nav>
+    <nav aria-label="Site">${foot.map(([u, n]) => `<a href="${u}">${esc(n)}</a>`).join('')}</nav>
   </div></footer>
 </body>
 </html>
@@ -410,6 +421,43 @@ for (const m of PARTY_PAGES) {
     <ul class="pairs">${PARTY_PAGES.filter((x) => x !== m).map((x) => `<li><span class="route">${esc(x.name)}</span><a class="go" href="/${x.slug}/">How it works</a></li>`).join('')}</ul>
     <div class="cta"><a class="play" href="/">Make a room</a><a class="play ghost" href="/how-to-play/">How to play</a></div>`,
   });
+}
+
+// ---------- translated pages ----------
+for (const lang of TR_LANGS) {
+  const L = TR[lang];
+  const p = `/${lang}/`;
+  for (const slug of ['how-to-play', 'multiplayer']) {
+    const t = L.pages[slug];
+    add({ url: `${p}${slug}/`, lang, title: t.title, description: t.description, h1: t.h1, body: t.body(p) });
+  }
+  const pm = L.pages['party-modes'];
+  const modes = PARTY_PAGES.map((m) => ({ slug: m.slug, ...L.party[m.slug] }));
+  add({
+    url: `${p}party-modes/`, lang, title: pm.title, description: pm.description, h1: pm.h1,
+    body: `
+    <p class="lead">${pm.lead}</p>
+    <ul class="pairs">${modes.map((m) => `<li><span class="route">${esc(m.name)}</span><a class="go" href="${p}${m.slug}/">${esc(L.ui.howItWorks)}</a></li>`).join('')}</ul>
+    <div class="cta"><a class="play" href="${p}">${esc(L.ui.makeRoom)}</a><a class="play ghost" href="${p}multiplayer/">${esc(L.ui.playWithFriends)}</a></div>`,
+  });
+  for (const m of modes) {
+    add({
+      url: `${p}${m.slug}/`, lang, title: m.title, description: m.description, h1: m.name, crumbs: [[`${p}party-modes/`, L.ui.partyModes]],
+      jsonld: [{ '@context': 'https://schema.org', '@type': 'HowTo', inLanguage: L.htmlLang, name: L.ui.howTo(m.name), step: m.how.map((x, i) => ({ '@type': 'HowToStep', position: i + 1, text: x.replace(/<[^>]+>/g, '') })) }],
+      body: `
+    <p class="lead">${m.lead}</p>
+    <div class="cta"><a class="play" href="${p}">${esc(L.ui.play(m.name))}</a></div>
+    <h2>${esc(L.ui.howToPlay)}</h2>
+    ${list(m.how, 'ol')}
+    <h2>${esc(L.ui.rules)}</h2>
+    ${list(m.rules)}
+    <h2>${esc(L.ui.tips)}</h2>
+    ${list(m.tips)}
+    <h2>${esc(L.ui.otherModes)}</h2>
+    <ul class="pairs">${modes.filter((x) => x !== m).map((x) => `<li><span class="route">${esc(x.name)}</span><a class="go" href="${p}${x.slug}/">${esc(L.ui.howItWorks)}</a></li>`).join('')}</ul>
+    <div class="cta"><a class="play" href="${p}">${esc(L.ui.makeRoom)}</a><a class="play ghost" href="${p}how-to-play/">${esc(L.ui.howToPlay)}</a></div>`,
+    });
+  }
 }
 
 // ---------- route pages (search landing pages, not linked from the site's menus) ----------

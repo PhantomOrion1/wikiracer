@@ -61,6 +61,8 @@ for (const [code, htmlLang, col] of LANGS) {
     .replace(/ aria-current="page"/g, '')
     .replace(`href="/${code}/"`, `href="/${code}/" aria-current="page"`)
     .replace(/(<summary[^>]*>)EN</, `$1${code.toUpperCase()}<`));
+  // Info pages that exist in this language: link to those instead of the English ones.
+  for (const slug of ['how-to-play', 'multiplayer', 'party-modes']) body = body.replace(new RegExp(`href="/${slug}/"`, 'g'), `href="/${code}/${slug}/"`);
   // Article pool for this language instead of the English one, plus the live translator.
   body = body
     .replace(/\s*<script src="\/pairs\.js[^"]*" defer><\/script>/, '')
