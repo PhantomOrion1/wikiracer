@@ -2067,11 +2067,9 @@
     return new Promise((resolve, reject) => {
       net = freshNet();
       Object.assign(net, { isHost: true, isPublic, slot, code, myId: 'host' });
-      const lastDiff = store.get('wr-room-diff');
-      // Choose and Custom are one tab now: Custom shows 3 suggested pairs above the two boxes.
-      if (['easy', 'medium', 'hard', 'choose', 'custom', 'party'].includes(lastDiff)) net.diff = lastDiff === 'choose' ? 'custom' : lastDiff;
-      net.party = PARTY_KEYS.includes(store.get('wr-party')) ? store.get('wr-party') : 'speed';
-      if (net.diff === 'custom') { net.choices = makeChoices(); net.chosen = -1; }
+      // Every new room starts on Medium (the last room's tab isn't carried over).
+      net.diff = 'medium';
+      net.party = 'speed';
       net.players.host = newPlayer(name, COLORS[0], myPfp());
       net.send = (msg) => hostHandle('host', msg);
       const me = net;
@@ -4092,14 +4090,12 @@
       if (!b || !net.isHost || !PARTY_KEYS.includes(b.dataset.party)) return;
       if (b.dataset.party !== net.party) net.royale = null; // switching modes ends a Battle Royale
       net.party = b.dataset.party;
-      store.set('wr-party', net.party);
       broadcast();
       renderLobby();
     });
     $$('#room-diff .btn').forEach((b) => b.addEventListener('click', () => {
       if (b.dataset.diff !== 'party') net.royale = null;
       net.diff = b.dataset.diff;
-      store.set('wr-room-diff', net.diff);
       if (net.diff === 'custom' && !(net.choices && net.choices.length)) hostShuffleChoices();
       else { broadcast(); renderLobby(); }
       syncRoomDiff();

@@ -121,3 +121,16 @@ test('Battle Royale: last place is knocked out each round until one is left', as
   await expect(host.locator('#results h2')).toContainText('Host wins the Battle Royale!', { timeout: 20000 });
   await expect(a.locator('#results h2')).toContainText('Host wins the Battle Royale!', { timeout: 20000 });
 });
+
+test('A new private room always starts on Medium, whatever the last room used', async ({ browser }) => {
+  const page = await (await browser.newContext()).newPage();
+  await mockWikipedia(page);
+  await createPrivateRoom(page, 'Host');
+  await expect(page.locator('[data-diff=medium]')).toHaveClass(/selected/);
+  await page.click('[data-diff=party]'); await page.click('[data-party=bingo]');
+  await page.click('#leave-lobby');
+  await page.click('#create-room');
+  await expect(page.locator('#room-code')).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 20000 });
+  await expect(page.locator('[data-diff=medium]')).toHaveClass(/selected/);
+  await expect(page.locator('#party-panel')).toBeHidden();
+});
