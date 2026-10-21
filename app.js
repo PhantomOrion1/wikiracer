@@ -1514,7 +1514,7 @@
       : rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up';
     track('share', { kind: 'daily' });
     // Spoiler-free: no pair, no route.
-    const text = `WikiRacer #${rec.n}\n${line}`;
+    const text = `WikiRacer #${rec.n}\n${line}\nwikiracer.live`;
     if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
     else copyText(text);
   }
