@@ -134,3 +134,15 @@ test('A new private room always starts on Medium, whatever the last room used', 
   await expect(page.locator('[data-diff=medium]')).toHaveClass(/selected/);
   await expect(page.locator('#party-panel')).toBeHidden();
 });
+
+test('Public results stay up longer when more people raced (10s + 2s per extra racer)', async ({ page }) => {
+  await mockWikipedia(page);
+  await page.goto('/?debug');
+  await page.waitForFunction(() => window.__wr);
+  const times = await page.evaluate(() => [2, 3, 5, 8].map((n) => {
+    const net = window.__wr.net();
+    net.players = Object.fromEntries(Array.from({ length: n }, (_, i) => [`p${i}`, { inRound: true }]));
+    return window.__wr.resultsMsFor();
+  }));
+  expect(times).toEqual([10000, 12000, 16000, 22000]);
+});

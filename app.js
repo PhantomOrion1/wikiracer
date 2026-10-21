@@ -2377,6 +2377,13 @@
     broadcast();
   }
 
+  // Public rooms: the results screen stays up longer when more people raced, so there's time to look
+  // through everyone's route (10s for 2 racers, +2s per extra racer: 22s for a full room of 8).
+  const resultsMsFor = () => {
+    const racers = Object.values(net.players).filter((p) => p.inRound).length;
+    return CONFIG.lobby.resultsMs + Math.max(0, Math.min(MAX_PLAYERS, racers) - 2) * 2000;
+  };
+
   function checkRoundOver() {
     if (net.phase !== 'playing') return;
     const racers = Object.values(net.players).filter((p) => p.inRound);
@@ -2387,8 +2394,8 @@
     const top = ranked()[0];
     if (top && validFinish(top)) net.players[top.id].wins++;
     if (net.isPublic) {
-      net.nextAt = Date.now() + CONFIG.lobby.resultsMs;
-      net.timers.next = setTimeout(hostBackToLobby, CONFIG.lobby.resultsMs);
+      net.nextAt = Date.now() + resultsMsFor();
+      net.timers.next = setTimeout(hostBackToLobby, net.nextAt - Date.now());
     }
   }
 
@@ -3310,7 +3317,7 @@
     }
     if (n.phase === 'results' && n.isPublic) {
       n.nextAt = Date.now() + CONFIG.lobby.resultsMs;
-      n.timers.next = setTimeout(hostBackToLobby, CONFIG.lobby.resultsMs);
+      n.timers.next = setTimeout(hostBackToLobby, n.nextAt - Date.now());
     }
     // Anyone who hasn't reconnected after 30s is gone.
     n.timers.rejoin = setTimeout(() => {
@@ -4255,6 +4262,6 @@
   addEventListener('minigame-score', (e) => track('minigame_game', { score: e.detail }));
   addEventListener('minigame-close', () => { renderMiniGameButton(); renderResults(); });
   if (/[?&]debug\b/.test(location.search)) {
-    window.__wr = { kick, addBot, loadIceServers, iceServers: () => iceServers, gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
+    window.__wr = { kick, addBot, resultsMsFor, loadIceServers, iceServers: () => iceServers, gamesStarted: () => gamesStarted, loadPeer, tallyVotes, hostRoom, planRoute, shortestRoute, pickPair, buildArticle, cleanName, sanitizePlayers, net: () => net, game: () => game };
   }
 })();
