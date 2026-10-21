@@ -298,6 +298,7 @@ module.exports.exact = [
 
   ['Or choose your own:', 'O elige el tuyo:', 'Ou escolha o seu:', 'Oder selbst wählen:', 'Ou choisis la tienne :'],
   ['Party modes', 'Modos fiesta', 'Modos festa', 'Party-Modi', 'Modes fête'],
+  ['Waiting for players to reconnect…', 'Esperando a que los jugadores se reconecten…', 'Esperando os jogadores reconectarem…', 'Warte, bis die Spieler wieder verbunden sind…', 'En attente de la reconnexion des joueurs…'],
   // ---- party modes ----
   ['🎉 Party', '🎉 Fiesta', '🎉 Festa', '🎉 Party', '🎉 Fête'],
   ['Party mode', 'Modo fiesta', 'Modo festa', 'Party-Modus', 'Mode fête'],

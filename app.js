@@ -957,7 +957,7 @@
     const lead = intro.length ? null : [...out.querySelectorAll('p')].find((p) => !p.closest('table, .infobox, .hatnote, figure, .mw-empty-elt') && len(p) > 30);
     const note = document.createElement('p');
     note.className = 'fog-note';
-    note.textContent = '🌫 Fog of War: only the intro is visible.';
+    note.textContent = T('🌫 Fog of War: only the intro is visible.'); // inside the article, so i18n.js skips it
     out.replaceChildren(...(intro.length ? intro : lead ? [lead] : []), note);
   }
 
@@ -1456,6 +1456,8 @@
       net.royale = { alive: ids, out: [], outIds: [], n: 0, lastOut: '', winner: '' };
     }
     const R = net.royale;
+    // After a host change, players take a few seconds to reconnect: don't drop them from the royale.
+    if (R.alive.some((id) => net.players[id] && net.players[id].awaiting)) throw new Error('Waiting for players to reconnect…');
     R.alive = R.alive.filter((id) => net.players[id] && net.players[id].connected);
     if (R.alive.length < 2) { net.royale = null; return royaleBeforeRound(); }
     R.n++;
@@ -3249,8 +3251,9 @@
     const n = freshNet();
     Object.assign(n, {
       isHost: true, isPublic: old.isPublic, slot: old.slot, code: old.code, roomId: old.roomId, myId: 'host', peer,
-      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: (old.round && ['easy', 'medium', 'hard', 'choose'].includes(old.round.difficulty)) ? old.round.difficulty : (old.choices && old.choices.length ? 'custom' : old.diff),
-      choices: old.choices || [], chosen: old.chosen || 0,
+      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: old.partyMode || (old.round && old.round.party) ? 'party' : (old.round && ['easy', 'medium', 'hard'].includes(old.round.difficulty)) ? old.round.difficulty : (old.choices && old.choices.length ? 'custom' : old.diff),
+      party: old.partyMode || (old.round && old.round.party) || 'speed',
+      choices: old.choices || [], chosen: old.chosen ?? -1,
       joined: true, myName: old.myName,
     });
     const players = { host: { ...old.players[old.myId], connected: true, awaiting: false, name: old.myName || 'Host' } };
@@ -3268,6 +3271,12 @@
       players[id] = { ...p, connected: false, awaiting: true };
     }
     n.players = players;
+    // Carry on a Battle Royale: everyone still here who wasn't knocked out is still in it.
+    const R = old.royaleInfo;
+    if (R && !R.winner && n.party === 'royale') {
+      const outIds = R.outIds.map((id) => (id === old.myId ? 'host' : id));
+      n.royale = { alive: Object.keys(players).filter((id) => !id.startsWith('gone-') && !outIds.includes(id)), out: R.out.slice(), outIds, n: R.n, lastOut: R.lastOut, winner: '' };
+    }
     n.send = (msg) => hostHandle('host', msg);
     net = n;
     if (spec.id && !players[spec.id]) closeSpectate();

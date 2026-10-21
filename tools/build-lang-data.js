@@ -52,12 +52,31 @@ async function translations(titles) {
   return out;
 }
 
+// Interlanguage links sometimes point at a redirect ("Perro" → "Canis familiaris"). Games compare the
+// page you land on with the target, so every title must be the real article title on that wiki.
+async function canonical(lang, titles) {
+  const map = {};
+  for (let i = 0; i < titles.length; i += 50) {
+    const batch = titles.slice(i, i + 50);
+    const r = await fetch(`https://${lang}.wikipedia.org/w/api.php?${new URLSearchParams({ action: 'query', format: 'json', formatversion: '2', redirects: '1', titles: batch.join('|') })}`, { headers: { 'User-Agent': UA } });
+    const j = await r.json();
+    const norm = Object.fromEntries((j.query.normalized || []).map((x) => [x.from, x.to]));
+    const red = Object.fromEntries((j.query.redirects || []).map((x) => [x.from, x.to]));
+    const missing = new Set(j.query.pages.filter((p) => p.missing).map((p) => p.title));
+    for (const t of batch) { let c = norm[t] || t; c = red[c] || c; map[t] = missing.has(c) ? null : c; }
+    await sleep(100);
+  }
+  return map;
+}
+
 (async () => {
   const titles = new Set(POOL.familiar.map(([t]) => t));
   for (const list of Object.values(PAIRS)) for (const [a, b] of list) { titles.add(a); titles.add(b); }
   const tr = await translations([...titles]);
   for (const lang of LANGS) {
-    const T = (t) => (tr[t] && tr[t][lang]) || null;
+    const raw = [...new Set(Object.values(tr).map((x) => x[lang]).filter(Boolean))];
+    const canon = await canonical(lang, raw);
+    const T = (t) => (tr[t] && tr[t][lang] && canon[tr[t][lang]]) || null;
     const seen = new Set();
     const familiar = [];
     for (const [t, g] of POOL.familiar) { const x = T(t); if (x && !seen.has(x)) { seen.add(x); familiar.push([x, g]); } }

@@ -15,9 +15,9 @@ module.exports = defineConfig({
     { command: 'npx peerjs --port 9010 --path / --allow_discovery false', port: 9010, reuseExistingServer: true },
   ],
   projects: [
-    { name: 'chrome', use: { channel: 'chrome' }, testIgnore: /smoke\.spec|quickmatch-load|bots\.spec/ },
+    { name: 'chrome', use: { channel: 'chrome' }, testIgnore: /smoke\.spec|quickmatch-load|bots\.spec|party-handover/ },
     // Shares the test public rooms with other quick-match tests, so it runs on its own afterwards.
-    { name: 'load', use: { channel: 'chrome' }, testMatch: /quickmatch-load/, dependencies: ['chrome'] },
+    { name: 'load', use: { channel: 'chrome' }, testMatch: /quickmatch-load|party-handover/, dependencies: ['chrome'] },
     { name: 'bots', use: { channel: 'chrome' }, testMatch: /bots\.spec/, dependencies: ['load'] },
     { name: 'smoke-chrome', use: { channel: 'chrome' }, testMatch: /smoke\.spec/ },
     { name: 'smoke-webkit', use: { browserName: 'webkit' }, testMatch: /smoke\.spec/ },
