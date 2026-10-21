@@ -1103,3 +1103,7 @@ h3.sec { font-size: 18px; color: var(--text); }
 #room-custom.custom-line { padding: 8px 12px 8px 14px; margin-left: 0; margin-right: 0; border: 2px solid var(--line); }
 #room-custom.custom-line.selected { border-color: var(--accent-fill); box-shadow: inset 4px 0 0 var(--accent-fill); }
 #room-custom.custom-line.selected .custom-label { color: var(--accent); }
+
+/* Joining by code: the room isn't confirmed yet, so the code is shown faded. */
+.room-code.pending { opacity: .35; }
+.solo-open { align-items: start; }

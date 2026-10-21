@@ -3370,6 +3370,7 @@
     leaveRoom();
     net = freshNet();
     net.code = code;
+    net.joining = true; // until the host answers, this is a search, not a room
     show('lobby');
     setLobbyStatus(`Joining room ${shownCode(code)}…`);
     renderLobby();
@@ -3386,7 +3387,9 @@
     // Keep trying for a while instead of failing on the first miss: a host who just switched apps
     // to send the code (phones pause background tabs) drops off the signalling server for a few
     // seconds, and a slow network can take a while to connect.
-    const JOIN_FOR_MS = 30000, ATTEMPT_MS = 9000, t0 = Date.now();
+    // A room the server says doesn't exist gets ~10s (enough for a host who briefly switched apps
+    // to send the code); other problems (slow network) get the full 30s.
+    const JOIN_FOR_MS = 30000, NOT_FOUND_MS = 10000, ATTEMPT_MS = 9000, t0 = Date.now();
     let attempts = 0, pending = null, retryTimer = null, lastErr = '';
     const giveUp = () => {
       track('issue', { kind: 'join_failed', error: lastErr || 'timeout', attempts });
@@ -3401,7 +3404,7 @@
       lastErr = why || lastErr;
       if (pending) { try { pending.close(); } catch {} pending = null; }
       clearTimeout(retryTimer);
-      if (Date.now() - t0 > JOIN_FOR_MS) return giveUp();
+      if (Date.now() - t0 > (lastErr === 'peer-unavailable' ? NOT_FOUND_MS : JOIN_FOR_MS)) return giveUp();
       setLobbyStatus(`Waiting for room ${shownCode(code)}… (the host needs the game open)`);
       retryTimer = setTimeout(attempt, 2000);
     };
@@ -3778,7 +3781,9 @@
     renderChoices(pub);
     renderParty(pub);
     const code = pub && net.slot != null ? pubCode(net.slot) : net.code || (pub ? '' : '');
-    $('#room-label').textContent = pub ? 'Public Room' : 'Private Room';
+    const looking = !!net.joining && !net.gotState;
+    $('#room-label').textContent = looking ? 'Looking for room' : pub ? 'Public Room' : 'Private Room';
+    $('#room-code').classList.toggle('pending', looking);
     const canHide = !!code && !net.matching;
     $('#room-code').textContent = net.matching ? 'Searching…' : (canHide ? shownCode(code) : code) || '·····';
     const hc = $('#hide-code');
@@ -3790,7 +3795,7 @@
     hc.title = eyeLabel;
     hc.setAttribute('aria-pressed', String(hideCode));
     $('#room-code').classList.toggle('pub', !!net.matching);
-    $('#invite').classList.toggle('hidden', !code || net.matching || pub);
+    $('#invite').classList.toggle('hidden', !code || net.matching || pub || looking);
     $('#invite-link').value = code ? `${baseUrl()}?room=${canHide ? shownCode(code) : code}` : '';
     $('#skip-room').classList.toggle('hidden', !pub || net.matching || !!net.publicFromPrivate);
     const tp = $('#toggle-public');
@@ -3848,7 +3853,7 @@
         ${canSpectate(pl) ? `<button class="btn tiny" data-spectate="${esc(id)}">👁 Spectate</button>` : ''}
         ${net.isHost && !pub && id !== 'host' ? `<button class="btn tiny ghost" data-kick="${esc(id)}" title="Remove player">✕</button>` : ''}
       </li>`;
-    }).join('') : `<li class="muted">${net.matching ? 'Searching…' : 'Connecting…'}</li>`;
+    }).join('') : `<li class="muted">${net.matching ? 'Searching…' : looking ? 'Looking for this room…' : 'Connecting…'}</li>`;
     const ready = net.isHost && net.peer && net.peer.open;
     const R = royaleInfo();
     const royaleShort = partyOf() === 'royale' && (!R || R.winner) && count < 3;
@@ -4103,7 +4108,17 @@
     nameInput.addEventListener('change', () => store.set('wr-name', nameInput.value.trim()));
 
     $$('[data-solo]').forEach((b) => b.addEventListener('click', () => startSolo(b.dataset.solo)));
-    $('#solo-custom-toggle').addEventListener('click', () => $('#solo-custom').classList.toggle('hidden'));
+    // Opening "Pick your own" grows only the Solo card: the other cards keep the height they had.
+    $('#solo-custom-toggle').addEventListener('click', () => {
+      const form = $('#solo-custom');
+      const row = $('#solo-card').parentElement;
+      const others = [...row.children].filter((el) => el.id !== 'solo-card');
+      const opening = form.classList.contains('hidden');
+      if (opening) others.forEach((el) => { el.style.height = `${el.getBoundingClientRect().height}px`; });
+      else others.forEach((el) => { el.style.height = ''; });
+      row.classList.toggle('solo-open', opening);
+      form.classList.toggle('hidden', !opening);
+    });
     $('#solo-custom').addEventListener('submit', (e) => {
       e.preventDefault();
       const f = e.target;

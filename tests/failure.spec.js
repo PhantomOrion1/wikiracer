@@ -646,3 +646,28 @@ test('Relay logins still load when multiplayer is touched before config.json arr
   await page.evaluate(() => { window.__wr.loadIceServers(); }); // before config has loaded
   await expect.poll(() => page.evaluate(() => JSON.stringify(window.__wr.iceServers())), { timeout: 10000 }).toContain('turns:relay.example:443');
 });
+
+test('Joining a code that does not exist shows a search, not a room', async ({ page }) => {
+  await mockWikipedia(page);
+  await openHome(page, 'Tester');
+  await page.fill('#join-code', 'QZ7KX');
+  await page.click('#join-form button[type=submit]');
+  await expect(page.locator('#room-label')).toHaveText('Looking for room');
+  await expect(page.locator('#room-code')).toHaveClass(/pending/);
+  await expect(page.locator('#invite')).toBeHidden();
+  await expect(page.locator('#lobby-players')).toContainText('Looking for this room');
+});
+
+test('Solo "Pick your own" only makes the Solo card taller', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await mockWikipedia(page);
+  await page.goto('/');
+  const heights = () => page.$$eval('.actions > .blk', (b) => b.map((x) => Math.round(x.getBoundingClientRect().height)));
+  const before = await heights();
+  await page.click('#solo-custom-toggle');
+  const open = await heights();
+  expect(open.slice(0, 3)).toEqual(before.slice(0, 3));
+  expect(open[3]).toBeGreaterThan(before[3]);
+  await page.click('#solo-custom-toggle');
+  expect(await heights()).toEqual(before);
+});

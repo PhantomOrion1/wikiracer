@@ -299,6 +299,8 @@ module.exports.exact = [
   ['Or choose your own:', 'O elige el tuyo:', 'Ou escolha o seu:', 'Oder selbst wählen:', 'Ou choisis la tienne :'],
   ['Party modes', 'Modos fiesta', 'Modos festa', 'Party-Modi', 'Modes fête'],
   ['Waiting for players to reconnect…', 'Esperando a que los jugadores se reconecten…', 'Esperando os jogadores reconectarem…', 'Warte, bis die Spieler wieder verbunden sind…', 'En attente de la reconnexion des joueurs…'],
+  ['Looking for room', 'Buscando sala', 'Procurando sala', 'Suche Raum', 'Recherche du salon'],
+  ['Looking for this room…', 'Buscando esta sala…', 'Procurando esta sala…', 'Suche diesen Raum…', 'Recherche de ce salon…'],
   // ---- party modes ----
   ['🎉 Party', '🎉 Fiesta', '🎉 Festa', '🎉 Party', '🎉 Fête'],
   ['Party mode', 'Modo fiesta', 'Modo festa', 'Party-Modus', 'Mode fête'],
