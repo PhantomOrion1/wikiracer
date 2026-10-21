@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://upload.wikimedia.org https://*.wikipedia.org https://*.wikimedia.org; connect-src 'self' https://*.wikipedia.org https://*.posthog.com https://formsubmit.co https://*.metered.live https://*.workers.dev wss://*.workers.dev https://*.peerjs.com wss://*.peerjs.com; media-src https://upload.wikimedia.org; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>WikiRacer Live: Das Wikipedia-Rennspiel für mehrere Spieler</title>
+  <meta name="description" content="Die Nr. 1 für Wikipedia-Rennen. Tritt live gegen bis zu 8 Freunde an, fordere Spieler online heraus und meistere das tägliche Rennen. Die wenigsten Klicks gewinnen.">
+  <link rel="canonical" href="https://wikiracer.live/de/">
+  <link rel="alternate" hreflang="en" href="https://wikiracer.live/">
+  <link rel="alternate" hreflang="es" href="https://wikiracer.live/es/">
+  <link rel="alternate" hreflang="pt-BR" href="https://wikiracer.live/pt/">
+  <link rel="alternate" hreflang="de" href="https://wikiracer.live/de/">
+  <link rel="alternate" hreflang="fr" href="https://wikiracer.live/fr/">
+  <link rel="alternate" hreflang="x-default" href="https://wikiracer.live/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WikiRacer Live">
+  <meta property="og:title" content="WikiRacer Live: Das Wikipedia-Rennspiel für mehrere Spieler">
+  <meta property="og:description" content="Die Nr. 1 für Wikipedia-Rennen. Tritt live gegen bis zu 8 Freunde an, fordere Spieler online heraus und meistere das tägliche Rennen. Die wenigsten Klicks gewinnen.">
+  <meta property="og:url" content="https://wikiracer.live/de/">
+  <meta property="og:image" content="https://wikiracer.live/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="WikiRacer: race friends through Wikipedia, one link at a time">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#f4f2ed">
+  <meta name="application-name" content="WikiRacer Live">
+  <meta name="apple-mobile-web-app-title" content="WikiRacer Live">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/icons/icon-96.png" sizes="96x96" type="image/png">
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-180.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"WikiRacer Live","alternateName":["WikiRacer","Wiki Racer Live","wikiracer.live"],"url":"https://wikiracer.live/de/","inLanguage":"de"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"WikiRacer Live","url":"https://wikiracer.live/de/","description":"Die Nr. 1 für Wikipedia-Rennen. Tritt live gegen bis zu 8 Freunde an, fordere Spieler online heraus und meistere das tägliche Rennen. Die wenigsten Klicks gewinnen.","image":"https://wikiracer.live/og.png","applicationCategory":"GameApplication","operatingSystem":"Any (web browser)","genre":["Puzzle","Trivia","Party"],"gamePlatform":"Web browser","playMode":["SinglePlayer","MultiPlayer"],"numberOfPlayers":{"@type":"QuantitativeValue","minValue":1,"maxValue":8},"isAccessibleForFree":true,"inLanguage":"de","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+  <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <link rel="stylesheet" href="/styles.css?v=110">
+</head>
+<body>
+  <!-- HOME -->
+  <section id="home" class="screen active">
+    <div class="home-wrap">
+
+      <div class="hero">
+        <div class="hero-text rise" style="--i:1">
+          <h1 class="headline brand">Wiki<br><span>Racer</span><span class="live-tag">.live</span></h1>
+          <p class="hero-sub big">Renne durch Wikipedia, <em>ein Link nach dem anderen.</em></p>
+          <div class="inapp-note hidden" id="inapp-note" role="note">
+            <span>In einer App geöffnet? Mehrspieler klappt am besten in Chrome, Edge oder Safari.</span>
+            <button type="button" class="textlink" id="inapp-copy">Link kopieren</button>
+          </div>
+          <div class="hero-controls">
+            <div class="pfp-wrap">
+              <button type="button" class="pfp-btn" id="pfp-btn" aria-label="Wähle dein Bild" aria-haspopup="true" aria-expanded="false"><img src="/pfp/ghost.webp" alt="" width="40" height="40"></button>
+              <div class="pfp-pop hidden" id="pfp-pop" role="group" aria-label="Bilder"></div>
+            </div>
+            <label class="name-field"><span class="sr">Dein Name</span><input id="name-input" maxlength="20" placeholder="DEIN NAME" autocomplete="nickname"></label>
+            <button class="sq light" id="open-howto">So geht’s</button>
+          </div>
+        </div>
+        <div class="board rise" style="--i:2" aria-hidden="true">
+          <div class="board-head"><span><span class="rec"></span>Live-Rennen</span><span id="board-target">Ziel</span></div>
+          <div class="demo-page" id="route-demo">
+            <div class="demo-url" id="demo-url">wiki/Pizza</div>
+            <h3 class="demo-title" id="demo-title">Pizza</h3>
+            <p class="demo-text" id="demo-text"></p>
+          </div>
+          <div class="demo-foot"><span class="demo-trail" id="demo-trail"></span><span class="demo-clicks"><b id="demo-clicks">0</b> Klicks</span></div>
+          <svg class="demo-cursor" id="demo-cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2l14 10-6.5 1.5L9.5 20z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+
+      <div id="challenge-banner" class="card challenge hidden"></div>
+
+      <div class="actions">
+        <button class="blk red rise" id="quick-match" style="--i:3">
+          <span class="blk-title">Schnelles Spiel</span>
+          <span class="blk-sub">Steig sofort in ein öffentliches Rennen ein.</span>
+          <span class="blk-go">Rennen finden →</span>
+        </button>
+        <div class="blk rise" style="--i:4">
+          <h2 class="blk-title">Mit Freunden spielen</h2>
+          <p class="blk-sub">Privater Raum. Teile den Code oder Link.</p>
+          <div class="frow">
+            <button class="sq" id="create-room">Neu</button>
+            <form id="join-form" class="join-form">
+              <input id="join-code" maxlength="5" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Raumcode">
+              <button class="sq red" type="submit">Los</button>
+            </form>
+          </div>
+        </div>
+        <div class="blk rise" id="daily-card" style="--i:5"></div>
+        <div class="blk rise" id="solo-card" style="--i:6">
+          <h2 class="blk-title">Solo</h2>
+          <p class="blk-sub">Übe deine Routen, bevor du gegen echte Leute antrittst.</p>
+          <div class="diffs">
+            <button class="sq light" data-solo="easy">Leicht</button>
+            <button class="sq light" data-solo="medium">Mittel</button>
+            <button class="sq light" data-solo="hard">Schwer</button>
+          </div>
+          <div class="solo-more"><button class="textlink" data-solo="random">Zufälliges Paar</button><button class="textlink" id="solo-custom-toggle">Selbst wählen</button></div>
+          <form id="solo-custom" class="custom-form hidden">
+            <input name="start" placeholder="Startartikel" autocomplete="off" required>
+            <input name="end" placeholder="Zielartikel" autocomplete="off" required>
+            <button class="sq" type="submit">Los</button>
+          </form>
+        </div>
+      </div>
+
+      <footer class="site-foot">
+        <nav aria-label="Mehr">
+          <a href="/how-to-play/">So geht’s</a><a href="/multiplayer/">Mit Freunden spielen</a><a href="/wiki-race-ideas/">Rennideen</a><a href="/wikipedia-speedrun/">Speedrun-Tipps</a><a href="/faq/">FAQ</a><a href="/privacy/">Datenschutz &amp; AGB</a>
+        </nav>
+        <nav class="lang-switch" aria-label="Language" data-no-i18n>
+          <a href="/" hreflang="en" lang="en">English</a><a href="/es/" hreflang="es" lang="es">Español</a><a href="/pt/" hreflang="pt-BR" lang="pt-BR">Português</a><a href="/de/" aria-current="page" hreflang="de" lang="de">Deutsch</a><a href="/fr/" hreflang="fr" lang="fr">Français</a>
+        </nav>
+      </footer>
+    </div>
+  </section>
+
+  <!-- HOW TO PLAY -->
+  <div id="howto" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="howto-title">
+    <div class="modal howto">
+      <div class="howto-head"><h2 id="howto-title">So geht’s</h2><button class="btn small" id="close-howto">Schließen</button></div>
+        <ol class="steps">
+          <li><span class="step-n">1</span><div><b>Start</b><p>Du startest auf einem Wikipedia-Artikel.</p></div></li>
+          <li><span class="step-n">2</span><div><b>Klicke Links</b><p>Nur Links im Artikel. Keine Suche.</p></div></li>
+          <li><span class="step-n">3</span><div><b>Erreiche das Ziel</b><p>Die wenigsten Klicks gewinnen. Bei Gleichstand die schnellste Zeit.</p></div></li>
+        </ol>
+        <div class="rule-grid">
+          <div class="rule">
+            <div class="rule-h">Zeitlimits</div>
+            <div class="pills"><span class="pill easy">Leicht 2:30</span><span class="pill medium">Mittel 5:00</span><span class="pill hard">Schwer 10:00</span></div>
+          </div>
+          <div class="rule">
+            <div class="rule-h">Was zählt als Klick?</div>
+            <p>Jede geöffnete Seite zählt, <b>auch der ← Zurück-Knopf</b>.</p>
+          </div>
+          <div class="rule">
+            <div class="rule-h">Nicht erlaubt</div>
+            <ul>
+              <li><b>Den Tab verlassen</b> verdeckt den Artikel (die Uhr läuft weiter)</li>
+              <li><b>Wortsuche</b> (Strg/⌘+F) ist aus</li>
+              <li>Externe, Kategorie- und Datei-Links gehen nicht</li>
+            </ul>
+          </div>
+          <div class="rule">
+            <div class="rule-h">Mehrspieler</div>
+            <ul>
+              <li>Bis zu <b>8 Spieler</b> pro Raum</li>
+              <li>Jede Route wird mit Wikipedia geprüft</li>
+              <li>Früher fertig? <b>Schau zu</b> oder spiel <b>Lane Rush</b></li>
+              <li>Geht der Host, übernimmt der nächste Spieler</li>
+            </ul>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- LOBBY -->
+  <section id="lobby" class="screen">
+    <div class="home-wrap">
+      <div class="lobby-head">
+        <button class="btn ghost small" id="leave-lobby">← Verlassen</button>
+        <div class="logo small">Wiki<span>Racer</span></div>
+      </div>
+      <div class="card">
+        <div class="room-row">
+          <div>
+            <div class="muted label" id="room-label">Raumcode</div>
+            <div class="room-code-line"><div class="room-code" id="room-code">·····</div><button class="icon-eye hidden" type="button" id="hide-code" aria-pressed="false" aria-label="Raumcode verbergen" title="Raumcode verbergen"></button></div>
+          </div>
+          <div class="invite" id="invite">
+            <input id="invite-link" readonly aria-label="Einladungslink">
+            <button class="btn" id="copy-invite">Einladung kopieren</button>
+          </div>
+          <button class="btn hidden" id="skip-room">Nächster Raum →</button>
+          <button class="btn hidden" id="toggle-public" title="Fremde über Schnelles Spiel beitreten lassen">Öffentlich machen</button>
+        </div>
+        <p class="muted" id="lobby-status">Verbinde…</p>
+      </div>
+
+      <div class="card">
+        <h2>Spieler <span class="muted" id="player-count"></span></h2>
+        <ul id="lobby-players" class="player-list"></ul>
+      </div>
+
+      <div id="choose-guest-slot">
+        <div class="card hidden" id="choose-panel">
+        <div class="choose-head"><h2>Wähle ein Rennen</h2><button class="btn small ghost" type="button" id="choose-shuffle">Mischen</button></div>
+        <ol class="choose-list" id="choose-list"></ol>
+        <p class="muted choose-note" id="choose-note"></p>
+      </div>
+      </div>
+      <div class="card" id="host-controls">
+        <h2>Nächstes Rennen</h2>
+        <div class="diff-buttons" id="room-diff">
+          <button class="btn diff easy selected" data-diff="easy">Leicht<small>2:30</small></button>
+          <button class="btn diff medium" data-diff="medium">Mittel<small>5:00</small></button>
+          <button class="btn diff hard" data-diff="hard">Schwer<small>10:00</small></button>
+          <button class="btn ghost" data-diff="choose">Auswählen</button>
+          <button class="btn ghost" data-diff="custom">Eigene</button>
+        </div>
+        <div id="choose-host-slot"></div>
+        <div id="room-custom" class="custom-form hidden">
+          <input id="room-start" placeholder="Startartikel" autocomplete="off">
+          <input id="room-end" placeholder="Zielartikel" autocomplete="off">
+        </div>
+        <button class="btn primary wide" id="start-race">Rennen starten</button>
+      </div>
+      <div class="card hidden" id="guest-wait">
+        <p class="center wait-text" id="wait-text">Warte, bis der Host das Rennen startet…</p>
+      </div>
+      <div class="card hidden" id="public-controls">
+        <div class="pc-row">
+          <div class="pc-vote">
+            <h2>Schwierigkeit wählen</h2>
+            <div class="vote-row" id="vote-row">
+              <button class="sq light vote easy" data-vote="easy">Leicht <span class="vc"></span></button>
+              <button class="sq light vote medium" data-vote="medium">Mittel <span class="vc"></span></button>
+              <button class="sq light vote hard" data-vote="hard">Schwer <span class="vc"></span></button>
+            </div>
+          </div>
+          <div class="pc-ready">
+            <button class="sq red ready-btn" id="ready-btn">Ich bin bereit</button>
+            <p class="ready-text" id="ready-text"></p>
+          </div>
+        </div>
+      </div>
+      <button class="btn wide ghost flappy-btn" id="lobby-flappy-btn">🏎 Spiel Lane Rush, während du wartest</button>
+      <div class="lobby-flappy hidden" id="lobby-flappy"></div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="screen">
+    <header class="hud">
+      <div class="hud-left">
+        <div class="logo tiny">W<span>R</span></div>
+        <span class="hud-diff" id="hud-diff"></span>
+        <div class="route">
+          <span class="muted">Ziel</span>
+          <strong id="hud-target">—</strong>
+        </div>
+        <span id="hud-watch" class="watch hidden"></span>
+      </div>
+      <div class="hud-stats">
+        <div class="stat"><span><span id="hud-clicks">0</span><sup id="hud-pen" class="pen hidden"></sup></span><small>Klicks</small></div>
+        <div class="stat" id="stat-time"><span id="hud-time">0:00</span><small>übrig</small></div>
+      </div>
+      <div class="hud-actions">
+        <button class="btn small ghost" id="btn-panel">Info</button>
+      </div>
+      <div id="racers-strip" class="racers-strip hidden"></div>
+    </header>
+    <div class="game-body">
+      <details class="toc" id="toc" open>
+        <summary>Inhalt</summary>
+        <ol id="toc-list"></ol>
+      </details>
+      <main class="article-wrap">
+        <div id="loading" class="loading hidden"><div class="spinner"></div></div>
+        <div class="away-cover" aria-live="polite"><div class="away-msg"><b>Komm zurück, um weiterzurennen</b><span>Der Artikel ist verdeckt, solange du in einem anderen Tab oder Fenster bist. Die Uhr läuft weiter.</span></div></div>
+        <h1 id="article-title" class="article-title"></h1>
+        <article id="article" class="article"></article>
+        <p id="article-credit" class="article-credit"></p>
+      </main>
+      <div class="race-controls" role="group" aria-label="Renn-Steuerung">
+        <button class="btn icon-btn" id="btn-back" title="Zurück zur vorigen Seite (kostet einen Klick)" aria-label="Zurück (kostet einen Klick)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 14 4 9l5-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" stroke-linejoin="miter"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg></button>
+        <button class="btn danger" id="btn-giveup">Aufgeben</button>
+      </div>
+      <aside id="panel" class="panel">
+        <div class="panel-section target-card" id="target-card"></div>
+        <div class="panel-section" id="racers-section">
+          <h3>Spieler</h3>
+          <ul id="racers" class="player-list compact"></ul>
+        </div>
+        <div class="panel-section">
+          <h3>Dein Weg</h3>
+          <ol id="path" class="path"></ol>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- COUNTDOWN -->
+  <div id="countdown" class="overlay hidden">
+    <div class="countdown-box">
+      <div class="cd-diff" id="cd-diff"></div>
+      <div class="cd-route" id="cd-route"></div>
+      <div class="cd-num" id="cd-num">3</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="overlay hidden">
+    <div class="modal wide">
+      <div id="confetti" class="confetti"></div>
+      <div id="results-body"></div>
+      <div class="modal-actions" id="results-actions"></div>
+      <div class="lobby-flappy results-flappy hidden" id="results-flappy"></div>
+    </div>
+  </div>
+
+  <!-- SPECTATE -->
+  <div id="spectate" class="overlay spectate hidden">
+    <div class="spec-box">
+      <header class="spec-head">
+        <span class="live-dot"></span>
+        <div class="spec-who" id="spec-who"></div>
+        <div class="spec-hover" id="spec-hover"></div>
+        <button class="btn small" id="spec-close">✕ Schließen</button>
+      </header>
+      <div class="spec-path" id="spec-path"></div>
+      <div class="spec-rail" title="Wie weit unten sie auf der Seite sind"><span id="spec-rail-dot"></span></div>
+      <div class="spec-body">
+        <h1 class="article-title" id="spec-title"></h1>
+        <article class="article readonly" id="spec-article"></article>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLAPPY -->
+  <div id="flappy" class="overlay flappy hidden">
+    <div class="flappy-box">
+      <header class="flappy-head">
+        <b class="mg-title">Lane Rush</b>
+        <span class="muted" id="flappy-best"></span>
+        <button class="btn small" id="flappy-close">✕</button>
+      </header>
+      <canvas id="flappy-canvas" width="640" height="252"></canvas>
+    </div>
+  </div>
+
+  <!-- CONFIRM -->
+  <!-- FEEDBACK -->
+  <button class="feedback-btn" id="feedback-open" type="button">Feedback</button>
+  <div id="feedback" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+    <form class="confirm-box feedback-box" id="feedback-form">
+      <h2 id="feedback-title">Feedback senden</h2>
+      <div class="fb-kinds" role="radiogroup" aria-label="Art">
+        <label><input type="radio" name="kind" value="issue" checked><span>Problem melden</span></label>
+        <label><input type="radio" name="kind" value="feedback"><span>Feedback</span></label>
+        <label><input type="radio" name="kind" value="idea"><span>Idee</span></label>
+      </div>
+      <label class="sr" for="feedback-text">Nachricht</label>
+      <textarea id="feedback-text" maxlength="1000" rows="5" required placeholder="Was ist passiert, oder was würde es besser machen?"></textarea>
+      <div class="confirm-actions">
+        <button class="btn" type="button" id="feedback-cancel">Abbrechen</button>
+        <button class="btn primary" type="submit">Senden</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="confirm" class="overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-box">
+      <h2 id="confirm-title"></h2>
+      <p id="confirm-body"></p>
+      <div class="confirm-actions">
+        <button class="btn" id="confirm-cancel">Abbrechen</button>
+        <button class="btn primary" id="confirm-ok">Ja</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/bots.js?v=110" defer></script>
+  <script src="/lang/de/data.js?v=110" defer></script>
+  <script src="/minigame.js?v=110" defer></script>
+  <script src="/daily-core.js?v=110" defer></script>
+  <script src="/lang/de/i18n.js?v=110" defer></script>
+  <script src="/i18n.js?v=110" defer></script>
+  <script src="/app.js?v=110" defer></script>
+</body>
+</html>

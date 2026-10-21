@@ -16,7 +16,18 @@
       return (c === 'x' ? r : (r & 3) | 8).toString(16);
     }));
 
-  const API = 'https://en.wikipedia.org/w/api.php';
+  // Language: the page's <html lang> picks the interface and which Wikipedia articles come from
+  // (/es/ → es.wikipedia.org). In a room, everyone races on the host's Wikipedia, so a guest's
+  // wikiLang follows the room and goes back to their own when they leave.
+  const LANGS = ['en', 'es', 'pt', 'de', 'fr'];
+  const LANG = (() => { const l = (document.documentElement.lang || 'en').slice(0, 2).toLowerCase(); return LANGS.includes(l) ? l : 'en'; })();
+  let wikiLang = LANG;
+  const wikiBase = () => `https://${wikiLang}.wikipedia.org`;
+  const setWikiLang = (l) => { wikiLang = LANGS.includes(l) ? l : LANG; };
+  // Translates text that never appears on screen (share texts, the copy prompt). On-screen text is
+  // translated by i18n.js as it appears.
+  const T = (s) => (window.I18N ? window.I18N.t(s) : s);
+  const SITE_URL = LANG === 'en' ? 'wikiracer.live' : `wikiracer.live/${LANG}/`;
   const PEER_PREFIX = 'wikirace-room-v1-';
   // Runtime settings. config.json (same folder) can override any of these without a code change,
   // e.g. turn fill-in racers down to 0 as the site gets busy, or point at your own PeerJS server.
@@ -36,7 +47,7 @@
   };
   async function loadConfig() {
     try {
-      const r = await fetch(`config.json?m=${Math.floor(Date.now() / 300000)}`);
+      const r = await fetch(`/config.json?m=${Math.floor(Date.now() / 300000)}`);
       if (!r.ok) return;
       const j = await r.json();
       if (typeof j.publicSlots === 'number') CONFIG.publicSlots = Math.max(1, Math.min(30, j.publicSlots));
@@ -173,7 +184,8 @@
   const utcDay = (offset = 0) => new Date(Date.now() + offset * 864e5).toISOString().slice(0, 10);
   function codeFor(slot, day) {
     let h = 2166136261;
-    const seed = `${PUBLIC_NS}${slot}:${day}`;
+    // Each language has its own public rooms (English keeps its original codes).
+    const seed = `${PUBLIC_NS}${LANG === 'en' ? '' : LANG + ':'}${slot}:${day}`;
     for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
     let out = '';
     for (let i = 0; i < 5; i++) { h = Math.imul(h ^ (h >>> 13), 2246822507) >>> 0; out += CODE_ALPHABET[h % CODE_ALPHABET.length]; }
@@ -205,6 +217,25 @@
     'wikt', 'wiktionary', 'commons', 'c', 's', 'q', 'n', 'b', 'v', 'voy', 'species', 'd',
     'm', 'meta', 'mw', 'foundation', 'wmf', 'incubator',
   ]);
+  // Other Wikipedias name their namespaces in their own language (Kategorie:, Catégorie:, Archivo:…),
+  // so those come from the wiki itself, once per language, before its first article is shown.
+  const localNs = {};
+  const nsLoading = {};
+  function loadNamespaces(lang) {
+    if (lang === 'en' || localNs[lang]) return Promise.resolve();
+    if (!nsLoading[lang]) {
+      nsLoading[lang] = api({ action: 'query', meta: 'siteinfo', siprop: 'namespaces|namespacealiases', smaxage: '86400', maxage: '86400' })
+        .then((j) => {
+          const set = new Set();
+          const q = j.query || {};
+          for (const n of Object.values(q.namespaces || {})) if (n.id !== 0) { for (const k of [n.name, n.canonical]) if (k) set.add(k.toLowerCase()); }
+          for (const a of q.namespacealiases || []) if (a.id !== 0 && a.alias) set.add(a.alias.toLowerCase());
+          localNs[lang] = set;
+        })
+        .catch(() => { nsLoading[lang] = null; });
+    }
+    return nsLoading[lang];
+  }
   const UNSAFE_TAGS = 'script, iframe, frame, frameset, object, embed, applet, form, input, button, textarea, select, base, meta, link, noscript, portal, template';
 
   // ---------- helpers ----------
@@ -237,15 +268,17 @@
   };
   const limitFor = (diff) => LIMITS[diff] || LIMITS.custom;
   const score = (p) => (p.clicks || 0) + (p.penalties || 0);
+  // Dailies, streaks, routes and bests are per language (each has its own daily and articles).
+  const lkey = (k) => (LANG !== 'en' && /^wr-(daily|route|best|played)/.test(k) ? k.replace(/^wr-/, `wr-${LANG}-`) : k);
   const store = {
-    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    get(k) { try { return JSON.parse(localStorage.getItem(lkey(k))); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(lkey(k), JSON.stringify(v)); } catch {} },
   };
   const baseUrl = () => location.origin + location.pathname;
   // PeerJS (WebRTC) costs ~1s of main-thread work on a mid-range phone as soon as it loads, so it
   // isn't in the page: it loads on the first tap/keypress or when the browser is idle, and every
   // multiplayer action waits for it. Same file and SRI hash as a normal <script> tag.
-  const PEERJS = { src: 'vendor/peerjs.min.js', integrity: 'sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR' };
+  const PEERJS = { src: '/vendor/peerjs.min.js', integrity: 'sha384-nlUQ8ZqCbvStErob+biJNzSgltf6urV3VGqhfIfzhmg9RXmpeRm76ELw0pYnKlTR' };
   let peerLoading = null;
   function loadPeer() {
     if (typeof Peer !== 'undefined') return Promise.resolve(true);
@@ -318,14 +351,14 @@
       await navigator.clipboard.writeText(text);
       toast('Copied to clipboard');
     } catch {
-      window.prompt('Copy this:', text);
+      window.prompt(T('Copy this:'), text);
     }
   }
 
   // ---------- Wikipedia ----------
   // Wikipedia API with retry + backoff (429s, 5xx, rate-limit errors) so busy moments don't break races.
   async function api(params, tries = 3) {
-    const url = API + '?' + new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params });
+    const url = wikiBase() + '/w/api.php?' + new URLSearchParams({ format: 'json', formatversion: '2', origin: '*', ...params });
     for (let i = 0; ; i++) {
       try {
         // Wikimedia asks API clients to identify themselves. The header costs a CORS preflight that
@@ -643,12 +676,13 @@
     if (href.startsWith('#')) return { type: 'anchor', id: href.slice(1) };
     if (a.classList.contains('new') || href.includes('redlink=1')) return { type: 'dead', reason: "That article doesn't exist yet" };
     if (a.classList.contains('extiw') || a.classList.contains('external')) return { type: 'dead', reason: 'External links are off-limits' };
-    const m = href.match(/^(?:https?:)?(?:\/\/en\.wikipedia\.org)?\/wiki\/([^?#]+)/) || href.match(/^\.\/([^?#]+)/);
+    const m = href.match(/^(?:https?:)?(?:\/\/[a-z-]+\.wikipedia\.org)?\/wiki\/([^?#]+)/) || href.match(/^\.\/([^?#]+)/);
     if (!m) return { type: 'dead', reason: 'External links are off-limits' };
     let title;
     try { title = decodeURIComponent(m[1]).replace(/_/g, ' '); } catch { return { type: 'dead', reason: 'Broken link' }; }
     const colon = title.indexOf(':');
-    if (colon > 0 && BLOCKED_NS.has(title.slice(0, colon).trim().toLowerCase())) {
+    const ns = colon > 0 ? title.slice(0, colon).trim().toLowerCase() : '';
+    if (ns && (BLOCKED_NS.has(ns) || (localNs[wikiLang] && localNs[wikiLang].has(ns)))) {
       return { type: 'dead', reason: 'Only links to other articles count' };
     }
     return { type: 'article', title: normTitle(title) };
@@ -758,7 +792,7 @@
   // CC BY-SA 4.0 attribution for the article on screen (title, source, authors via history, licence,
   // and a note that it was changed). Opens outside the game, so it's not a shortcut.
   function attribution(title) {
-    const page = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(title.replace(/ /g, '_'));
+    const page = wikiBase() + '/wiki/' + encodeURIComponent(title.replace(/ /g, '_'));
     const link = (href, text) => Object.assign(document.createElement('a'), { href, textContent: text, target: '_blank', rel: 'noopener noreferrer' });
     return ['Text from the Wikipedia article ', link(page, `“${title}”`), ' by ', link(page.replace('/wiki/', '/w/index.php?action=history&title='), 'its contributors'),
       ', under ', link('https://creativecommons.org/licenses/by-sa/4.0/', 'CC BY-SA 4.0'), '. Links and layout adapted for the game.'];
@@ -845,7 +879,7 @@
     $('#loading').classList.remove('hidden');
     let art;
     try {
-      art = await fetchArticle(title);
+      [art] = await Promise.all([fetchArticle(title), loadNamespaces(wikiLang)]);
     } catch (e) {
       track('issue', { kind: 'article_load', title: String(title).slice(0, 120), message: String(e.message || '').slice(0, 160) });
       // The very first page must load or you can't race at all: keep retrying for ~20s first.
@@ -1059,7 +1093,7 @@
   const PINK_CROWN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ff2e93" d="M2.5 7.5l5 4.2L12 4.5l4.5 7.2 5-4.2-2.2 11.5H4.7z"/><rect x="4.7" y="19.6" width="14.6" height="2" fill="#ff2e93"/></svg>';
   function avatar(p) {
     if (String(p.name || '').trim().toLowerCase() === 'b') return `<span class="avatar crowned" style="--c:#ffd9ec" title="b">${PINK_CROWN}</span>`;
-    if (PFPS.includes(p.pfp)) return `<span class="avatar pfp"><img src="pfp/${p.pfp}.webp" alt="" width="40" height="40" loading="lazy" decoding="async"></span>`;
+    if (PFPS.includes(p.pfp)) return `<span class="avatar pfp"><img src="/pfp/${p.pfp}.webp" alt="" width="40" height="40" loading="lazy" decoding="async"></span>`;
     return `<span class="avatar" style="--c:${esc(p.color || COLORS[0])}">${esc((p.name || '?').charAt(0).toUpperCase())}</span>`;
   }
 
@@ -1312,7 +1346,7 @@
     if (PFPS.includes(myPfp())) params.set('pf', myPfp());
     const url = `${baseUrl()}?${params}`;
     track('share', { kind: 'challenge' });
-    const text = `🏁 I got from ${g.start} to ${g.end} in ${plural(score(g), 'click')} on WikiRacer. Can you beat me?\n${url}`;
+    const text = T(`🏁 I got from ${g.start} to ${g.end} in ${plural(score(g), 'click')} on WikiRacer. Can you beat me?\n${url}`);
     if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
     else copyText(text);
   }
@@ -1606,11 +1640,11 @@
 
   function shareDaily(rec, beat) {
     const line = rec.result === 'finished'
-      ? `🖱 ${plural(rec.score, 'click')} ⏱ ${fmtTime(rec.time)}`
-      : rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up';
+      ? T(`🖱 ${plural(rec.score, 'click')} ⏱ ${fmtTime(rec.time)}`)
+      : T(rec.result === 'timeout' ? '⏰ Ran out of time' : '🏳️ Gave up');
     track('share', { kind: 'daily' });
     // Spoiler-free: no pair, no route.
-    const text = `WikiRacer #${rec.n}\n${line}\nwikiracer.live`;
+    const text = `WikiRacer #${rec.n}\n${line}\n${SITE_URL}`;
     if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
     else copyText(text);
   }
@@ -2219,7 +2253,7 @@
       players[id] = racing && id !== viewerId ? { ...p, title: '', path: [], livePath: [], watchers } : { ...p, watchers };
     }
     return {
-      type: 'state', players, phase: net.phase, round: publicRound(net.round), isPublic: net.isPublic,
+      type: 'state', players, phase: net.phase, round: publicRound(net.round), isPublic: net.isPublic, lang: wikiLang,
       succ: Object.keys(net.players).filter((id) => id !== 'host' && !isBot(id) && net.players[id].connected !== false),
       slot: net.slot, publicFromPrivate: !!net.publicFromPrivate,
       roundElapsed: net.phase !== 'lobby' && net.roundStartedAt ? Date.now() - net.roundStartedAt : 0,
@@ -3211,6 +3245,7 @@
   function guestHandle(d, fail) {
     if (!d || typeof d !== 'object') return;
     if (d.type === 'state' && d.players && typeof d.players === 'object') {
+      if (typeof d.lang === 'string' && d.lang !== wikiLang) { setWikiLang(d.lang); loadNamespaces(wikiLang); }
       const prevPhase = net.phase;
       net.gotState = true;
       net.players = sanitizePlayers(d.players);
@@ -3442,6 +3477,7 @@
 
   function leaveRoom() {
     const old = net;
+    setWikiLang(LANG);
     if (old.bots) for (const b of old.bots.values()) b.timers.forEach(clearTimeout);
     clearTimers();
     net = freshNet();
@@ -3643,7 +3679,7 @@
   // Example routes cycling under the logo (illustrative, each step is a real link on Wikipedia).
   // Home-page demo: a mini article where a cursor finds the right link, clicks it, and the page flips
   // to the next article. Each step's text is a short summary; [[x]] is a link, [[x|>]] the one to click.
-  const DEMO_ROUTES = [
+  const DEMO_ROUTES = (window.I18N && window.I18N.demo) || [
     [
       ['Pizza', 'Pizza is a [[flatbread]] dish topped with [[tomato]] and [[cheese]], first made famous in [[Naples|>]], Italy.'],
       ['Naples', 'Naples is a port city in southern [[Italy]] on the [[Bay of Naples]], in the shadow of [[Mount Vesuvius|>]].'],
@@ -3753,8 +3789,8 @@
   // Face picker: the little square left of the name box. No label on purpose.
   function initPfp() {
     const btn = $('#pfp-btn'), pop = $('#pfp-pop');
-    const paint = () => { btn.querySelector('img').src = `pfp/${myPfp()}.webp`; };
-    pop.innerHTML = PFPS.map((id) => `<button type="button" class="pfp-opt" data-pfp="${id}" aria-label="${id}"><img src="pfp/${id}.webp" alt="" width="64" height="64"></button>`).join('');
+    const paint = () => { btn.querySelector('img').src = `/pfp/${myPfp()}.webp`; };
+    pop.innerHTML = PFPS.map((id) => `<button type="button" class="pfp-opt" data-pfp="${id}" aria-label="${id}"><img src="/pfp/${id}.webp" alt="" width="64" height="64"></button>`).join('');
     const mark = () => $$('.pfp-opt', pop).forEach((b) => b.classList.toggle('selected', b.dataset.pfp === myPfp()));
     const close = () => { pop.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); };
     btn.addEventListener('click', (e) => {
@@ -3986,7 +4022,7 @@
   {
     const q = new URLSearchParams(location.search);
     track('app_open', {
-      entry: q.get('room') ? 'invite' : q.get('s') ? 'challenge' : 'direct',
+      entry: q.get('room') ? 'invite' : q.get('s') ? 'challenge' : 'direct', lang: LANG,
       referrer_host: document.referrer ? new URL(document.referrer).hostname : '',
       played_before: playedList().length > 0,
     });

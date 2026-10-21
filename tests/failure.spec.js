@@ -386,19 +386,19 @@ test('Profile pictures: ghost by default, picker changes it, other players see i
   const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
   for (const p of [host, friend]) await mockWikipedia(p);
   await openHome(friend, 'Friend');
-  await expect(friend.locator('#pfp-btn img')).toHaveAttribute('src', 'pfp/ghost.webp');
+  await expect(friend.locator('#pfp-btn img')).toHaveAttribute('src', '/pfp/ghost.webp');
   await expect(friend.locator('#pfp-pop')).toBeHidden();
   await friend.click('#pfp-btn');
   await expect(friend.locator('#pfp-pop .pfp-opt')).toHaveCount(9);
   await friend.click('#pfp-pop [data-pfp=werewolf]');
   await expect(friend.locator('#pfp-pop')).toBeHidden();
-  await expect(friend.locator('#pfp-btn img')).toHaveAttribute('src', 'pfp/werewolf.webp');
+  await expect(friend.locator('#pfp-btn img')).toHaveAttribute('src', '/pfp/werewolf.webp');
   const code = await createPrivateRoom(host, 'Host');
   await friend.fill('#join-code', code);
   await friend.click('#join-form button[type=submit]');
   await friend.waitForFunction(() => window.__wr.net().joined, null, { timeout: 25000 });
-  await expect(host.locator('#lobby-players img[src="pfp/werewolf.webp"]')).toHaveCount(1);
-  await expect(host.locator('#lobby-players img[src="pfp/ghost.webp"]')).toHaveCount(1); // host kept the default
+  await expect(host.locator('#lobby-players img[src="/pfp/werewolf.webp"]')).toHaveCount(1);
+  await expect(host.locator('#lobby-players img[src="/pfp/ghost.webp"]')).toHaveCount(1); // host kept the default
   // a hostile pfp value is ignored
   expect(await host.evaluate(() => window.__wr.sanitizePlayers({ a: { name: 'x', pfp: '../../evil' } }).a.pfp)).toBe('ghost');
   await Promise.all(ctxs.map((c) => c.close()));

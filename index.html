@@ -8,6 +8,12 @@
   <title>WikiRacer Live: Multiplayer Wikipedia Race Game</title>
   <meta name="description" content="The #1 Wikipedia racing site. Race up to 8 friends live, challenge players online, and compete in daily challenges. Fewest clicks wins.">
   <link rel="canonical" href="https://wikiracer.live/">
+  <link rel="alternate" hreflang="en" href="https://wikiracer.live/">
+  <link rel="alternate" hreflang="es" href="https://wikiracer.live/es/">
+  <link rel="alternate" hreflang="pt-BR" href="https://wikiracer.live/pt/">
+  <link rel="alternate" hreflang="de" href="https://wikiracer.live/de/">
+  <link rel="alternate" hreflang="fr" href="https://wikiracer.live/fr/">
+  <link rel="alternate" hreflang="x-default" href="https://wikiracer.live/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="WikiRacer Live">
   <meta property="og:title" content="WikiRacer Live: Multiplayer Wikipedia Race Game">
@@ -31,7 +37,7 @@
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css">
-  <link rel="stylesheet" href="styles.css?v=109">
+  <link rel="stylesheet" href="/styles.css?v=110">
 </head>
 <body>
   <!-- HOME -->
@@ -48,7 +54,7 @@
           </div>
           <div class="hero-controls">
             <div class="pfp-wrap">
-              <button type="button" class="pfp-btn" id="pfp-btn" aria-label="Choose your picture" aria-haspopup="true" aria-expanded="false"><img src="pfp/ghost.webp" alt="" width="40" height="40"></button>
+              <button type="button" class="pfp-btn" id="pfp-btn" aria-label="Choose your picture" aria-haspopup="true" aria-expanded="false"><img src="/pfp/ghost.webp" alt="" width="40" height="40"></button>
               <div class="pfp-pop hidden" id="pfp-pop" role="group" aria-label="Pictures"></div>
             </div>
             <label class="name-field"><span class="sr">Your name</span><input id="name-input" maxlength="20" placeholder="YOUR NAME" autocomplete="nickname"></label>
@@ -107,6 +113,9 @@
       <footer class="site-foot">
         <nav aria-label="More">
           <a href="/how-to-play/">How to play</a><a href="/multiplayer/">Play with friends</a><a href="/wiki-race-ideas/">Race ideas</a><a href="/wikipedia-speedrun/">Speedrun tips</a><a href="/faq/">FAQ</a><a href="/privacy/">Privacy &amp; terms</a>
+        </nav>
+        <nav class="lang-switch" aria-label="Language" data-no-i18n>
+          <a href="/" hreflang="en" lang="en" aria-current="page">English</a><a href="/es/" hreflang="es" lang="es">Español</a><a href="/pt/" hreflang="pt-BR" lang="pt-BR">Português</a><a href="/de/" hreflang="de" lang="de">Deutsch</a><a href="/fr/" hreflang="fr" lang="fr">Français</a>
         </nav>
       </footer>
     </div>
@@ -360,11 +369,11 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 
-  <script src="pairs.js?v=109" defer></script>
-  <script src="bots.js?v=109" defer></script>
-  <script src="vital.js?v=109" defer></script>
-  <script src="minigame.js?v=109" defer></script>
-  <script src="daily-core.js?v=109" defer></script>
-  <script src="app.js?v=109" defer></script>
+  <script src="/pairs.js?v=110" defer></script>
+  <script src="/bots.js?v=110" defer></script>
+  <script src="/vital.js?v=110" defer></script>
+  <script src="/minigame.js?v=110" defer></script>
+  <script src="/daily-core.js?v=110" defer></script>
+  <script src="/app.js?v=110" defer></script>
 </body>
 </html>

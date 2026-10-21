@@ -390,7 +390,7 @@ ROUTES.forEach((r, idx) => {
 function buildSeoFiles() {
   write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /tests/\nDisallow: /tools/\n\nSitemap: ${SITE}/sitemap.xml\n`);
   const today = new Date().toISOString().slice(0, 10);
-  const urls = [{ loc: '/', pri: '1.0', freq: 'daily' }, ...pages.filter((p) => !p.noindex).map((p) => ({
+  const urls = [{ loc: '/', pri: '1.0', freq: 'daily' }, ...['es', 'pt', 'de', 'fr'].map((l) => ({ loc: `/${l}/`, pri: '0.9', freq: 'daily' })), ...pages.filter((p) => !p.noindex).map((p) => ({
     loc: p.url, pri: '0.7', freq: 'monthly',
   }))];
   write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE}${u.loc}</loc><lastmod>${today}</lastmod><changefreq>${u.freq}</changefreq><priority>${u.pri}</priority></url>`).join('\n')}\n</urlset>\n`);

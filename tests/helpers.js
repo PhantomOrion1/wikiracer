@@ -58,7 +58,8 @@ const TEST_PEER = process.env.SIGNAL === 'prod'
     : { host: 'localhost', port: 9010, path: '/', secure: false };
 async function mockWikipedia(page, { fail = false, delayMs = 0 } = {}) {
   await page.addInitScript((peer) => { window.__WR_TEST_PEER = peer; }, TEST_PEER);
-  await page.route('https://en.wikipedia.org/w/api.php**', async (route) => {
+  if (process.env.COLLECT_STRINGS) await collectStrings(page);
+  await page.route(/^https:\/\/[a-z-]+\.wikipedia\.org\/w\/api\.php/, async (route) => {
     if (fail) return route.abort('failed');
     if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
     route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(wikiResponse(route.request().url())) });
@@ -68,6 +69,41 @@ async function mockWikipedia(page, { fail = false, delayMs = 0 } = {}) {
   await page.route('https://formsubmit.co/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":"true"}' }));
 }
 
+// Translation helper: records every piece of interface text that appears on screen during a test
+// run (not article text, titles or names), so tools/i18n can list what needs translating.
+async function collectStrings(page) {
+  const file = process.env.COLLECT_STRINGS;
+  try {
+    await page.exposeFunction('__wrCollect', (list) => { require('fs').appendFileSync(file, list.map((x) => JSON.stringify(x)).join('\n') + '\n'); });
+  } catch { return; }
+  await page.addInitScript(() => {
+    const SKIP = '.mw-parser-output, #article, #article-title, #spec-article, #spec-title, #toc-list, .node, .route-big, #path, .tname, .tdesc, .textract, #hud-target, .pname, .lane-name, .route, input, textarea, .demo-text, .demo-title, .rd-row, #board-target, .demo-trail, script, style';
+    const seen = new Set();
+    let buf = [];
+    const add = (kind, v) => { v = (v || '').replace(/\s+/g, ' ').trim(); if (!v || !/[A-Za-z]/.test(v) || seen.has(kind + v)) return; seen.add(kind + v); buf.push([kind, v]); };
+    const scan = (root) => {
+      if (!(root instanceof Element) && root.nodeType !== 3) return;
+      const el = root.nodeType === 3 ? root.parentElement : root;
+      if (!el || el.closest(SKIP)) return;
+      if (root.nodeType === 3) return add('t', root.nodeValue);
+      const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+      for (let n = w.currentNode; n; n = w.nextNode()) {
+        if (n.nodeType === 1) {
+          if (n.matches(SKIP)) continue;
+          for (const a of ['placeholder', 'title', 'aria-label']) if (n.hasAttribute(a)) add('a', n.getAttribute(a));
+        } else if (!n.parentElement.closest(SKIP)) add('t', n.nodeValue);
+      }
+    };
+    const start = () => {
+      scan(document.body);
+      new MutationObserver((ms) => { for (const m of ms) { if (m.type === 'characterData') scan(m.target); else m.addedNodes.forEach(scan); if (m.type === 'attributes') scan(m.target); } })
+        .observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title', 'aria-label'] });
+      setInterval(() => { if (buf.length && window.__wrCollect) { window.__wrCollect(buf); buf = []; } }, 400);
+    };
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  });
+}
+
 // Collects uncaught page errors so a test can assert the app never crashed.
 function trackErrors(page) {
   const errors = [];
@@ -75,23 +111,23 @@ function trackErrors(page) {
   return errors;
 }
 
-async function openHome(page, name) {
-  await page.goto('/?debug');
+async function openHome(page, name, at = '/') {
+  await page.goto(`${at}?debug`);
   await page.waitForFunction(() => window.__wr);
   await page.evaluate(() => window.__wr.loadPeer());
   if (name) await page.fill('#name-input', name);
 }
 
-async function createPrivateRoom(page, name) {
-  await openHome(page, name);
+async function createPrivateRoom(page, name, at = '/') {
+  await openHome(page, name, at);
   await page.click('#create-room');
   await expect(page.locator('#room-code')).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 20000 });
   await page.waitForFunction(() => window.__wr.net().peer && window.__wr.net().peer.open, null, { timeout: 20000 });
   return (await page.locator('#room-code').textContent()).trim();
 }
 
-async function joinPrivateRoom(page, name, code) {
-  await openHome(page, name);
+async function joinPrivateRoom(page, name, code, at = '/') {
+  await openHome(page, name, at);
   await page.fill('#join-code', code);
   await page.click('#join-form button[type=submit]');
   await page.waitForFunction(() => window.__wr.net().joined, null, { timeout: 25000 });
