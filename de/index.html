@@ -37,7 +37,7 @@
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bungee-latin-4e46cf.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css">
-  <link rel="stylesheet" href="/styles.css?v=115">
+  <link rel="stylesheet" href="/styles.css?v=117">
 </head>
 <body>
   <!-- HOME -->
@@ -216,9 +216,11 @@
         </div>
         <div id="choose-host-slot"></div>
         <div id="party-host-slot"></div>
-        <div id="room-custom" class="custom-form hidden">
-          <input id="room-start" placeholder="Startartikel" autocomplete="off">
-          <input id="room-end" placeholder="Zielartikel" autocomplete="off">
+        <div id="room-custom" class="custom-form custom-line hidden">
+          <span class="custom-label">Selbst wählen:</span>
+          <input id="room-start" placeholder="Startartikel" autocomplete="off" aria-label="Startartikel">
+          <span class="custom-arrow" aria-hidden="true">→</span>
+          <input id="room-end" placeholder="Zielartikel" autocomplete="off" aria-label="Zielartikel">
         </div>
         <button class="btn primary wide" id="start-race">Rennen starten</button>
       </div>
@@ -383,12 +385,12 @@
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/bots.js?v=115" defer></script>
-  <script src="/lang/de/data.js?v=115" defer></script>
-  <script src="/minigame.js?v=115" defer></script>
-  <script src="/daily-core.js?v=115" defer></script>
-  <script src="/lang/de/i18n.js?v=115" defer></script>
-  <script src="/i18n.js?v=115" defer></script>
-  <script src="/app.js?v=115" defer></script>
+  <script src="/bots.js?v=117" defer></script>
+  <script src="/lang/de/data.js?v=117" defer></script>
+  <script src="/minigame.js?v=117" defer></script>
+  <script src="/daily-core.js?v=117" defer></script>
+  <script src="/lang/de/i18n.js?v=117" defer></script>
+  <script src="/i18n.js?v=117" defer></script>
+  <script src="/app.js?v=117" defer></script>
 </body>
 </html>

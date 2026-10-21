@@ -296,6 +296,7 @@ module.exports.exact = [
   ["Route doesn't begin at the start article", 'La ruta no empieza en el artículo de inicio', 'A rota não começa no artigo inicial', 'Route beginnt nicht beim Startartikel', 'L’itinéraire ne part pas de l’article de départ'],
   ["Route doesn't reach the target", 'La ruta no llega al objetivo', 'A rota não chega ao destino', 'Route erreicht das Ziel nicht', 'L’itinéraire n’atteint pas la cible'],
 
+  ['Choose your own:', 'Elige el tuyo:', 'Escolha o seu:', 'Selbst wählen:', 'Choisis la tienne :'],
   // ---- party modes ----
   ['🎉 Party', '🎉 Fiesta', '🎉 Festa', '🎉 Party', '🎉 Fête'],
   ['Party mode', 'Modo fiesta', 'Modo festa', 'Party-Modus', 'Mode fête'],
