@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const SITE = 'https://wikiracer.live';
 const NAME = 'WikiRacer Live';
 const ISSUES = 'https://github.com/PhantomOrion1/wikiracer/issues';
-const CSS_V = '4';
+const CSS_V = '5';
 
 globalThis.window = globalThis;
 require(path.join(ROOT, 'pairs.js'));
@@ -341,6 +341,49 @@ add({
   body: `
     <p class="lead">This page doesn't exist. Even the best racers hit a dead link sometimes.</p>
     <div class="cta"><a class="play" href="/">Back to the race</a><a class="play ghost" href="/how-to-play/">How to play</a></div>`,
+});
+
+// ---------- route pages (search landing pages, not linked from the site's menus) ----------
+// One page per pair in tools/routes.json (made by tools/find-routes.js from live Wikipedia).
+const slug = (t) => t.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const routeUrl = (r) => `/route/${slug(r.start)}-to-${slug(r.end)}/`;
+// Routes through reference-box pages (Wikidata, ISBN, …) are real links but useless advice, so they're
+// left out; a pair whose only shortest route goes through one is skipped.
+const META_PAGES = new Set(['Wikidata', 'ISBN', 'ISSN', 'Digital object identifier', 'PubMed', 'PubMed Central', 'Bibcode', 'JSTOR', 'OCLC',
+  'ArXiv', 'Semantic Scholar', 'Geographic coordinate system', 'Wayback Machine', 'Internet Archive', 'Integrated Authority File',
+  'Library of Congress Control Number', 'Virtual International Authority File', 'International Standard Name Identifier', 'WorldCat',
+  'Wikimedia Commons', 'Wikisource', 'Wiktionary', 'Wikiquote', 'Wikipedia', 'Encyclopædia Britannica', 'IMDb']);
+const ROUTES = (fs.existsSync(path.join(__dirname, 'routes.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, 'routes.json'), 'utf8')) : [])
+  .map((r) => ({ ...r, routes: r.routes.filter((x) => !x.slice(1, -1).some((t) => META_PAGES.has(t))) }))
+  .filter((r) => r.routes.length);
+const chain = (route) => `<ol class="chain">${route.map((t, i) => `<li class="${i === 0 ? 'start' : i === route.length - 1 ? 'end' : ''}"><a href="${esc(wikiUrl(t))}" rel="nofollow noopener" target="_blank">${esc(t)}</a></li>`).join('')}</ol>`;
+ROUTES.forEach((r, idx) => {
+  const best = r.routes[0];
+  const n = r.clicks;
+  const clicks = `${n} click${n === 1 ? '' : 's'}`;
+  const d = n <= 2 ? 'easy' : n === 3 ? 'medium' : 'hard';
+  const desc = (t) => (r.descriptions && r.descriptions[t] ? ` <span class="muted">(${esc(r.descriptions[t])})</span>` : '');
+  const others = r.routes.slice(1);
+  const more = ROUTES.filter((x, i) => i !== idx).sort((a, b) => (a.end === r.end ? -1 : 0) - (b.end === r.end ? -1 : 0) || (a.start === r.start ? -1 : 0) - (b.start === r.start ? -1 : 0)).slice(0, 6);
+  add({
+    url: routeUrl(r),
+    title: `${r.start} to ${r.end} on Wikipedia: Shortest Route (${clicks}) | ${NAME}`,
+    description: `The shortest way from ${r.start} to ${r.end} on Wikipedia is ${clicks}: ${best.join(' → ')}. See other routes, then race it yourself.`,
+    h1: `${r.start} to ${r.end} on Wikipedia`,
+    body: `
+    <p class="lead">The shortest route from <b>${esc(r.start)}</b> to <b>${esc(r.end)}</b> is <b>${clicks}</b>.</p>
+    ${chain(best)}
+    <div class="cta"><a class="play" href="${esc(playUrl(r.start, r.end, d))}">Race ${esc(r.start)} → ${esc(r.end)}</a><a class="play ghost" href="/">More races</a></div>
+    <h2>Step by step</h2>
+    <ol class="route-steps">${best.slice(0, -1).map((t, i) => `<li>On <b>${esc(t)}</b>${i === 0 ? desc(t) : ''}, click <b>${esc(best[i + 1])}</b>${desc(best[i + 1])}.</li>`).join('')}</ol>
+    ${n > 1 ? `<p>No route is shorter: we checked every link on the ${esc(r.start)} article${n === 3 ? ', and none of those pages link straight to ' + esc(r.end) : ''}.</p>` : ''}
+    ${others.length ? `<h2>Other ${n}-click routes</h2><ul class="alt-routes">${others.map((x) => `<li>${x.map(esc).join(' <span class="arrow" aria-hidden="true">→</span><span class="sr-only">to</span> ')}</li>`).join('')}</ul>` : ''}
+    <h2>Can you find it in a race?</h2>
+    <p>Knowing the answer is easy. Finding it with the clock running, using only the links inside each article, is the hard part. In WikiRacer you race friends or strangers from one article to another, and the fewest clicks wins.</p>
+    <div class="cta"><a class="play" href="${esc(playUrl(r.start, r.end, d))}">Race this route</a><a class="play ghost" href="/multiplayer/">Race a friend</a></div>
+    <p class="muted small">Checked against live Wikipedia on ${esc(r.checked)}. Articles change, so links can come and go.</p>
+    ${more.length ? `<h2>More routes</h2><ul class="pairs">${more.map((x) => `<li><span class="route">${esc(x.start)}<span class="arrow" aria-hidden="true">→</span><span class="sr-only">to </span>${esc(x.end)}</span><a class="go" href="${routeUrl(x)}">${x.clicks} click${x.clicks === 1 ? '' : 's'}</a></li>`).join('')}</ul>` : ''}`,
+  });
 });
 
 // ---------- robots, sitemap ----------

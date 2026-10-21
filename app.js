@@ -765,6 +765,8 @@
     $('#panel').classList.remove('open');
     $('#racers-section').classList.toggle('hidden', mode !== 'duel');
     $('#racers-strip').classList.toggle('hidden', mode !== 'duel');
+    lastChallengerKey = '';
+    if (mode === 'challenge') renderChallenger();
     updateHud();
     renderPath();
     renderTargetCard(round.end);
@@ -782,7 +784,7 @@
     if (!g || !g.startTime || g.finished) return;
     g.elapsed = Date.now() - g.startTime;
     if (g.elapsed >= g.limit) finishGame('timeout');
-    else updateHud();
+    else { updateHud(); if (g.mode === 'challenge') renderChallenger(); }
   }
 
   function updateHud() {
@@ -837,7 +839,7 @@
 
     if (count) g.clicks++;
     g.current = art.title;
-    g.path.push({ t: art.title, via: via || title, back });
+    g.path.push({ t: art.title, via: via || title, back, at: g.startTime ? Date.now() - g.startTime : 0 });
     if (back) g.stack.pop();
     else g.stack.push(art.title);
     if (!g.startTime) g.startTime = Date.now();
@@ -1171,10 +1173,19 @@
         </div>`;
       if (g.mode === 'challenge' && g.challenge && g.challenge.clicks && g.result === 'finished') {
         const c = g.challenge;
-        const verdict = score(g) < c.clicks ? `You beat ${esc(c.by)}! 🔥` : score(g) === c.clicks ? `Tied with ${esc(c.by)}.` : `${esc(c.by)} wins this one.`;
-        html += `<p><b>${verdict}</b> <span class="muted">${esc(c.by)} took ${plural(c.clicks, 'click')}.</span></p>`;
+        // Fewest clicks wins; same clicks, the faster time does (when the link has their time).
+        const mine = score(g);
+        const tie = mine === c.clicks;
+        const win = mine < c.clicks || (tie && c.time && g.elapsed < c.time);
+        const verdict = win ? `You beat ${esc(c.by)}! 🔥` : tie && !c.time ? `Tied with ${esc(c.by)}.` : tie && g.elapsed === c.time ? `Dead heat with ${esc(c.by)}!` : `${esc(c.by)} wins this one.`;
+        html += `<p><b>${verdict}</b> <span class="muted">${esc(c.by)} took ${plural(c.clicks, 'click')}${c.time ? ` in ${fmtTime(c.time)}` : ''}.</span></p>`;
       }
       html += `<h3 class="sec">Your route</h3><div class="lanes">${laneHtml(me, `solo:${g.startTime}`, new Set(), round, '')}</div>`;
+      const them = g.mode === 'challenge' ? challengerNow(g) : null;
+      if (them && them.path) {
+        const mineSet = new Set((g.path || []).slice(1).map((x) => normTitle(x.t)));
+        html += `<h3 class="sec">${esc(them.name)}'s route</h3><div class="lanes">${laneHtml(them, `challenger:${g.startTime}`, mineSet, round, '')}</div>`;
+      }
       const best = store.get(`wr-route:${pairKey(g.start, g.end)}`);
       if (best) html += `<h3 class="sec">Shortest route we found (${best.length - 1} clicks)</h3>${routeHtml(best)}`;
       else if (!g.noRoute) html += '<p class="muted small-print">Looking up the shortest route…</p>';
@@ -1210,10 +1221,63 @@
     }
   }
 
+  // A challenge link's recorded run: [[title, second, back?], ...], checked and capped.
+  function parseChallengeRun(q) {
+    const out = {};
+    try {
+      const raw = JSON.parse(q.get('r') || 'null');
+      if (Array.isArray(raw) && raw.length) {
+        out.run = raw.slice(0, 60).filter(Array.isArray).map((x) => ({ t: normTitle(str(x[0], 300)), at: int(x[1], 0, 3600) * 1000, back: x[2] === 1 })).filter((x) => x.t);
+        if (!out.run.length) delete out.run;
+      }
+    } catch {}
+    const tm = int(q.get('tm'), 0, 3600);
+    if (tm) out.time = tm * 1000;
+    if (PFPS.includes(q.get('pf'))) out.pfp = q.get('pf');
+    return out;
+  }
+
+  // Where the challenger was at this point in their race. Pages stay hidden until you're done, like
+  // other racers in multiplayer: you see their clicks, not their route.
+  function challengerNow(g) {
+    const c = g && g.challenge;
+    if (!c || !c.run) return null;
+    const t = g.finished ? Infinity : g.elapsed;
+    const steps = c.run.filter((x) => x.at <= t);
+    const done = c.time ? t >= c.time : steps.length === c.run.length;
+    return {
+      id: 'challenger', name: c.by, pfp: c.pfp, color: COLORS[1],
+      status: done ? 'finished' : 'playing', clicks: done ? c.clicks || c.run.length : steps.length, penalties: 0,
+      time: c.time || 0, title: steps.length ? steps[steps.length - 1].t : g.start,
+      path: done ? [{ t: g.start, via: g.start, back: false }, ...c.run.map((x) => ({ t: x.t, via: x.t, back: x.back }))] : null,
+    };
+  }
+
+  let lastChallengerKey = '';
+  function renderChallenger() {
+    const g = game;
+    const p = g && g.mode === 'challenge' ? challengerNow(g) : null;
+    const key = p ? `${p.status}|${p.clicks}` : '';
+    if (key === lastChallengerKey) return;
+    lastChallengerKey = key;
+    $('#racers-section').classList.toggle('hidden', !p);
+    $('#racers-strip').classList.toggle('hidden', !p);
+    if (!p) return;
+    const meta = p.status === 'finished' ? `✔ finished · ${plural(p.clicks, 'click')}${p.time ? ` · ${fmtTime(p.time)}` : ''}` : `racing · ${plural(p.clicks, 'click')}`;
+    $('#racers').innerHTML = `<li><span class="rank">·</span>${avatar(p)}<span class="pname">${esc(p.name)}</span><span class="pmeta">${meta}</span></li>`;
+    $('#racers-strip').innerHTML = `<span class="chip" style="--c:${esc(p.color)}"><b>${esc(p.name)}</b> ${esc(p.status === 'finished' ? `✔ ${p.clicks}` : `${p.clicks} clicks`)}</span>`;
+  }
+
   function shareChallenge(g) {
     const params = new URLSearchParams({ s: g.start, e: g.end, c: String(score(g)), d: g.difficulty });
     const name = $('#name-input').value.trim();
     if (name) params.set('by', cleanName(name));
+    // Their run, so the friend races against it: each page after the start with the second it was
+    // reached (and whether it was a Back), plus the finish time and profile picture.
+    const run = g.path.slice(1, 61).map((x) => (x.back ? [x.t, Math.round((x.at || 0) / 1000), 1] : [x.t, Math.round((x.at || 0) / 1000)]));
+    if (run.length) params.set('r', JSON.stringify(run));
+    params.set('tm', String(Math.round(g.elapsed / 1000)));
+    if (PFPS.includes(myPfp())) params.set('pf', myPfp());
     const url = `${baseUrl()}?${params}`;
     track('share', { kind: 'challenge' });
     const text = `🏁 I got from ${g.start} to ${g.end} in ${plural(score(g), 'click')} on WikiRacer. Can you beat me?\n${url}`;
@@ -2529,7 +2593,16 @@
     let plan = null;
     try { plan = await planRoute(round.start, round.end); } catch {}
     if (net !== me || net.round !== round || net.phase !== 'playing') return;
-    for (const id of ids) Object.assign(net.bots.get(id), { routeKey: null, hurried: false, script: null, holding: false });
+    for (const id of ids) {
+      const b = net.bots.get(id);
+      Object.assign(b, { routeKey: null, hurried: false, script: null, holding: false });
+      // People have good and bad rounds: re-roll a fill-in's level now and then so the same bot
+      // isn't always the one who wins (or the one who never gets there).
+      if (Math.random() < 0.35) b.tier = pickWeighted(BOT_TIERS);
+    }
+    // Most rounds the slowest fill-in waits until real players are done (so a person is rarely
+    // last), but not every round, or the same placings repeat every race.
+    net.botHoldThisRound = Math.random() < 0.65;
     for (const id of ids) simulateBot(id, round, plan);
     maybeHurryBots();
   }
@@ -2555,15 +2628,19 @@
     const sorted = [...routes].sort((a, c) => a.length - c.length);
     const fresh = sorted.filter((r) => !used.has(r.join('|')));
     const options = fresh.length ? fresh : sorted;
-    // Sharp racers take the shortest route they know; off-form ones often pick a longer one.
-    const route = options.length ? options[tier.giveUp < 0.05 || sharp ? 0 : options.length - 1 - Math.floor(Math.random() * Math.ceil(options.length / 2))] : null;
+    // Fewest clicks wins, and real people rarely find the very shortest route, so even the best
+    // fill-ins only take it some rounds (it used to be every round for good/sharp ones, so the same
+    // bot won every race in 2 clicks). Otherwise they take a longer route, or add a wrong turn.
+    const optimal = Math.random() < ([0.12, 0.22, 0.35, 0.5][BOT_TIERS.indexOf(tier)] ?? 0.25);
+    const route = options.length ? options[optimal ? 0 : options.length - 1 - Math.floor(Math.random() * Math.ceil(options.length / 2))] : null;
+    const shortestLen = sorted.length ? sorted[0].length : 0;
     b.routeKey = route ? route.join('|') : null;
     if (route) {
       const pool = plan.startLinks.filter((t) => !route.some((r) => sameTitle(r, t)));
       // Real players rarely back-track: at most one wrong turn, occasionally two on Hard. Off-form
       // racers mostly lose time by reading slower and taking a longer route, not by going back.
-      const extra = !sharp && Math.random() < 0.3 ? 1 : 0;
-      const detours = Math.min(pool.length, dm > 1.2 ? 2 : 1, (sharp ? 0 : randInt(tier.detours[0], tier.detours[1])) + extra);
+      const extra = (!sharp && Math.random() < 0.3) || (!optimal && route.length <= shortestLen && Math.random() < 0.6) ? 1 : 0;
+      const detours = Math.min(pool.length, dm > 1.2 ? 2 : 1, (sharp || optimal ? 0 : randInt(tier.detours[0], tier.detours[1])) + (optimal ? 0 : extra));
       for (let k = 0; k < detours; k++) {
         const w = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
         path.push({ t: w, via: w, back: false }, { t: round.start, via: round.start, back: true });
@@ -2641,7 +2718,7 @@
     at(b.script.end.at, () => {
       // Never let every fill-in finish while a real person is still racing: the last one waits a
       // page away from the target and wraps up once they're done (see maybeHurryBots).
-      if (b.script.end.type === 'finished' && realPlayersRacing() && !otherBotsStillRacing(id)) {
+      if (b.script.end.type === 'finished' && net.botHoldThisRound && realPlayersRacing() && !otherBotsStillRacing(id)) {
         b.holding = true;
         return;
       }
@@ -3837,20 +3914,22 @@
       $('#banner-join').addEventListener('click', () => joinRoom(code));
       if (!nameInput.value) nameInput.focus();
     } else if (q.get('s') && q.get('e')) {
-      const challenge = { by: cleanName(q.get('by') || 'A friend'), clicks: int(q.get('c'), 0, 999) };
+      const challenge = { by: cleanName(q.get('by') || 'A friend'), clicks: int(q.get('c'), 0, 999), ...parseChallengeRun(q) };
       const s = str(q.get('s'), 300);
       const e = str(q.get('e'), 300);
       const d = LIMITS[q.get('d')] ? q.get('d') : 'challenge';
-      banner.innerHTML = `<h2>${esc(challenge.by)} challenged you</h2>
+      // Plain "race this" links (race ideas, route pages) have no challenger.
+      const fromFriend = !!(q.get('by') || q.get('c'));
+      banner.innerHTML = `<h2>${fromFriend ? `${esc(challenge.by)} challenged you` : 'Ready to race?'}</h2>
         <div class="route-big">${esc(s)} → <span style="color:var(--accent)">${esc(e)}</span></div>
-        ${challenge.clicks ? `<p class="muted">Their score: <b>${plural(challenge.clicks, 'click')}</b>. Can you do better? You have ${fmtTime(limitFor(d))}.</p>` : ''}
-        <button class="btn primary wide" id="banner-play">Accept challenge</button>`;
+        ${challenge.clicks ? `<p class="muted">Their score: <b>${plural(challenge.clicks, 'click')}</b>${challenge.time ? ` in ${fmtTime(challenge.time)}` : ''}. Can you do better? You have ${fmtTime(limitFor(d))}.${challenge.run ? ` You'll see their progress as you race.` : ''}</p>` : ''}
+        <button class="btn primary wide" id="banner-play">${fromFriend ? 'Accept challenge' : 'Start race'}</button>`;
       banner.classList.remove('hidden');
       $('#banner-play').addEventListener('click', () => launch(async () => {
         try {
           const pair = await validatePair(s, e);
           const round = { ...pair, difficulty: d, limit: limitFor(d) };
-          await runCountdown(round, `${challenge.by}'s challenge · ${fmtTime(round.limit)} on the clock`);
+          await runCountdown(round, `${fromFriend ? `${challenge.by}'s challenge` : `${round.start} → ${round.end}`} · ${fmtTime(round.limit)} on the clock`);
           startGame(round, 'challenge', { challenge });
         } catch (err) {
           toast(err.message);

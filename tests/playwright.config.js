@@ -17,7 +17,8 @@ module.exports = defineConfig({
   projects: [
     { name: 'chrome', use: { channel: 'chrome' }, testIgnore: /smoke\.spec|quickmatch-load|bots\.spec/ },
     // Shares the test public rooms with other quick-match tests, so it runs on its own afterwards.
-    { name: 'load', use: { channel: 'chrome' }, testMatch: /quickmatch-load|bots\.spec/, dependencies: ['chrome'] },
+    { name: 'load', use: { channel: 'chrome' }, testMatch: /quickmatch-load/, dependencies: ['chrome'] },
+    { name: 'bots', use: { channel: 'chrome' }, testMatch: /bots\.spec/, dependencies: ['load'] },
     { name: 'smoke-chrome', use: { channel: 'chrome' }, testMatch: /smoke\.spec/ },
     { name: 'smoke-webkit', use: { browserName: 'webkit' }, testMatch: /smoke\.spec/ },
     { name: 'smoke-iphone', use: { browserName: 'webkit', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' }, testMatch: /smoke\.spec/ },

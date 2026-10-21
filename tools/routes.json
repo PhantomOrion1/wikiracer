@@ -1,0 +1,2401 @@
+[
+ {
+  "start": "Banana",
+  "end": "Jesus",
+  "clicks": 2,
+  "routes": [
+   [
+    "Banana",
+    "Kerala",
+    "Jesus"
+   ],
+   [
+    "Banana",
+    "Andy Warhol",
+    "Jesus"
+   ],
+   [
+    "Banana",
+    "Islam",
+    "Jesus"
+   ],
+   [
+    "Banana",
+    "Augustus",
+    "Jesus"
+   ],
+   [
+    "Banana",
+    "Palestine (region)",
+    "Jesus"
+   ],
+   [
+    "Banana",
+    "Ghost",
+    "Jesus"
+   ]
+  ],
+  "descriptions": {
+   "Andy Warhol": "American artist and filmmaker (1928–1987)",
+   "Augustus": "Roman emperor from 27 BC to AD 14",
+   "Ghost": "Supernatural being originating in folklore",
+   "Banana": "Tropical, edible, staple fruit",
+   "Jesus": "First-century Jewish preacher and religious leader",
+   "Palestine (region)": "Geographic region in West Asia",
+   "Kerala": "State in southwestern India",
+   "Islam": "Abrahamic monotheistic religion"
+  },
+  "asked": [
+   "Banana",
+   "Jesus"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Minecraft",
+  "end": "Jesus",
+  "clicks": 2,
+  "routes": [
+   [
+    "Minecraft",
+    "PewDiePie",
+    "Jesus"
+   ],
+   [
+    "Minecraft",
+    "South Park",
+    "Jesus"
+   ],
+   [
+    "Minecraft",
+    "Fez (video game)",
+    "Jesus"
+   ],
+   [
+    "Minecraft",
+    "G.U.Y.",
+    "Jesus"
+   ]
+  ],
+  "descriptions": {
+   "South Park": "American animated sitcom",
+   "Jesus": "First-century Jewish preacher and religious leader",
+   "Fez (video game)": "2012 video game",
+   "Minecraft": "Sandbox video game",
+   "PewDiePie": "Swedish YouTuber (born 1989)",
+   "G.U.Y.": "2014 single by Lady Gaga"
+  },
+  "asked": [
+   "Minecraft",
+   "Jesus"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Pizza",
+  "end": "Jesus",
+  "clicks": 2,
+  "routes": [
+   [
+    "Pizza",
+    "Rome",
+    "Jesus"
+   ],
+   [
+    "Pizza",
+    "Byzantine Empire",
+    "Jesus"
+   ],
+   [
+    "Pizza",
+    "Turin",
+    "Jesus"
+   ],
+   [
+    "Pizza",
+    "Armenian cuisine",
+    "Jesus"
+   ],
+   [
+    "Pizza",
+    "Christmas wafer",
+    "Jesus"
+   ],
+   [
+    "Pizza",
+    "Paskha",
+    "Jesus"
+   ]
+  ],
+  "descriptions": {
+   "Pizza": "Italian dish",
+   "Rome": "Capital and largest city of Italy",
+   "Jesus": "First-century Jewish preacher and religious leader",
+   "Christmas wafer": "European Catholic Christmas tradition",
+   "Paskha": "East Slavic festive dish",
+   "Armenian cuisine": "Culinary traditions of Armenia",
+   "Byzantine Empire": "Continuation of the Roman Empire (330–1453)",
+   "Turin": "City in Piedmont, Italy"
+  },
+  "asked": [
+   "Pizza",
+   "Jesus"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Taylor Swift",
+  "end": "Jesus",
+  "clicks": 2,
+  "routes": [
+   [
+    "Taylor Swift",
+    "Barack Obama",
+    "Jesus"
+   ],
+   [
+    "Taylor Swift",
+    "Michael Jackson",
+    "Jesus"
+   ],
+   [
+    "Taylor Swift",
+    "Impact of the Eras Tour",
+    "Jesus"
+   ],
+   [
+    "Taylor Swift",
+    "Elton John",
+    "Jesus"
+   ],
+   [
+    "Taylor Swift",
+    "Haile Selassie",
+    "Jesus"
+   ],
+   [
+    "Taylor Swift",
+    "Sgt. Pepper's Lonely Hearts Club Band",
+    "Jesus"
+   ],
+   [
+    "Taylor Swift",
+    "The Beatles",
+    "Jesus"
+   ],
+   [
+    "Taylor Swift",
+    "Georgetown University",
+    "Jesus"
+   ]
+  ],
+  "descriptions": {
+   "The Beatles": "English rock band (1960–1970)",
+   "Haile Selassie": "Emperor of Ethiopia from 1930 to 1974",
+   "Sgt. Pepper's Lonely Hearts Club Band": "1967 studio album by the Beatles",
+   "Georgetown University": "Private Jesuit university in Washington, D.C.",
+   "Barack Obama": "President of the United States from 2009 to 2017",
+   "Jesus": "First-century Jewish preacher and religious leader",
+   "Elton John": "British musician and songwriter",
+   "Taylor Swift": "American singer-songwriter (born 1989)",
+   "Michael Jackson": "American singer and songwriter (1958–2009)",
+   "Impact of the Eras Tour": "Cultural influence of Taylor Swift's sixth concert tour"
+  },
+  "asked": [
+   "Taylor Swift",
+   "Jesus"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "SpongeBob SquarePants",
+  "end": "Jesus",
+  "clicks": 2,
+  "routes": [
+   [
+    "SpongeBob SquarePants",
+    "Charlie Chaplin",
+    "Jesus"
+   ],
+   [
+    "SpongeBob SquarePants",
+    "Evangelicalism",
+    "Jesus"
+   ],
+   [
+    "SpongeBob SquarePants",
+    "Ricky Gervais",
+    "Jesus"
+   ],
+   [
+    "SpongeBob SquarePants",
+    "Asexuality",
+    "Jesus"
+   ],
+   [
+    "SpongeBob SquarePants",
+    "James Dobson",
+    "Jesus"
+   ],
+   [
+    "SpongeBob SquarePants",
+    "United Church of Christ",
+    "Jesus"
+   ],
+   [
+    "SpongeBob SquarePants",
+    "Profanity",
+    "Jesus"
+   ],
+   [
+    "SpongeBob SquarePants",
+    "Jakers! The Adventures of Piggley Winks",
+    "Jesus"
+   ]
+  ],
+  "descriptions": {
+   "Charlie Chaplin": "English actor and filmmaker (1889–1977)",
+   "Evangelicalism": "Protestant Christian movement",
+   "Profanity": "Socially offensive form of language",
+   "James Dobson": "American evangelical Christian psychologist and author (1936–2025)",
+   "Asexuality": "Lack of or little sexual attraction to others",
+   "Ricky Gervais": "English comedian (born 1961)",
+   "United Church of Christ": "Protestant Christian denomination",
+   "Jesus": "First-century Jewish preacher and religious leader",
+   "Jakers! The Adventures of Piggley Winks": "Irish animated children's television series",
+   "SpongeBob SquarePants": "American animated television series"
+  },
+  "asked": [
+   "SpongeBob SquarePants",
+   "Jesus"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Cat",
+  "end": "Philosophy",
+  "clicks": 2,
+  "routes": [
+   [
+    "Cat",
+    "Aristotle",
+    "Philosophy"
+   ],
+   [
+    "Cat",
+    "Western Roman Empire",
+    "Philosophy"
+   ],
+   [
+    "Cat",
+    "Archaeology",
+    "Philosophy"
+   ],
+   [
+    "Cat",
+    "History of Animals",
+    "Philosophy"
+   ]
+  ],
+  "descriptions": {
+   "Aristotle": "Ancient Greek philosopher and polymath (384–322 BC)",
+   "Cat": "Small domesticated carnivorous mammal",
+   "Western Roman Empire": "Western half of the Roman Empire (395–476)",
+   "History of Animals": "Work by Aristotle",
+   "Philosophy": "Study of general and fundamental questions",
+   "Archaeology": "Study of human activity based on materials left behind"
+  },
+  "asked": [
+   "Cat",
+   "Philosophy"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Pizza",
+  "end": "Philosophy",
+  "clicks": 2,
+  "routes": [
+   [
+    "Pizza",
+    "Ancient Rome",
+    "Philosophy"
+   ],
+   [
+    "Pizza",
+    "Sicily",
+    "Philosophy"
+   ],
+   [
+    "Pizza",
+    "Francesco de Sanctis",
+    "Philosophy"
+   ]
+  ],
+  "descriptions": {
+   "Pizza": "Italian dish",
+   "Sicily": "Island in the Mediterranean, region of Italy",
+   "Ancient Rome": "Roman civilisation from the 8th century BC to the 5th century AD",
+   "Francesco de Sanctis": "Italian literary critic and scholar (1817–1883)",
+   "Philosophy": "Study of general and fundamental questions"
+  },
+  "asked": [
+   "Pizza",
+   "Philosophy"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Minecraft",
+  "end": "Philosophy",
+  "clicks": 2,
+  "routes": [
+   [
+    "Minecraft",
+    "Europe",
+    "Philosophy"
+   ],
+   [
+    "Minecraft",
+    "Personal identity",
+    "Philosophy"
+   ],
+   [
+    "Minecraft",
+    "Queer",
+    "Philosophy"
+   ]
+  ],
+  "descriptions": {
+   "Europe": "Continent",
+   "Queer": "Term for sexual and gender minorities",
+   "Philosophy": "Study of general and fundamental questions",
+   "Minecraft": "Sandbox video game",
+   "Personal identity": "Philosophical idea of a person having a unique existence"
+  },
+  "asked": [
+   "Minecraft",
+   "Philosophy"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Taylor Swift",
+  "end": "Philosophy",
+  "clicks": 2,
+  "routes": [
+   [
+    "Taylor Swift",
+    "Cultural impact of Taylor Swift",
+    "Philosophy"
+   ],
+   [
+    "Taylor Swift",
+    "Lana Del Rey",
+    "Philosophy"
+   ],
+   [
+    "Taylor Swift",
+    "Swim (BTS song)",
+    "Philosophy"
+   ],
+   [
+    "Taylor Swift",
+    "The arts",
+    "Philosophy"
+   ],
+   [
+    "Taylor Swift",
+    "Queer",
+    "Philosophy"
+   ],
+   [
+    "Taylor Swift",
+    "Popular culture",
+    "Philosophy"
+   ],
+   [
+    "Taylor Swift",
+    "Erasmus University Rotterdam",
+    "Philosophy"
+   ],
+   [
+    "Taylor Swift",
+    "Routledge",
+    "Philosophy"
+   ]
+  ],
+  "descriptions": {
+   "Queer": "Term for sexual and gender minorities",
+   "Routledge": "English multinational academic publisher",
+   "Erasmus University Rotterdam": "Public university in the Netherlands",
+   "Taylor Swift": "American singer-songwriter (born 1989)",
+   "Philosophy": "Study of general and fundamental questions",
+   "Popular culture": "Widespread norms in a society",
+   "The arts": "Creative human and cultural expression",
+   "Lana Del Rey": "American singer-songwriter (born 1985)",
+   "Swim (BTS song)": "2026 single by BTS"
+  },
+  "asked": [
+   "Taylor Swift",
+   "Philosophy"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Taylor Swift",
+  "end": "Kevin Bacon",
+  "clicks": 2,
+  "routes": [
+   [
+    "Taylor Swift",
+    "Reba McEntire",
+    "Kevin Bacon"
+   ],
+   [
+    "Taylor Swift",
+    "Will Smith",
+    "Kevin Bacon"
+   ],
+   [
+    "Taylor Swift",
+    "Jennifer Aniston",
+    "Kevin Bacon"
+   ],
+   [
+    "Taylor Swift",
+    "Tom Hiddleston",
+    "Kevin Bacon"
+   ],
+   [
+    "Taylor Swift",
+    "Patricia Arquette",
+    "Kevin Bacon"
+   ]
+  ],
+  "descriptions": {
+   "Kevin Bacon": "American actor (born 1958)",
+   "Jennifer Aniston": "American actress (born 1969)",
+   "Will Smith": "American actor and rapper (born 1968)",
+   "Reba McEntire": "American country singer and actress (born 1955)",
+   "Patricia Arquette": "American actress (born 1968)",
+   "Taylor Swift": "American singer-songwriter (born 1989)",
+   "Tom Hiddleston": "British actor (born 1981)"
+  },
+  "asked": [
+   "Taylor Swift",
+   "Kevin Bacon"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Pizza",
+  "end": "Kevin Bacon",
+  "clicks": 3,
+  "routes": [
+   [
+    "Pizza",
+    "New York metropolitan area",
+    "Empire State Building",
+    "Kevin Bacon"
+   ],
+   [
+    "Pizza",
+    "Chicago",
+    "Joliet, Illinois",
+    "Kevin Bacon"
+   ],
+   [
+    "Pizza",
+    "BBC",
+    "Jim Broadbent",
+    "Kevin Bacon"
+   ],
+   [
+    "Pizza",
+    "New Haven, Connecticut",
+    "List of people from Connecticut",
+    "Kevin Bacon"
+   ],
+   [
+    "Pizza",
+    "Turin",
+    "Michael Caine",
+    "Kevin Bacon"
+   ],
+   [
+    "Pizza",
+    "White House",
+    "Empire State Building",
+    "Kevin Bacon"
+   ]
+  ],
+  "descriptions": {
+   "Chicago": "Most populous city in Illinois, US",
+   "Empire State Building": "Office skyscraper in Manhattan, New York",
+   "Kevin Bacon": "American actor (born 1958)",
+   "Pizza": "Italian dish",
+   "White House": "Residence and workplace of the US president",
+   "New Haven, Connecticut": "City in Connecticut, United States",
+   "Michael Caine": "English retired actor (born 1933)",
+   "Joliet, Illinois": "City in Illinois, United States",
+   "Jim Broadbent": "British actor (born 1949)",
+   "BBC": "British public service broadcaster",
+   "Turin": "City in Piedmont, Italy"
+  },
+  "asked": [
+   "Pizza",
+   "Kevin Bacon"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Minecraft",
+  "end": "Kevin Bacon",
+  "clicks": 3,
+  "routes": [
+   [
+    "Minecraft",
+    "Masters of the Universe",
+    "Idris Elba",
+    "Kevin Bacon"
+   ],
+   [
+    "Minecraft",
+    "Facebook",
+    "Aaron Sorkin",
+    "Kevin Bacon"
+   ],
+   [
+    "Minecraft",
+    "Usher (musician)",
+    "47th Annual Grammy Awards",
+    "Kevin Bacon"
+   ],
+   [
+    "Minecraft",
+    "Reddit",
+    "George Clooney",
+    "Kevin Bacon"
+   ],
+   [
+    "Minecraft",
+    "BBC",
+    "Jim Broadbent",
+    "Kevin Bacon"
+   ],
+   [
+    "Minecraft",
+    "YouTube",
+    "List of Internet phenomena",
+    "Kevin Bacon"
+   ]
+  ],
+  "descriptions": {
+   "Kevin Bacon": "American actor (born 1958)",
+   "George Clooney": "American actor and filmmaker (born 1961)",
+   "Aaron Sorkin": "American screenwriter, playwright, and filmmaker (born 1961)",
+   "Usher (musician)": "American singer (born 1978)",
+   "Jim Broadbent": "British actor (born 1949)",
+   "Masters of the Universe": "American media franchise",
+   "Idris Elba": "English actor (born 1972)",
+   "47th Annual Grammy Awards": "2005 US music awards ceremony",
+   "YouTube": "Video-sharing platform",
+   "Reddit": "American social news and discussion site",
+   "Facebook": "Social networking service owned by Meta Platforms",
+   "BBC": "British public service broadcaster",
+   "Minecraft": "Sandbox video game"
+  },
+  "asked": [
+   "Minecraft",
+   "Kevin Bacon"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Banana",
+  "end": "Kevin Bacon",
+  "clicks": 3,
+  "routes": [
+   [
+    "Banana",
+    "Philippines",
+    "Cinema of the United States",
+    "Kevin Bacon"
+   ],
+   [
+    "Banana",
+    "Sabah",
+    "Cinema of the United States",
+    "Kevin Bacon"
+   ],
+   [
+    "Banana",
+    "Cold War",
+    "Cinema of the United States",
+    "Kevin Bacon"
+   ],
+   [
+    "Banana",
+    "Andy Warhol",
+    "Empire State Building",
+    "Kevin Bacon"
+   ],
+   [
+    "Banana",
+    "BBC",
+    "Jim Broadbent",
+    "Kevin Bacon"
+   ],
+   [
+    "Banana",
+    "Indo-Pacific",
+    "Cinema of the United States",
+    "Kevin Bacon"
+   ]
+  ],
+  "descriptions": {
+   "Andy Warhol": "American artist and filmmaker (1928–1987)",
+   "Empire State Building": "Office skyscraper in Manhattan, New York",
+   "Kevin Bacon": "American actor (born 1958)",
+   "Philippines": "Archipelagic country in Southeast Asia",
+   "Sabah": "State in East Malaysia",
+   "Banana": "Tropical, edible, staple fruit",
+   "Jim Broadbent": "British actor (born 1949)",
+   "Cold War": "1947–1991 geopolitical rivalry between US and USSR",
+   "Indo-Pacific": "Biogeographic marine region of Earth",
+   "BBC": "British public service broadcaster"
+  },
+  "asked": [
+   "Banana",
+   "Kevin Bacon"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Pizza",
+  "end": "Albert Einstein",
+  "clicks": 2,
+  "routes": [
+   [
+    "Pizza",
+    "UNESCO",
+    "Albert Einstein"
+   ]
+  ],
+  "descriptions": {
+   "Albert Einstein": "German-born theoretical physicist (1879–1955)",
+   "Pizza": "Italian dish",
+   "UNESCO": "Specialized agency of the United Nations"
+  },
+  "asked": [
+   "Pizza",
+   "Albert Einstein"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Dog",
+  "end": "Moon",
+  "clicks": 2,
+  "routes": [
+   [
+    "Dog",
+    "Japan",
+    "Moon"
+   ],
+   [
+    "Dog",
+    "Proto-Indo-European mythology",
+    "Moon"
+   ],
+   [
+    "Dog",
+    "Hecate",
+    "Moon"
+   ],
+   [
+    "Dog",
+    "Babylonia",
+    "Moon"
+   ],
+   [
+    "Dog",
+    "Soviet space program",
+    "Moon"
+   ],
+   [
+    "Dog",
+    "Earth's magnetic field",
+    "Moon"
+   ],
+   [
+    "Dog",
+    "Neo-Babylonian Empire",
+    "Moon"
+   ],
+   [
+    "Dog",
+    "Precambrian",
+    "Moon"
+   ]
+  ],
+  "descriptions": {
+   "Hecate": "Greek goddess of magic and transitions",
+   "Japan": "Country in East Asia",
+   "Moon": "Natural satellite orbiting Earth",
+   "Precambrian": "History of Earth 4600–539 million years ago",
+   "Babylonia": "Ancient Amorite-Akkadian state in Mesopotamia",
+   "Soviet space program": "Space exploration program conducted by the Soviet Union from 1951 to 1991",
+   "Dog": "Domesticated species of canid",
+   "Neo-Babylonian Empire": "Ancient Mesopotamian empire (626–539 BC)"
+  },
+  "asked": [
+   "Dog",
+   "Moon"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Cat",
+  "end": "Ancient Rome",
+  "clicks": 2,
+  "routes": [
+   [
+    "Cat",
+    "Roman Empire",
+    "Ancient Rome"
+   ],
+   [
+    "Cat",
+    "Age of Discovery",
+    "Ancient Rome"
+   ],
+   [
+    "Cat",
+    "Sardinia",
+    "Ancient Rome"
+   ],
+   [
+    "Cat",
+    "Ancient Egypt",
+    "Ancient Rome"
+   ],
+   [
+    "Cat",
+    "Middle Ages",
+    "Ancient Rome"
+   ],
+   [
+    "Cat",
+    "Tiger",
+    "Ancient Rome"
+   ],
+   [
+    "Cat",
+    "Antarctica",
+    "Ancient Rome"
+   ],
+   [
+    "Cat",
+    "Lion",
+    "Ancient Rome"
+   ]
+  ],
+  "descriptions": {
+   "Ancient Egypt": "Cradle of civilization in North Africa",
+   "Cat": "Small domesticated carnivorous mammal",
+   "Middle Ages": "European history from the 5th to 15th centuries",
+   "Roman Empire": "27 BC–476/1453 AD state and civilization",
+   "Sardinia": "Island in the Mediterranean and region of Italy",
+   "Tiger": "Species of large cat",
+   "Lion": "Large cat native to Africa and India",
+   "Ancient Rome": "Roman civilisation from the 8th century BC to the 5th century AD",
+   "Age of Discovery": "Period of European global exploration",
+   "Antarctica": "Earth's southernmost continent"
+  },
+  "asked": [
+   "Cat",
+   "Ancient Rome"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Golf",
+  "end": "Vikings",
+  "clicks": 2,
+  "routes": [
+   [
+    "Golf",
+    "Scotland",
+    "Vikings"
+   ]
+  ],
+  "descriptions": {
+   "Scotland": "Country within the United Kingdom",
+   "Vikings": "Norse seafarers, merchants and raiders",
+   "Golf": "Club-and-ball sport"
+  },
+  "asked": [
+   "Golf",
+   "Vikings"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Spider-Man",
+  "end": "Photosynthesis",
+  "clicks": 2,
+  "routes": [
+   [
+    "Spider-Man",
+    "Groot",
+    "Photosynthesis"
+   ],
+   [
+    "Spider-Man",
+    "Biology",
+    "Photosynthesis"
+   ]
+  ],
+  "descriptions": {
+   "Photosynthesis": "Biological process to convert light into chemical energy",
+   "Spider-Man": "Marvel Comics superhero",
+   "Groot": "Marvel Comics fictional character",
+   "Biology": "Scientific study of life"
+  },
+  "asked": [
+   "Spider-Man",
+   "Photosynthesis"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Hamburger",
+  "end": "Space Shuttle",
+  "clicks": 2,
+  "routes": [
+   [
+    "Hamburger",
+    "Canada",
+    "Space Shuttle"
+   ],
+   [
+    "Hamburger",
+    "Japan",
+    "Space Shuttle"
+   ],
+   [
+    "Hamburger",
+    "Jalapeño",
+    "Space Shuttle"
+   ]
+  ],
+  "descriptions": {
+   "Japan": "Country in East Asia",
+   "Space Shuttle": "Partially reusable launch system and space plane",
+   "Hamburger": "Ground beef patty",
+   "Jalapeño": "Hot pepper",
+   "Canada": "Country in North America"
+  },
+  "asked": [
+   "Hamburger",
+   "Space Shuttle"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Bitcoin",
+  "end": "Leonardo da Vinci",
+  "clicks": 3,
+  "routes": [
+   [
+    "Bitcoin",
+    "Donald Trump",
+    "Italy",
+    "Leonardo da Vinci"
+   ],
+   [
+    "Bitcoin",
+    "Tesla, Inc.",
+    "Elon Musk (Isaacson book)",
+    "Leonardo da Vinci"
+   ],
+   [
+    "Bitcoin",
+    "Elon Musk",
+    "Baptism",
+    "Leonardo da Vinci"
+   ],
+   [
+    "Bitcoin",
+    "2020 stock market crash",
+    "2020 in art",
+    "Leonardo da Vinci"
+   ],
+   [
+    "Bitcoin",
+    "Texas",
+    "Atheism",
+    "Leonardo da Vinci"
+   ],
+   [
+    "Bitcoin",
+    "Washington, D.C.",
+    "Allentown, Pennsylvania",
+    "Leonardo da Vinci"
+   ]
+  ],
+  "descriptions": {
+   "Baptism": "Christian rite of initiation into the Church",
+   "Italy": "Country in Southern and Western Europe",
+   "Leonardo da Vinci": "Italian polymath (1452–1519)",
+   "Texas": "U.S. state",
+   "Washington, D.C.": "Capital city of the United States",
+   "Allentown, Pennsylvania": "City in Pennsylvania, United States",
+   "Elon Musk": "Businessman and entrepreneur (born 1971)",
+   "Donald Trump": "President of the United States (2017–2021; since 2025)",
+   "Tesla, Inc.": "American electric vehicle and clean energy company",
+   "Atheism": "Absence of belief in the existence of deities; the opposite of theism",
+   "Bitcoin": "Decentralized digital cryptocurrency",
+   "2020 stock market crash": "Financial market reaction to the COVID-19 pandemic",
+   "Elon Musk (Isaacson book)": "2023 authorized biography by Walter Isaacson"
+  },
+  "asked": [
+   "Bitcoin",
+   "Leonardo da Vinci"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Taylor Swift",
+  "end": "Black hole",
+  "clicks": 2,
+  "routes": [
+   [
+    "Taylor Swift",
+    "Charles H. Townes",
+    "Black hole"
+   ]
+  ],
+  "descriptions": {
+   "Black hole": "Compact astronomical body",
+   "Charles H. Townes": "American physicist (1915–2015)",
+   "Taylor Swift": "American singer-songwriter (born 1989)"
+  },
+  "asked": [
+   "Taylor Swift",
+   "Black hole"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Minecraft",
+  "end": "Roman Empire",
+  "clicks": 2,
+  "routes": [
+   [
+    "Minecraft",
+    "Europe",
+    "Roman Empire"
+   ],
+   [
+    "Minecraft",
+    "British Museum",
+    "Roman Empire"
+   ],
+   [
+    "Minecraft",
+    "Age of Empires",
+    "Roman Empire"
+   ],
+   [
+    "Minecraft",
+    "Sword",
+    "Roman Empire"
+   ]
+  ],
+  "descriptions": {
+   "British Museum": "National museum in London, England",
+   "Europe": "Continent",
+   "Roman Empire": "27 BC–476/1453 AD state and civilization",
+   "Sword": "Long bladed weapon",
+   "Age of Empires": "Real-time strategy video game series",
+   "Minecraft": "Sandbox video game"
+  },
+  "asked": [
+   "Minecraft",
+   "Roman Empire"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Mount Everest",
+  "end": "Jazz",
+  "clicks": 2,
+  "routes": [
+   [
+    "Mount Everest",
+    "Russia",
+    "Jazz"
+   ],
+   [
+    "Mount Everest",
+    "India",
+    "Jazz"
+   ],
+   [
+    "Mount Everest",
+    "United States",
+    "Jazz"
+   ],
+   [
+    "Mount Everest",
+    "Brazil",
+    "Jazz"
+   ],
+   [
+    "Mount Everest",
+    "Sweden",
+    "Jazz"
+   ],
+   [
+    "Mount Everest",
+    "China",
+    "Jazz"
+   ]
+  ],
+  "descriptions": {
+   "Brazil": "Country in South America",
+   "China": "Country in East Asia",
+   "India": "Country in South Asia",
+   "Jazz": "Music genre",
+   "Russia": "Country in Eastern Europe and North Asia",
+   "Mount Everest": "Earth's highest mountain",
+   "United States": "Country primarily in North America",
+   "Sweden": "Country in Northern Europe"
+  },
+  "asked": [
+   "Mount Everest",
+   "Jazz"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Pokémon",
+  "end": "Charles Darwin",
+  "clicks": 3,
+  "routes": [
+   [
+    "Pokémon",
+    "List of organisms named after works of fiction",
+    "Andean condor",
+    "Charles Darwin"
+   ],
+   [
+    "Pokémon",
+    "Nintendo Switch",
+    "Brazil",
+    "Charles Darwin"
+   ],
+   [
+    "Pokémon",
+    "COVID-19 pandemic",
+    "2024 in science",
+    "Charles Darwin"
+   ],
+   [
+    "Pokémon",
+    "List of organisms named after works of fiction",
+    "Augustin Pyramus de Candolle",
+    "Charles Darwin"
+   ],
+   [
+    "Pokémon",
+    "List of organisms named after works of fiction",
+    "Bahia",
+    "Charles Darwin"
+   ],
+   [
+    "Pokémon",
+    "List of organisms named after works of fiction",
+    "Brazil",
+    "Charles Darwin"
+   ]
+  ],
+  "descriptions": {
+   "Brazil": "Country in South America",
+   "Pokémon": "Japanese media franchise",
+   "Bahia": "State of Brazil",
+   "Andean condor": "Species of bird",
+   "Augustin Pyramus de Candolle": "Swiss botanist (1778–1841)",
+   "Charles Darwin": "English naturalist and biologist (1809–1882)",
+   "Nintendo Switch": "Hybrid video game console",
+   "COVID-19 pandemic": "Pandemic caused by SARS-CoV-2"
+  },
+  "asked": [
+   "Pokémon",
+   "Charles Darwin"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Banana",
+  "end": "Albert Einstein",
+  "clicks": 2,
+  "routes": [
+   [
+    "Banana",
+    "The New York Times",
+    "Albert Einstein"
+   ],
+   [
+    "Banana",
+    "Cooperative",
+    "Albert Einstein"
+   ],
+   [
+    "Banana",
+    "Encyclopædia Britannica",
+    "Albert Einstein"
+   ],
+   [
+    "Banana",
+    "Oxford University Press",
+    "Albert Einstein"
+   ],
+   [
+    "Banana",
+    "Routledge",
+    "Albert Einstein"
+   ]
+  ],
+  "descriptions": {
+   "Albert Einstein": "German-born theoretical physicist (1879–1955)",
+   "Encyclopædia Britannica": "General-knowledge encyclopaedia",
+   "The New York Times": "American daily newspaper",
+   "Banana": "Tropical, edible, staple fruit",
+   "Oxford University Press": "Publishing arm of the University of Oxford",
+   "Cooperative": "Autonomous association of persons or organizations",
+   "Routledge": "English multinational academic publisher"
+  },
+  "asked": [
+   "Banana",
+   "Albert Einstein"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "William Shakespeare",
+  "end": "Internet",
+  "clicks": 2,
+  "routes": [
+   [
+    "William Shakespeare",
+    "Internet Archive",
+    "Internet"
+   ],
+   [
+    "William Shakespeare",
+    "Esperanto",
+    "Internet"
+   ],
+   [
+    "William Shakespeare",
+    "Futurism",
+    "Internet"
+   ],
+   [
+    "William Shakespeare",
+    "Project Gutenberg",
+    "Internet"
+   ]
+  ],
+  "descriptions": {
+   "Esperanto": "Constructed auxiliary language",
+   "Internet": "Global system of connected computer networks",
+   "Project Gutenberg": "Online digital book library",
+   "William Shakespeare": "English playwright and poet (1564–1616)",
+   "Internet Archive": "American non-profit digital archive",
+   "Futurism": "Artistic and social movement"
+  },
+  "asked": [
+   "William Shakespeare",
+   "Internet"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Sushi",
+  "end": "Association football",
+  "clicks": 2,
+  "routes": [
+   [
+    "Sushi",
+    "India",
+    "Association football"
+   ],
+   [
+    "Sushi",
+    "Vietnam",
+    "Association football"
+   ],
+   [
+    "Sushi",
+    "California",
+    "Association football"
+   ],
+   [
+    "Sushi",
+    "Bangladesh",
+    "Association football"
+   ],
+   [
+    "Sushi",
+    "Sri Lanka",
+    "Association football"
+   ],
+   [
+    "Sushi",
+    "Thailand",
+    "Association football"
+   ],
+   [
+    "Sushi",
+    "Catalonia",
+    "Association football"
+   ],
+   [
+    "Sushi",
+    "Malaysia",
+    "Association football"
+   ]
+  ],
+  "descriptions": {
+   "Bangladesh": "Country in South Asia",
+   "California": "U.S. state",
+   "Catalonia": "Nationality and autonomous community of Spain",
+   "Association football": "Team sport played with a ball",
+   "India": "Country in South Asia",
+   "Sri Lanka": "Country in South Asia",
+   "Sushi": "Japanese dish with vinegared rice",
+   "Thailand": "Country in Southeast Asia",
+   "Vietnam": "Country in Southeast Asia",
+   "Malaysia": "Country in Southeast Asia"
+  },
+  "asked": [
+   "Sushi",
+   "Association football"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Netflix",
+  "end": "Napoleon",
+  "clicks": 2,
+  "routes": [
+   [
+    "Netflix",
+    "Russia",
+    "Napoleon"
+   ],
+   [
+    "Netflix",
+    "Portugal",
+    "Napoleon"
+   ],
+   [
+    "Netflix",
+    "Poland",
+    "Napoleon"
+   ],
+   [
+    "Netflix",
+    "France",
+    "Napoleon"
+   ],
+   [
+    "Netflix",
+    "Steven Spielberg",
+    "Napoleon"
+   ],
+   [
+    "Netflix",
+    "Mexico",
+    "Napoleon"
+   ],
+   [
+    "Netflix",
+    "The New York Times",
+    "Napoleon"
+   ],
+   [
+    "Netflix",
+    "Spain",
+    "Napoleon"
+   ]
+  ],
+  "descriptions": {
+   "Poland": "Country in Central Europe",
+   "Portugal": "Country in Southwestern Europe",
+   "Russia": "Country in Eastern Europe and North Asia",
+   "Spain": "Country in Southern and Western Europe",
+   "Steven Spielberg": "American filmmaker (born 1946)",
+   "The New York Times": "American daily newspaper",
+   "Napoleon": "Emperor of the French (1804–1814; 1815)",
+   "Netflix": "American video streaming service",
+   "Mexico": "Country in North America",
+   "France": "Country primarily in Western Europe"
+  },
+  "asked": [
+   "Netflix",
+   "Napoleon"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Emoji",
+  "end": "Great Wall of China",
+  "clicks": 2,
+  "routes": [
+   [
+    "Emoji",
+    "List of Internet phenomena",
+    "Great Wall of China"
+   ]
+  ],
+  "descriptions": {
+   "Emoji": "Symbols for emotional cues in text",
+   "Great Wall of China": "Series of fortifications in northern China"
+  },
+  "asked": [
+   "Emoji",
+   "Great Wall of China"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Lego",
+  "end": "Moon",
+  "clicks": 2,
+  "routes": [
+   [
+    "Lego",
+    "Japan",
+    "Moon"
+   ],
+   [
+    "Lego",
+    "Gear",
+    "Moon"
+   ],
+   [
+    "Lego",
+    "Lego Space",
+    "Moon"
+   ]
+  ],
+  "descriptions": {
+   "Japan": "Country in East Asia",
+   "Lego": "Plastic construction toy",
+   "Moon": "Natural satellite orbiting Earth",
+   "Gear": "Rotating circular machine part with teeth that mesh with another toothed part",
+   "Lego Space": "Lego theme"
+  },
+  "asked": [
+   "Lego",
+   "Moon"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Coca-Cola",
+  "end": "Antarctica",
+  "clicks": 2,
+  "routes": [
+   [
+    "Coca-Cola",
+    "Russia",
+    "Antarctica"
+   ],
+   [
+    "Coca-Cola",
+    "COVID-19 pandemic",
+    "Antarctica"
+   ],
+   [
+    "Coca-Cola",
+    "Saudi Arabia",
+    "Antarctica"
+   ],
+   [
+    "Coca-Cola",
+    "Thailand",
+    "Antarctica"
+   ],
+   [
+    "Coca-Cola",
+    "Europe",
+    "Antarctica"
+   ],
+   [
+    "Coca-Cola",
+    "American imperialism",
+    "Antarctica"
+   ],
+   [
+    "Coca-Cola",
+    "Southern United States",
+    "Antarctica"
+   ],
+   [
+    "Coca-Cola",
+    "South America",
+    "Antarctica"
+   ]
+  ],
+  "descriptions": {
+   "Coca-Cola": "Cola soft drink",
+   "Europe": "Continent",
+   "Russia": "Country in Eastern Europe and North Asia",
+   "South America": "Continent",
+   "Thailand": "Country in Southeast Asia",
+   "Southern United States": "One of the four census regions of the US",
+   "American imperialism": "Expansion of American political, economic, and military influence",
+   "Saudi Arabia": "Country in West Asia",
+   "Antarctica": "Earth's southernmost continent",
+   "COVID-19 pandemic": "Pandemic caused by SARS-CoV-2"
+  },
+  "asked": [
+   "Coca-Cola",
+   "Antarctica"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Cheese",
+  "end": "World War II",
+  "clicks": 1,
+  "routes": [
+   [
+    "Cheese",
+    "World War II"
+   ]
+  ],
+  "descriptions": {
+   "World War II": "Global conflict from 1939 to 1945",
+   "Cheese": "Curdled milk food product"
+  },
+  "asked": [
+   "Cheese",
+   "World War II"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Penguin",
+  "end": "Isaac Newton",
+  "clicks": 2,
+  "routes": [
+   [
+    "Penguin",
+    "Dinosaur",
+    "Isaac Newton"
+   ],
+   [
+    "Penguin",
+    "Latitude",
+    "Isaac Newton"
+   ]
+  ],
+  "descriptions": {
+   "Dinosaur": "Diverse clade of specialized reptiles",
+   "Isaac Newton": "English polymath (1642–1727)",
+   "Latitude": "Geographic coordinate specifying north-south position",
+   "Penguin": "Family of aquatic flightless birds"
+  },
+  "asked": [
+   "Penguin",
+   "Isaac Newton"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Volleyball",
+  "end": "Ancient Greece",
+  "clicks": 2,
+  "routes": [
+   [
+    "Volleyball",
+    "India",
+    "Ancient Greece"
+   ],
+   [
+    "Volleyball",
+    "World War II",
+    "Ancient Greece"
+   ],
+   [
+    "Volleyball",
+    "Boxing",
+    "Ancient Greece"
+   ],
+   [
+    "Volleyball",
+    "Football",
+    "Ancient Greece"
+   ],
+   [
+    "Volleyball",
+    "International Olympic Committee",
+    "Ancient Greece"
+   ],
+   [
+    "Volleyball",
+    "Summer Olympic Games",
+    "Ancient Greece"
+   ],
+   [
+    "Volleyball",
+    "Field hockey",
+    "Ancient Greece"
+   ],
+   [
+    "Volleyball",
+    "Sport",
+    "Ancient Greece"
+   ]
+  ],
+  "descriptions": {
+   "Boxing": "Combat sport and martial art",
+   "Field hockey": "Team sport played with sticks and a ball",
+   "India": "Country in South Asia",
+   "International Olympic Committee": "Governing body of Olympic sports",
+   "Summer Olympic Games": "Major international multi-sport event",
+   "Volleyball": "Team sport",
+   "World War II": "Global conflict from 1939 to 1945",
+   "Ancient Greece": "Greek civilization from 1200 BC to 600 AD",
+   "Football": "Group of related team sports",
+   "Sport": "Forms of competitive activity, usually physical"
+  },
+  "asked": [
+   "Volleyball",
+   "Ancient Greece"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Fidget spinner",
+  "end": "Ottoman Empire",
+  "clicks": 3,
+  "routes": [
+   [
+    "Fidget spinner",
+    "United States",
+    "African diaspora",
+    "Ottoman Empire"
+   ],
+   [
+    "Fidget spinner",
+    "United States",
+    "Age of Enlightenment",
+    "Ottoman Empire"
+   ],
+   [
+    "Fidget spinner",
+    "United States",
+    "Allies of World War I",
+    "Ottoman Empire"
+   ],
+   [
+    "Fidget spinner",
+    "United States",
+    "American entry into World War I",
+    "Ottoman Empire"
+   ],
+   [
+    "Fidget spinner",
+    "United States",
+    "American imperialism",
+    "Ottoman Empire"
+   ],
+   [
+    "Fidget spinner",
+    "United States",
+    "Andrew Jackson",
+    "Ottoman Empire"
+   ]
+  ],
+  "descriptions": {
+   "Andrew Jackson": "President of the United States from 1829 to 1837",
+   "Ottoman Empire": "Former empire (c. 1299–1922)",
+   "Age of Enlightenment": "European cultural movement",
+   "African diaspora": "Spread of people with African heritage",
+   "American imperialism": "Expansion of American political, economic, and military influence",
+   "Allies of World War I": "Military coalition in World War I",
+   "United States": "Country primarily in North America",
+   "Fidget spinner": "Stress-relieving toy"
+  },
+  "asked": [
+   "Fidget spinner",
+   "Ottoman Empire"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Axolotl",
+  "end": "Stock exchange",
+  "clicks": 3,
+  "routes": [
+   [
+    "Axolotl",
+    "Minecraft",
+    "Nairobi",
+    "Stock exchange"
+   ],
+   [
+    "Axolotl",
+    "Mexico",
+    "Bolsa Institucional de Valores",
+    "Stock exchange"
+   ],
+   [
+    "Axolotl",
+    "Mexico City",
+    "Amsterdam",
+    "Stock exchange"
+   ],
+   [
+    "Axolotl",
+    "Alexander von Humboldt",
+    "Finance",
+    "Stock exchange"
+   ],
+   [
+    "Axolotl",
+    "Spanish Empire",
+    "Dutch Republic",
+    "Stock exchange"
+   ],
+   [
+    "Axolotl",
+    "Graffiti",
+    "Amsterdam",
+    "Stock exchange"
+   ]
+  ],
+  "descriptions": {
+   "Amsterdam": "Capital and largest city of the Netherlands",
+   "Finance": "Academic discipline studying businesses and investments",
+   "Graffiti": "Drawings and paintings on surfaces",
+   "Mexico City": "Capital and most populous city of Mexico",
+   "Nairobi": "Capital and largest city of Kenya",
+   "Stock exchange": "Organization that provides services for stock brokers and traders to trade securities",
+   "Dutch Republic": "Predecessor state of the Netherlands (1581–1795)",
+   "Alexander von Humboldt": "German polymath (1769–1859)",
+   "Axolotl": "Species of salamander",
+   "Spanish Empire": "Colonial empire between 1492 and 1976",
+   "Mexico": "Country in North America",
+   "Minecraft": "Sandbox video game",
+   "Bolsa Institucional de Valores": "Stock exchange in Mexico City, Mexico"
+  },
+  "asked": [
+   "Axolotl",
+   "Stock exchange"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Spork",
+  "end": "Pythagorean theorem",
+  "clicks": 3,
+  "routes": [
+   [
+    "Spork",
+    "Copper",
+    "Ancient Egypt",
+    "Pythagorean theorem"
+   ],
+   [
+    "Spork",
+    "Trademark",
+    "Ancient Egypt",
+    "Pythagorean theorem"
+   ],
+   [
+    "Spork",
+    "Titanium",
+    "India",
+    "Pythagorean theorem"
+   ],
+   [
+    "Spork",
+    "Silver",
+    "Ancient Egypt",
+    "Pythagorean theorem"
+   ],
+   [
+    "Spork",
+    "Portmanteau",
+    "Finnegans Wake",
+    "Pythagorean theorem"
+   ],
+   [
+    "Spork",
+    "Weapon",
+    "Spoke",
+    "Pythagorean theorem"
+   ]
+  ],
+  "descriptions": {
+   "Ancient Egypt": "Cradle of civilization in North Africa",
+   "India": "Country in South Asia",
+   "Silver": "Chemical element with atomic number 47 (Ag)",
+   "Titanium": "Chemical element with atomic number 22 (Ti)",
+   "Weapon": "Implement or device used to inflict damage, harm, or kill",
+   "Finnegans Wake": "1939 novel by James Joyce",
+   "Copper": "Chemical element with atomic number 29 (Cu)",
+   "Spoke": "Part of a wheel extending radially from the hub to the rim",
+   "Spork": "Item of cutlery combining a spoon and fork",
+   "Portmanteau": "Word consisting of two words",
+   "Trademark": "Trade identifier of products or services",
+   "Pythagorean theorem": "Relation between sides of a right triangle"
+  },
+  "asked": [
+   "Spork",
+   "Pythagorean theorem"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Lighthouse",
+  "end": "K-pop",
+  "clicks": 3,
+  "routes": [
+   [
+    "Lighthouse",
+    "Russia",
+    "Jazz",
+    "K-pop"
+   ],
+   [
+    "Lighthouse",
+    "India",
+    "East Asia",
+    "K-pop"
+   ],
+   [
+    "Lighthouse",
+    "United Kingdom",
+    "Coldplay",
+    "K-pop"
+   ],
+   [
+    "Lighthouse",
+    "Roman Empire",
+    "American imperialism",
+    "K-pop"
+   ],
+   [
+    "Lighthouse",
+    "Scotland",
+    "List of Celtic festivals",
+    "K-pop"
+   ],
+   [
+    "Lighthouse",
+    "New Jersey",
+    "Hangul",
+    "K-pop"
+   ]
+  ],
+  "descriptions": {
+   "India": "Country in South Asia",
+   "Jazz": "Music genre",
+   "Lighthouse": "Structure designed to emit light to aid navigation",
+   "New Jersey": "U.S. state",
+   "Russia": "Country in Eastern Europe and North Asia",
+   "Roman Empire": "27 BC–476/1453 AD state and civilization",
+   "Scotland": "Country within the United Kingdom",
+   "United Kingdom": "Country in Northwestern Europe",
+   "Coldplay": "British rock band",
+   "American imperialism": "Expansion of American political, economic, and military influence",
+   "K-pop": "South Korean popular music genre",
+   "East Asia": "Subregion of the Asian continent",
+   "Hangul": "Native alphabet of the Korean language"
+  },
+  "asked": [
+   "Lighthouse",
+   "K-pop"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Bubble wrap",
+  "end": "Mongolia",
+  "clicks": 2,
+  "routes": [
+   [
+    "Bubble wrap",
+    "List of generic and genericized trademarks",
+    "Mongolia"
+   ],
+   [
+    "Bubble wrap",
+    "Waste management",
+    "Mongolia"
+   ]
+  ],
+  "descriptions": {
+   "Mongolia": "Country in East Asia",
+   "Waste management": "Activities and actions required to manage waste from its source to its final disposal",
+   "Bubble wrap": "Packing material"
+  },
+  "asked": [
+   "Bubble wrap",
+   "Mongolia"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Toaster",
+  "end": "Genghis Khan",
+  "clicks": 3,
+  "routes": [
+   [
+    "Toaster",
+    "Scotland",
+    "Catholic Church in Scotland",
+    "Genghis Khan"
+   ],
+   [
+    "Toaster",
+    "Water",
+    "Amu Darya",
+    "Genghis Khan"
+   ],
+   [
+    "Toaster",
+    "Georgia Tech",
+    "China",
+    "Genghis Khan"
+   ],
+   [
+    "Toaster",
+    "Milk",
+    "Animal welfare",
+    "Genghis Khan"
+   ],
+   [
+    "Toaster",
+    "Internet",
+    "Censorship in China",
+    "Genghis Khan"
+   ],
+   [
+    "Toaster",
+    "Air conditioning",
+    "China",
+    "Genghis Khan"
+   ]
+  ],
+  "descriptions": {
+   "Amu Darya": "River in Central Asia",
+   "China": "Country in East Asia",
+   "Internet": "Global system of connected computer networks",
+   "Milk": "Nutrient-rich liquid produced by mammals",
+   "Scotland": "Country within the United Kingdom",
+   "Water": "Chemical compound of hydrogen and oxygen",
+   "Animal welfare": "Well-being of non-human animals",
+   "Toaster": "Domestic appliance used for toasting foods, especially bread",
+   "Air conditioning": "Cooling of air in an enclosed space",
+   "Genghis Khan": "Khan of the Mongol Empire from 1206 to 1227",
+   "Georgia Tech": "Public university in Atlanta, Georgia, US"
+  },
+  "asked": [
+   "Toaster",
+   "Genghis Khan"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Platypus",
+  "end": "Morse code",
+  "clicks": 2,
+  "routes": [
+   [
+    "Platypus",
+    "Wikidata",
+    "Morse code"
+   ]
+  ],
+  "descriptions": {
+   "Morse code": "Transmission of language with brief pulses",
+   "Platypus": "Species of mammal",
+   "Wikidata": "Collaborative multilingual knowledge graph"
+  },
+  "asked": [
+   "Platypus",
+   "Morse code"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Kazoo",
+  "end": "Antarctica",
+  "clicks": 3,
+  "routes": [
+   [
+    "Kazoo",
+    "Buffalo, New York",
+    "Demonym",
+    "Antarctica"
+   ],
+   [
+    "Kazoo",
+    "Sgt. Pepper's Lonely Hearts Club Band",
+    "Bible Belt",
+    "Antarctica"
+   ],
+   [
+    "Kazoo",
+    "Carnival",
+    "Age of Discovery",
+    "Antarctica"
+   ],
+   [
+    "Kazoo",
+    "The Beatles",
+    "Bible Belt",
+    "Antarctica"
+   ],
+   [
+    "Kazoo",
+    "Frank Zappa",
+    "Mojave Desert",
+    "Antarctica"
+   ],
+   [
+    "Kazoo",
+    "Leonard Bernstein",
+    "Nicolai Ghiaurov",
+    "Antarctica"
+   ]
+  ],
+  "descriptions": {
+   "Buffalo, New York": "City in New York, United States",
+   "Frank Zappa": "American musician (1940–1993)",
+   "The Beatles": "English rock band (1960–1970)",
+   "Carnival": "Christian festival before Lent",
+   "Leonard Bernstein": "American conductor and composer (1918–1990)",
+   "Sgt. Pepper's Lonely Hearts Club Band": "1967 studio album by the Beatles",
+   "Kazoo": "Toy musical instrument",
+   "Mojave Desert": "Desert in the southwestern United States",
+   "Bible Belt": "Cultural region of the United States",
+   "Demonym": "Name for a resident of a particular geographical area",
+   "Age of Discovery": "Period of European global exploration",
+   "Nicolai Ghiaurov": "Bulgarian opera singer (1929–2004)",
+   "Antarctica": "Earth's southernmost continent"
+  },
+  "asked": [
+   "Kazoo",
+   "Antarctica"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Pickleball",
+  "end": "Byzantine Empire",
+  "clicks": 3,
+  "routes": [
+   [
+    "Pickleball",
+    "LeBron James",
+    "Christianity",
+    "Byzantine Empire"
+   ],
+   [
+    "Pickleball",
+    "Novak Djokovic",
+    "Athens",
+    "Byzantine Empire"
+   ],
+   [
+    "Pickleball",
+    "COVID-19 pandemic",
+    "Ancient history",
+    "Byzantine Empire"
+   ],
+   [
+    "Pickleball",
+    "Novak Djokovic",
+    "Balkans",
+    "Byzantine Empire"
+   ],
+   [
+    "Pickleball",
+    "Novak Djokovic",
+    "Belgrade",
+    "Byzantine Empire"
+   ],
+   [
+    "Pickleball",
+    "Novak Djokovic",
+    "Bosnia and Herzegovina",
+    "Byzantine Empire"
+   ]
+  ],
+  "descriptions": {
+   "Athens": "Capital and largest city of Greece",
+   "Bosnia and Herzegovina": "Country in Southeastern Europe",
+   "Balkans": "Region of southeastern Europe",
+   "Christianity": "Abrahamic monotheistic religion",
+   "Ancient history": "Period between prehistory and the medieval era",
+   "Belgrade": "Capital and largest city of Serbia",
+   "LeBron James": "American basketball player (born 1984)",
+   "Pickleball": "Racket sport",
+   "Novak Djokovic": "Serbian tennis player (born 1987)",
+   "Byzantine Empire": "Continuation of the Roman Empire (330–1453)",
+   "COVID-19 pandemic": "Pandemic caused by SARS-CoV-2"
+  },
+  "asked": [
+   "Pickleball",
+   "Byzantine Empire"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Saxophone",
+  "end": "Mitochondria",
+  "clicks": 3,
+  "routes": [
+   [
+    "Saxophone",
+    "Anton Webern",
+    "History of evolutionary thought",
+    "Mitochondria"
+   ],
+   [
+    "Saxophone",
+    "University of Michigan",
+    "Genetic code",
+    "Mitochondria"
+   ],
+   [
+    "Saxophone",
+    "Chicago (band)",
+    "Alzheimer's disease",
+    "Mitochondria"
+   ],
+   [
+    "Saxophone",
+    "Sergei Rachmaninoff",
+    "Romanticism in evolution theory",
+    "Mitochondria"
+   ],
+   [
+    "Saxophone",
+    "Ralph Vaughan Williams",
+    "Charles Darwin",
+    "Mitochondria"
+   ],
+   [
+    "Saxophone",
+    "Maurice Ravel",
+    "Alzheimer's disease",
+    "Mitochondria"
+   ]
+  ],
+  "descriptions": {
+   "Genetic code": "Rules by which information encoded within genetic material is translated into proteins",
+   "Mitochondria": "Organelle in eukaryotic cells responsible for respiration",
+   "Saxophone": "Single-reed woodwind instrument",
+   "University of Michigan": "Public university in Ann Arbor, Michigan, U.S.",
+   "Maurice Ravel": "French composer (1875–1937)",
+   "Anton Webern": "Austrian composer and conductor (1883–1945)",
+   "Ralph Vaughan Williams": "English composer (1872–1958)",
+   "Sergei Rachmaninoff": "Russian composer and pianist (1873–1943)",
+   "Chicago (band)": "American rock band",
+   "Charles Darwin": "English naturalist and biologist (1809–1882)",
+   "Alzheimer's disease": "Progressive neurodegenerative disease",
+   "Romanticism in evolution theory": "Romantic influence on evolution theory"
+  },
+  "asked": [
+   "Saxophone",
+   "Mitochondrion"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Sudoku",
+  "end": "Great Barrier Reef",
+  "clicks": 3,
+  "routes": [
+   [
+    "Sudoku",
+    "COVID-19 pandemic",
+    "2020 in science",
+    "Great Barrier Reef"
+   ],
+   [
+    "Sudoku",
+    "Apple Inc.",
+    "Americas",
+    "Great Barrier Reef"
+   ],
+   [
+    "Sudoku",
+    "The New York Times",
+    "Andes",
+    "Great Barrier Reef"
+   ],
+   [
+    "Sudoku",
+    "BBC",
+    "Australia",
+    "Great Barrier Reef"
+   ],
+   [
+    "Sudoku",
+    "World War I",
+    "Anatolia",
+    "Great Barrier Reef"
+   ],
+   [
+    "Sudoku",
+    "The Wall Street Journal",
+    "Africa",
+    "Great Barrier Reef"
+   ]
+  ],
+  "descriptions": {
+   "Anatolia": "Peninsula of Turkey in Western Asia",
+   "Apple Inc.": "American multinational technology company",
+   "Andes": "Mountain range in South America",
+   "Americas": "Landmass comprising North and South America",
+   "The New York Times": "American daily newspaper",
+   "Great Barrier Reef": "Coral reef system in Queensland, Australia",
+   "The Wall Street Journal": "American business-focused daily newspaper",
+   "Sudoku": "Logic-based number-placement puzzle",
+   "Australia": "Country in Oceania",
+   "World War I": "Global conflict from 1914 to 1918",
+   "Africa": "Continent",
+   "BBC": "British public service broadcaster",
+   "COVID-19 pandemic": "Pandemic caused by SARS-CoV-2"
+  },
+  "asked": [
+   "Sudoku",
+   "Great Barrier Reef"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Origami",
+  "end": "Quantum mechanics",
+  "clicks": 2,
+  "routes": [
+   [
+    "Origami",
+    "Mathematics",
+    "Quantum mechanics"
+   ],
+   [
+    "Origami",
+    "Salvador Dalí",
+    "Quantum mechanics"
+   ],
+   [
+    "Origami",
+    "Jean Metzinger",
+    "Quantum mechanics"
+   ],
+   [
+    "Origami",
+    "Projective geometry",
+    "Quantum mechanics"
+   ],
+   [
+    "Origami",
+    "Kinetic energy",
+    "Quantum mechanics"
+   ],
+   [
+    "Origami",
+    "George David Birkhoff",
+    "Quantum mechanics"
+   ],
+   [
+    "Origami",
+    "Lumen Naturae",
+    "Quantum mechanics"
+   ]
+  ],
+  "descriptions": {
+   "Kinetic energy": "Energy of a moving physical body",
+   "Mathematics": "Field of knowledge",
+   "Quantum mechanics": "Description of physical properties at the atomic and subatomic scale",
+   "Salvador Dalí": "Spanish surrealist artist (1904–1989)",
+   "Origami": "Japanese art of paper folding",
+   "Projective geometry": "Type of geometry",
+   "Jean Metzinger": "French painter and writer (1883–1956)",
+   "George David Birkhoff": "American mathematician (1884–1944)",
+   "Lumen Naturae": "2020 book by Matilde Marcolli"
+  },
+  "asked": [
+   "Origami",
+   "Quantum mechanics"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Yo-yo",
+  "end": "Tsar Bomba",
+  "clicks": 3,
+  "routes": [
+   [
+    "Yo-yo",
+    "World War II",
+    "Nuclear weapon",
+    "Tsar Bomba"
+   ],
+   [
+    "Yo-yo",
+    "Friction",
+    "Explosion",
+    "Tsar Bomba"
+   ],
+   [
+    "Yo-yo",
+    "Octopussy",
+    "Nuclear weapon",
+    "Tsar Bomba"
+   ],
+   [
+    "Yo-yo",
+    "Polycarbonate",
+    "Joule",
+    "Tsar Bomba"
+   ]
+  ],
+  "descriptions": {
+   "Friction": "Force resisting sliding motion",
+   "Joule": "SI unit of energy",
+   "World War II": "Global conflict from 1939 to 1945",
+   "Tsar Bomba": "Most powerful nuclear weapon ever tested",
+   "Yo-yo": "Toy",
+   "Polycarbonate": "Family of polymers",
+   "Octopussy": "1983 James Bond film by John Glen",
+   "Explosion": "Rapid, energetic expansion of matter"
+  },
+  "asked": [
+   "Yo-yo",
+   "Tsar Bomba"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Rubber duck",
+  "end": "French Revolution",
+  "clicks": 2,
+  "routes": [
+   [
+    "Rubber duck",
+    "Patent",
+    "French Revolution"
+   ]
+  ],
+  "descriptions": {
+   "French Revolution": "1789–1799 sociopolitical change in France",
+   "Patent": "Type of legal protection for an invention",
+   "Rubber duck": "Stylized, floating duck-shaped toy"
+  },
+  "asked": [
+   "Rubber duck",
+   "French Revolution"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Tardigrade",
+  "end": "Eurovision Song Contest",
+  "clicks": 3,
+  "routes": [
+   [
+    "Tardigrade",
+    "International Space Station",
+    "Belarus",
+    "Eurovision Song Contest"
+   ],
+   [
+    "Tardigrade",
+    "Cold War",
+    "BBC",
+    "Eurovision Song Contest"
+   ],
+   [
+    "Tardigrade",
+    "Star Trek: Discovery",
+    "Radio Times",
+    "Eurovision Song Contest"
+   ],
+   [
+    "Tardigrade",
+    "The Guardian",
+    "BBC",
+    "Eurovision Song Contest"
+   ],
+   [
+    "Tardigrade",
+    "International Space Station",
+    "Denmark",
+    "Eurovision Song Contest"
+   ],
+   [
+    "Tardigrade",
+    "International Space Station",
+    "French language",
+    "Eurovision Song Contest"
+   ]
+  ],
+  "descriptions": {
+   "Belarus": "Country in Eastern Europe",
+   "Eurovision Song Contest": "Annual international song competition",
+   "French language": "Romance language",
+   "International Space Station": "Modular space station in low Earth orbit",
+   "Denmark": "Country in Northern Europe",
+   "Cold War": "1947–1991 geopolitical rivalry between US and USSR",
+   "Radio Times": "British weekly listings magazine",
+   "The Guardian": "British national daily newspaper",
+   "BBC": "British public service broadcaster",
+   "Tardigrade": "Phylum of microscopic animals",
+   "Star Trek: Discovery": "American science fiction television series"
+  },
+  "asked": [
+   "Tardigrade",
+   "Eurovision Song Contest"
+  ],
+  "checked": "2026-10-21"
+ },
+ {
+  "start": "Bagpipes",
+  "end": "Photosynthesis",
+  "clicks": 2,
+  "routes": [
+   [
+    "Bagpipes",
+    "Bamboo",
+    "Photosynthesis"
+   ]
+  ],
+  "descriptions": {
+   "Bagpipes": "Woodwind instrument",
+   "Photosynthesis": "Biological process to convert light into chemical energy",
+   "Bamboo": "Subfamily of plants in the grass family"
+  },
+  "asked": [
+   "Bagpipes",
+   "Photosynthesis"
+  ],
+  "checked": "2026-10-21"
+ }
+]

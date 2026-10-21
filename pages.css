@@ -81,3 +81,17 @@ details p { margin: 8px 0 0; }
   th, td { padding: 8px 6px; }
   .top .play { padding: 8px 12px; font-size: 14px; }
 }
+
+/* Route pages: the route as a row of linked steps. */
+.chain { list-style: none; padding: 0; margin: 4px 0 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; }
+.chain li { display: flex; align-items: center; max-width: none; margin: 0; }
+.chain li + li::before { content: "→"; color: var(--accent); font-weight: 800; padding: 0 10px; }
+.chain a { display: inline-block; padding: 8px 12px; border: 2px solid var(--ink); background: var(--surface); color: var(--text); font-weight: 800; text-decoration: none; overflow-wrap: anywhere; }
+.chain .end a { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
+.chain a:hover { text-decoration: underline; }
+.route-steps li { margin-bottom: 6px; }
+.alt-routes { padding-left: 20px; }
+.alt-routes li { margin-bottom: 6px; font-weight: 600; }
+.alt-routes .arrow { color: var(--accent); padding: 0 4px; }
+.small { font-size: 14px; }
+
