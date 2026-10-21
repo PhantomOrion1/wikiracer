@@ -20,7 +20,7 @@ const wikiUrl = (t) => 'https://en.wikipedia.org/wiki/' + encodeURIComponent(t.r
 const playUrl = (s, e, d) => `/?${new URLSearchParams({ s, e, ...(d ? { d } : {}) })}`;
 
 const FOOT_LINKS = [
-  ['/', 'Play'], ['/how-to-play/', 'How to play'], ['/multiplayer/', 'Play with friends'], ['/wiki-race-ideas/', 'Race ideas'],
+  ['/', 'Play'], ['/how-to-play/', 'How to play'], ['/multiplayer/', 'Play with friends'], ['/wiki-race-ideas/', 'Race ideas'], ['/party-modes/', 'Party modes'],
   ['/wikipedia-speedrun/', 'Wikipedia speedrun'], ['/faq/', 'FAQ'], ['/privacy/', 'Privacy & terms'],
 ];
 
@@ -342,6 +342,75 @@ add({
     <p class="lead">This page doesn't exist. Even the best racers hit a dead link sometimes.</p>
     <div class="cta"><a class="play" href="/">Back to the race</a><a class="play ghost" href="/how-to-play/">How to play</a></div>`,
 });
+
+// ---------- party modes ----------
+const PARTY_PAGES = [
+  {
+    slug: 'wiki-bingo', name: 'Wiki Bingo',
+    title: `Wiki Bingo: Wikipedia Bingo Game With Friends | ${NAME}`,
+    description: 'Play Wiki Bingo online: everyone gets the same 3×3 card of Wikipedia articles. Visit pages by clicking links to mark them off. First full line wins. Free, no sign-up.',
+    lead: 'Wiki Bingo is a Wikipedia race with a twist: instead of one target, everyone gets the same 3×3 bingo card of articles. Click through Wikipedia to visit them, and the first player to complete a full line wins.',
+    how: ['Make a private room and share the code with friends.', 'Press <b>🎉 Party</b> and pick <b>Wiki Bingo</b>.', 'Everyone starts on the same article with the same 3×3 card.', 'Tap a square to make it your target and read what it is. Change it whenever you like.', 'Visiting a page on the card marks it off. Complete any row, column or diagonal to win.'],
+    rules: ['Clicks don’t matter, only speed: the first full line wins.', 'Every route is checked against Wikipedia, so you have to really visit the squares.', 'You have 10 minutes.'],
+    tips: ['Look for a line where the topics share a hub page, like a country or a decade.', 'Big general articles (countries, centuries, sciences) link to almost everything.', 'Switch targets when you spot a shortcut to a different square.'],
+  },
+  {
+    slug: 'wikipedia-fog-of-war', name: 'Fog of War',
+    title: `Wikipedia Fog of War: Race With Only the Intro Visible | ${NAME}`,
+    description: 'Fog of War is a harder Wikipedia race: you only see the intro of each article, so you have to guess where links lead. Play with friends online, free.',
+    lead: 'In Fog of War you race through Wikipedia, but only the intro of each article is visible. The rest of the page is hidden, so you have to guess which links will get you closer to the target.',
+    how: ['Make a private room and invite friends.', 'Press <b>🎉 Party</b> and pick <b>Fog of War</b>.', 'Everyone races from the same start to the same target.', 'Each article shows only its intro, so choose your links carefully.'],
+    rules: ['Fewest clicks wins; ties go to the fastest time.', 'You can still use the Back button (it counts as a click).', 'You have 10 minutes, and the pairs are a bit easier to make up for the fog.'],
+    tips: ['Intros usually link to the broadest related topics, which make great stepping stones.', 'If a page is a dead end, go back early rather than wandering.', 'Read the target’s description on the side panel to guess which subject it belongs to.'],
+  },
+  {
+    slug: 'wikipedia-speed-race', name: 'Speed Race',
+    title: `Wikipedia Speed Race: Fastest to the Target Wins | ${NAME}`,
+    description: 'A Wikipedia speed race where clicks don’t matter, only time. Race friends from one article to another; the fastest to reach the target wins.',
+    lead: 'Speed Race is a pure race against the clock. Clicks don’t count at all: whoever reaches the target article first wins, however many pages it took.',
+    how: ['Make a private room and share the code.', 'Press <b>🎉 Party</b> and pick <b>Speed Race</b>.', 'Everyone starts on the same article with the same target.', 'Click links as fast as you can. First to the target wins.'],
+    rules: ['Only time counts; extra clicks and Back presses cost nothing but seconds.', 'Every finishing route is checked against Wikipedia.', 'You have 5 minutes.'],
+    tips: ['Don’t read, skim: headings and the contents list are your friends.', 'Jump to a big hub article fast, then narrow down.', 'Going back is free in Speed Race, so don’t be afraid to try a link.'],
+  },
+  {
+    slug: 'wikipedia-battle-royale', name: 'Battle Royale',
+    title: `Wikipedia Battle Royale: Last Place Is Knocked Out | ${NAME}`,
+    description: 'Wikipedia Battle Royale for 3 to 8 players: race round after round and the last-placed player is knocked out each time, until one champion is left.',
+    lead: 'Battle Royale turns a Wikipedia race into a knockout tournament. Everyone races, the last-placed player is knocked out, and you keep going round after round until only one champion is left.',
+    how: ['Make a private room with at least 3 players.', 'Press <b>🎉 Party</b> and pick <b>Battle Royale</b>.', 'Race as normal. When the round ends, last place is knocked out.', 'Knocked-out players can spectate the rest live.', 'Keep starting rounds until one player is left: they win.'],
+    rules: ['Needs 3 to 8 players.', 'Ranking is fewest clicks, then fastest time. Giving up or running out of time puts you at the bottom.', 'Each round has 5 minutes.'],
+    tips: ['Playing safe beats taking risks early: you only need to avoid last place.', 'In the final rounds every click matters, so slow down and plan.', 'Watching others while knocked out is a great way to learn shortcuts.'],
+  },
+];
+const list = (items, tag = 'ul') => `<${tag}>${items.map((x) => `<li>${x}</li>`).join('')}</${tag}>`;
+add({
+  url: '/party-modes/',
+  title: `Wikipedia Party Games: Wiki Bingo, Fog of War & More | ${NAME}`,
+  description: 'Four party modes for Wikipedia races with friends: Wiki Bingo, Fog of War, Speed Race and Battle Royale. Free, in your browser, up to 8 players.',
+  h1: 'Party modes',
+  body: `
+    <p class="lead">Private rooms have four party modes that change how a Wikipedia race works. Make a room, press <b>🎉 Party</b>, and the host picks one. Everyone in the room can see the choice.</p>
+    <ul class="pairs">${PARTY_PAGES.map((m) => `<li><span class="route">${esc(m.name)}</span><a class="go" href="/${m.slug}/">How it works</a></li>`).join('')}</ul>
+    <div class="cta"><a class="play" href="/">Make a room</a><a class="play ghost" href="/multiplayer/">Play with friends</a></div>`,
+});
+for (const m of PARTY_PAGES) {
+  add({
+    url: `/${m.slug}/`, title: m.title, description: m.description, h1: m.name, crumbs: [['/party-modes/', 'Party modes']],
+    jsonld: [{ '@context': 'https://schema.org', '@type': 'HowTo', name: `How to play ${m.name}`, step: m.how.map((t, i) => ({ '@type': 'HowToStep', position: i + 1, text: t.replace(/<[^>]+>/g, '') })) }],
+    body: `
+    <p class="lead">${m.lead}</p>
+    <div class="cta"><a class="play" href="/">Play ${esc(m.name)}</a></div>
+    <h2>How to play</h2>
+    ${list(m.how, 'ol')}
+    <h2>Rules</h2>
+    ${list(m.rules)}
+    <h2>Tips</h2>
+    ${list(m.tips)}
+    <h2>Other party modes</h2>
+    <ul class="pairs">${PARTY_PAGES.filter((x) => x !== m).map((x) => `<li><span class="route">${esc(x.name)}</span><a class="go" href="/${x.slug}/">How it works</a></li>`).join('')}</ul>
+    <div class="cta"><a class="play" href="/">Make a room</a><a class="play ghost" href="/how-to-play/">How to play</a></div>`,
+  });
+}
 
 // ---------- route pages (search landing pages, not linked from the site's menus) ----------
 // One page per pair in tools/routes.json (made by tools/find-routes.js from live Wikipedia).
