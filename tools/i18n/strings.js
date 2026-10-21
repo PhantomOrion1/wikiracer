@@ -296,6 +296,28 @@ module.exports.exact = [
   ["Route doesn't begin at the start article", 'La ruta no empieza en el artículo de inicio', 'A rota não começa no artigo inicial', 'Route beginnt nicht beim Startartikel', 'L’itinéraire ne part pas de l’article de départ'],
   ["Route doesn't reach the target", 'La ruta no llega al objetivo', 'A rota não chega ao destino', 'Route erreicht das Ziel nicht', 'L’itinéraire n’atteint pas la cible'],
 
+  // ---- party modes ----
+  ['🎉 Party', '🎉 Fiesta', '🎉 Festa', '🎉 Party', '🎉 Fête'],
+  ['Party mode', 'Modo fiesta', 'Modo festa', 'Party-Modus', 'Mode fête'],
+  ['Speed Race', 'Carrera de velocidad', 'Corrida de velocidade', 'Tempo-Rennen', 'Course de vitesse'],
+  ['Fog of War', 'Niebla de guerra', 'Névoa de guerra', 'Nebel des Krieges', 'Brouillard de guerre'],
+  ['Wiki Bingo', 'Wiki Bingo', 'Wiki Bingo', 'Wiki-Bingo', 'Wiki Bingo'],
+  ['Battle Royale', 'Battle Royale', 'Battle Royale', 'Battle Royale', 'Battle Royale'],
+  ["Clicks don't matter, only speed.", 'Los clics no importan, solo la velocidad.', 'Cliques não importam, só a velocidade.', 'Klicks zählen nicht, nur das Tempo.', 'Les clics ne comptent pas, seule la vitesse.'],
+  ['Only the first paragraph of each article is visible.', 'Solo se ve el primer párrafo de cada artículo.', 'Só o primeiro parágrafo de cada artigo aparece.', 'Von jedem Artikel ist nur der erste Absatz sichtbar.', 'Seul le premier paragraphe de chaque article est visible.'],
+  ['Same 3×3 card for everyone. First full line wins.', 'El mismo cartón de 3×3 para todos. Gana la primera línea completa.', 'A mesma cartela 3×3 para todos. Vence a primeira linha completa.', 'Dieselbe 3×3-Karte für alle. Die erste volle Reihe gewinnt.', 'La même grille 3×3 pour tous. La première ligne complète gagne.'],
+  ['Last place is knocked out every round. 3+ players.', 'El último queda eliminado cada ronda. 3+ jugadores.', 'O último é eliminado a cada rodada. 3+ jogadores.', 'Der Letzte fliegt jede Runde raus. Ab 3 Spielern.', 'Le dernier est éliminé à chaque manche. 3 joueurs min.'],
+  ['The host is picking a mode.', 'El anfitrión está eligiendo un modo.', 'O anfitrião está escolhendo um modo.', 'Der Host wählt einen Modus.', 'L’hôte choisit un mode.'],
+  ['Battle Royale needs at least 3 players', 'Battle Royale necesita al menos 3 jugadores', 'Battle Royale precisa de pelo menos 3 jogadores', 'Battle Royale braucht mindestens 3 Spieler', 'Battle Royale demande au moins 3 joueurs'],
+  ['Bingo card', 'Cartón de bingo', 'Cartela de bingo', 'Bingo-Karte', 'Grille de bingo'],
+  ['bingo card', 'cartón de bingo', 'cartela de bingo', 'Bingo-Karte', 'grille de bingo'],
+  ['Tap a square to make it your target. A full line wins.', 'Toca una casilla para que sea tu objetivo. Gana una línea completa.', 'Toque num quadrado para torná-lo seu destino. Uma linha completa vence.', 'Tippe ein Feld an, um es zu deinem Ziel zu machen. Eine volle Reihe gewinnt.', 'Touche une case pour en faire ta cible. Une ligne complète gagne.'],
+  ['Card', 'Cartón', 'Cartela', 'Karte', 'Grille'],
+  ['🌫 Fog of War: only the first paragraph is visible.', '🌫 Niebla de guerra: solo se ve el primer párrafo.', '🌫 Névoa de guerra: só o primeiro parágrafo aparece.', '🌫 Nebel des Krieges: nur der erste Absatz ist sichtbar.', '🌫 Brouillard de guerre : seul le premier paragraphe est visible.'],
+  ['🎉 Bingo!', '🎉 ¡Bingo!', '🎉 Bingo!', '🎉 Bingo!', `🎉 Bingo${N}!`],
+  ['💥 knocked out', '💥 eliminado', '💥 eliminado', '💥 raus', '💥 éliminé'],
+  ["💥 You're knocked out of this Battle Royale. Spectate the others or play Lane Rush.", '💥 Quedaste eliminado de este Battle Royale. Mira a los demás o juega a Lane Rush.', '💥 Você foi eliminado deste Battle Royale. Assista os outros ou jogue Lane Rush.', '💥 Du bist aus diesem Battle Royale raus. Schau den anderen zu oder spiel Lane Rush.', '💥 Tu es éliminé de ce Battle Royale. Regarde les autres ou joue à Lane Rush.'],
+
   // ---- challenge links ----
   ['Accept challenge', 'Aceptar reto', 'Aceitar desafio', 'Herausforderung annehmen', 'Relever le défi'],
   ['Ready to race?', '¿Listo para correr?', 'Pronto para correr?', 'Bereit fürs Rennen?', `Prêt à courir${N}?`],
@@ -348,7 +370,7 @@ module.exports.patterns = [
   ['^Daily #(\\d+) · (.+)$', 'Reto diario #$1 · $2', 'Desafio diário #$1 · $2', 'Tagesrennen #$1 · $2', 'Défi du jour #$1 · $2'],
   ['^📅 Daily #(\\d+) · ([\\d:]+) on the clock$', '📅 Reto diario #$1 · $2 en el reloj', '📅 Desafio diário #$1 · $2 no relógio', '📅 Tagesrennen #$1 · $2 auf der Uhr', '📅 Défi du jour #$1 · $2 au chrono'],
   ['^(.+) · ([\\d:]+) on the clock$', '{1} · $2 en el reloj', '{1} · $2 no relógio', '{1} · $2 auf der Uhr', '{1} · $2 au chrono'],
-  ['^(Easy|Medium|Hard|Random|Custom|Picked|Challenge) · (.+)$', '{1} · $2', '{1} · $2', '{1} · $2', '{1} · $2'],
+  ['^(Easy|Medium|Hard|Random|Custom|Picked|Challenge|Speed Race|Fog of War|Wiki Bingo|Battle Royale) · (.+)$', '{1} · $2', '{1} · $2', '{1} · $2', '{1} · $2'],
   ["^(.+)'s challenge$", 'Reto de $1', 'Desafio de $1', 'Herausforderung von $1', 'Défi de $1'],
   ['^(.+) challenged you$', '$1 te ha retado', '$1 desafiou você', '$1 fordert dich heraus', '$1 te défie'],
   ['^(.+) took (\\d+ clicks?) in ([\\d:]+)\\.$', '$1 hizo {2} en $3.', '$1 fez {2} em $3.', '$1 brauchte {2} in $3.', '$1 a fait {2} en $3.'],
@@ -386,6 +408,14 @@ module.exports.patterns = [
   ['^Click (\\d+) doesn\'t lead to "(.+)"$', 'El clic $1 no lleva a «$2»', 'O clique $1 não leva a "$2"', 'Klick $1 führt nicht zu „$2“', 'Le clic $1 ne mène pas à « $2 »'],
   ['^"(.+)" has no link to "(.+)" \\(click (\\d+)\\)$', '«$1» no enlaza a «$2» (clic $3)', '"$1" não tem link para "$2" (clique $3)', '„$1“ verlinkt nicht auf „$2“ (Klick $3)', '« $1 » n’a pas de lien vers « $2 » (clic $3)'],
   ['^🏁 I got from (.+) to (.+) in (\\d+ clicks?) on WikiRacer\\. Can you beat me\\?\\n([\\s\\S]+)$', '🏁 Llegué de $1 a $2 en {3} en WikiRacer. ¿Me superas?\n$4', '🏁 Fui de $1 até $2 em {3} no WikiRacer. Consegue me vencer?\n$4', '🏁 Ich bin bei WikiRacer in {3} von $1 nach $2 gekommen. Schaffst du es besser?\n$4', `🏁 J’ai relié $1 à $2 en {3} sur WikiRacer. Tu peux me battre${N}?\n$4`],
+  ['^racing · ★ (\\d)/9$', 'corriendo · ★ $1/9', 'correndo · ★ $1/9', 'rennt · ★ $1/9', 'en course · ★ $1/9'],
+  ['^(.+) · bingo card$', '{1} · cartón de bingo', '{1} · cartela de bingo', '{1} · Bingo-Karte', '{1} · grille de bingo'],
+  ['^👑 (.+) wins the Battle Royale!$', '👑 ¡$1 gana el Battle Royale!', '👑 $1 venceu o Battle Royale!', '👑 $1 gewinnt das Battle Royale!', `👑 $1 remporte le Battle Royale${N}!`],
+  ['^💥 (.+) is knocked out · (\\d+) left$', '💥 $1 queda eliminado · quedan $2', '💥 $1 foi eliminado · restam $2', '💥 $1 fliegt raus · noch $2', '💥 $1 est éliminé · il en reste $2'],
+  ['^💥 (.+) is knocked out$', '💥 $1 queda eliminado', '💥 $1 foi eliminado', '💥 $1 fliegt raus', '💥 $1 est éliminé'],
+  ['^👑 (.+) won the last Battle Royale$', '👑 $1 ganó el último Battle Royale', '👑 $1 venceu o último Battle Royale', '👑 $1 hat das letzte Battle Royale gewonnen', '👑 $1 a remporté le dernier Battle Royale'],
+  ['^Round (\\d+) done · (\\d+) left · Out: (.+)$', 'Ronda $1 terminada · quedan $2 · Fuera: $3', 'Rodada $1 encerrada · restam $2 · Fora: $3', 'Runde $1 vorbei · noch $2 · Raus: $3', 'Manche $1 finie · il en reste $2 · Éliminés : $3'],
+  ['^Round (\\d+) done · (\\d+) left$', 'Ronda $1 terminada · quedan $2', 'Rodada $1 encerrada · restam $2', 'Runde $1 vorbei · noch $2', 'Manche $1 finie · il en reste $2'],
 ];
 
 module.exports.scoped = [

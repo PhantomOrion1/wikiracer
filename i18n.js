@@ -9,7 +9,7 @@
   const patterns = D.patterns.map(([re, out]) => [new RegExp(re), out]);
   const scoped = D.scoped || [];
   // Content that must never be translated: Wikipedia text, article titles, routes, typed input.
-  const SKIP = '.logo, .headline.brand, .mw-parser-output, #article, #article-title, #spec-article, #spec-title, #toc-list, .node, .route-big, #path, .tname, .tdesc, .textract, #hud-target, .tv, .choice, input, textarea, script, style, .demo-text, .demo-title, .demo-trail, #demo-url, .room-code, [data-no-i18n]';
+  const SKIP = '.logo, .headline.brand, .bingo-grid, .mw-parser-output, #article, #article-title, #spec-article, #spec-title, #toc-list, .node, .route-big, #path, .tname, .tdesc, .textract, #hud-target, .tv, .choice, input, textarea, script, style, .demo-text, .demo-title, .demo-trail, #demo-url, .room-code, [data-no-i18n]';
 
   function translate(core) {
     const hit = exact.get(core);

@@ -174,6 +174,8 @@
   const FORCE_RELAY = /[?&]debug\b/.test(location.search) && /[?&]relay\b/.test(location.search);
   // Automated tests (?debug) can point at a local matchmaking server via window.__WR_TEST_PEER.
   const TEST_PEER = /[?&]debug\b/.test(location.search) && window.__WR_TEST_PEER;
+  // ...and fix the next party race's articles (window.__WR_TEST_PAIR / __WR_TEST_BINGO) for repeatable tests.
+  const TEST_MODE = /[?&]debug\b/.test(location.search);
   const peerOpts = () => ({ debug: 0, config: { iceServers, ...(FORCE_RELAY ? { iceTransportPolicy: 'relay' } : {}) }, ...(TEST_PEER || CONFIG.peer || {}) });
   // ?debug uses a separate set of public rooms so testing never lands in real players' races.
   const PUBLIC_NS = /[?&]debug\b/.test(location.search) ? 'test-public-' : 'public-';
@@ -205,8 +207,20 @@
   const MAX_PLAYERS = 8;
   const COUNTDOWN_MS = 3300;
   const GRACE_MS = 4000;
-  const LIMITS = { easy: 150e3, medium: 300e3, hard: 600e3, random: 600e3, custom: 600e3, choose: 600e3, challenge: 300e3 };
-  const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', random: 'Random', custom: 'Custom', choose: 'Picked', challenge: 'Challenge', daily: 'Daily' };
+  const LIMITS = { easy: 150e3, medium: 300e3, hard: 600e3, random: 600e3, custom: 600e3, choose: 600e3, challenge: 300e3, speed: 300e3, fog: 600e3, bingo: 600e3, royale: 300e3 };
+  const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard', random: 'Random', custom: 'Custom', choose: 'Picked', challenge: 'Challenge', daily: 'Daily', speed: 'Speed Race', fog: 'Fog of War', bingo: 'Wiki Bingo', royale: 'Battle Royale' };
+  // Party modes (private rooms only). The host picks one; everyone in the room sees the choice.
+  const PARTY_MODES = [
+    { key: 'speed', name: 'Speed Race', desc: "Clicks don't matter, only speed." },
+    { key: 'fog', name: 'Fog of War', desc: 'Only the first paragraph of each article is visible.' },
+    { key: 'bingo', name: 'Wiki Bingo', desc: 'Same 3×3 card for everyone. First full line wins.' },
+    { key: 'royale', name: 'Battle Royale', desc: 'Last place is knocked out every round. 3+ players.' },
+  ];
+  const PARTY_KEYS = PARTY_MODES.map((m) => m.key);
+  const BINGO_LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+  const bingoMarks = (cards, titles) => new Set(titles.map((t) => cards.findIndex((c) => sameTitle(c, t))).filter((i) => i >= 0));
+  const bingoLine = (marked) => BINGO_LINES.some((l) => l.every((i) => marked.has(i)));
+  const timeOnly = (round) => !!round && (round.party === 'speed' || round.party === 'bingo');
   const COLORS = ['#3355ff', '#f76707', '#2f9e44', '#d6336c', '#7048e8', '#0c8599', '#e8a400', '#8a5a44'];
   // Namespaces / interwiki prefixes that don't count as articles.
   const BLOCKED_NS = new Set([
@@ -471,9 +485,9 @@
   // Checks a reported route against Wikipedia: every forward step must be a real link on the
   // previous page, back steps must match the history, and it must end at the target.
   // Returns null when the route is legit, otherwise a reason.
-  async function verifyPath(round, path) {
+  async function verifyPath(round, path, needEnd = true) {
     if (!path.length || !sameTitle(path[0].t, round.start)) return "Route doesn't begin at the start article";
-    if (!sameTitle(path[path.length - 1].t, round.end)) return "Route doesn't reach the target";
+    if (needEnd && !sameTitle(path[path.length - 1].t, round.end)) return "Route doesn't reach the target";
     const stack = [path[0].t];
     const steps = [];
     for (let i = 1; i < path.length; i++) {
@@ -817,12 +831,15 @@
     });
     game = {
       start: round.start, end: round.end, difficulty: round.difficulty, limit: round.limit || limitFor(round.difficulty),
-      mode, ...extra,
+      mode, ...extra, party: round.party || null, cards: round.cards || null, marked: new Set(),
       clicks: 0, penalties: 0, tabLeaves: 0, path: [], stack: [], current: null,
       startTime: 0, elapsed: 0, finished: false, result: null, busy: false, away: false, suppressAway: false,
     };
     show('game');
     $('#hud-target').textContent = round.end;
+    $('#bingo-section').classList.toggle('hidden', round.party !== 'bingo');
+    $('#btn-panel').textContent = round.party === 'bingo' ? 'Card' : 'Info';
+    if (round.party === 'bingo') renderBingo();
     const hd = $('#hud-diff');
     hd.textContent = DIFF_LABEL[round.difficulty] || round.difficulty || '';
     hd.className = `hud-diff ${round.difficulty || ''}`;
@@ -906,6 +923,7 @@
     if (count) g.clicks++;
     g.current = art.title;
     g.path.push({ t: art.title, via: via || title, back, at: g.startTime ? Date.now() - g.startTime : 0 });
+    if (g.party === 'bingo') bingoVisit(g, art.title);
     if (back) g.stack.pop();
     else g.stack.push(art.title);
     if (!g.startTime) g.startTime = Date.now();
@@ -913,6 +931,7 @@
     const built = buildArticle(art);
     $('#article-title').textContent = built.title;
     $('#article').replaceChildren(...built.nodes);
+    if (g.party === 'fog') applyFog($('#article'));
     $('#article-credit').replaceChildren(...attribution(art.title));
     renderToc();
     window.scrollTo(0, 0);
@@ -922,7 +941,47 @@
     sendProgress();
     hoverIdx = -1;
     sendView(true);
-    if (sameTitle(art.title, g.end)) finishGame('finished');
+    if (g.party === 'bingo') { if (bingoLine(g.marked)) finishGame('finished'); }
+    else if (sameTitle(art.title, g.end)) finishGame('finished');
+  }
+
+  // Fog of War: only the article's first real paragraph stays; everything else is hidden.
+  function applyFog(root) {
+    const out = root.querySelector('.mw-parser-output') || root;
+    // Link text lives in data-label (drawn by CSS so find-in-page can't see it), so count it too.
+    const len = (p) => (p.textContent + [...p.querySelectorAll('[data-label]')].map((a) => a.dataset.label).join('')).trim().length;
+    const lead = [...out.querySelectorAll('p')].find((p) => !p.closest('table, .infobox, .hatnote, figure, .mw-empty-elt') && len(p) > 30);
+    const note = document.createElement('p');
+    note.className = 'fog-note';
+    note.textContent = '🌫 Fog of War: only the first paragraph is visible.';
+    out.replaceChildren(...(lead ? [lead] : []), note);
+  }
+
+  // Wiki Bingo: visiting a page on the card marks it; tapping a square makes it your target.
+  function bingoVisit(g, title) {
+    const i = g.cards.findIndex((c) => sameTitle(c, title));
+    if (i < 0 || g.marked.has(i)) return;
+    g.marked.add(i);
+    if (!g.finished) toast(`★ ${g.cards[i]}`, 1800);
+    if (sameTitle(g.end, g.cards[i])) {
+      const next = g.cards.findIndex((_, k) => !g.marked.has(k));
+      if (next >= 0) setBingoTarget(next);
+    }
+    renderBingo();
+  }
+  function setBingoTarget(i) {
+    const g = game;
+    if (!g || g.party !== 'bingo' || !g.cards[i]) return;
+    g.end = g.cards[i];
+    $('#hud-target').textContent = g.end;
+    renderTargetCard(g.end);
+    renderBingo();
+  }
+  function renderBingo() {
+    const g = game;
+    if (!g || g.party !== 'bingo') return;
+    $('#bingo-grid').innerHTML = g.cards.map((c, i) => `<button type="button" class="bingo-cell${g.marked.has(i) ? ' marked' : ''}${sameTitle(c, g.end) ? ' current' : ''}" data-bingo="${i}" aria-pressed="${sameTitle(c, g.end)}">${g.marked.has(i) ? '<i aria-hidden="true">★</i>' : ''}<span>${esc(c)}</span></button>`).join('');
+    $('#hud-target').textContent = `${g.end} · ★ ${g.marked.size}/9`;
   }
 
   function onArticleClick(e) {
@@ -1156,6 +1215,7 @@
           ${p.status === 'finished' || p.status === 'playing' ? `<span>🖱 ${plural(p.clicks || 0, 'click')}</span>` : ''}
           ${p.penalties ? `<span class="pen-chip">+${p.penalties} penalty</span>` : ''}
           ${p.status === 'finished' ? `<span>⏱ ${fmtTime(p.time)}</span>` : ''}
+          ${net.round && net.round.party === 'bingo' && p.id !== 'solo' ? `<span>★ ${p.bingo || 0}/9</span>` : ''}
           ${canSpec ? `<button class="btn tiny" data-spectate="${esc(p.id)}">👁 Spectate</button>` : ''}
         </span>
       </div>
@@ -1202,13 +1262,17 @@
     const body = $('#results-body');
     const actions = $('#results-actions');
     const round = { start: g.start, end: g.end };
-    const headline = g.result === 'finished' ? '🎉 You made it!' : g.result === 'timeout' ? "⏰ Time's up!" : '🏳️ You gave up';
+    const headline = g.result === 'finished' ? (g.party === 'bingo' ? '🎉 Bingo!' : '🎉 You made it!') : g.result === 'timeout' ? "⏰ Time's up!" : '🏳️ You gave up';
     let html = '';
 
     if (g.mode === 'duel') {
       const done = net.phase === 'results';
       const list = ranked();
       const winner = done && list[0] && validFinish(list[0]) ? list[0] : null;
+      const R = net.round && net.round.party === 'royale' ? royaleInfo() : null;
+      const royaleOut = R ? R.lastOut : '';
+      const royaleWinner = R ? R.winner : '';
+      const royaleLeft = R ? R.left : 0;
       const shared = sharedTitles(list, round);
       if (done && confettiRound !== net.round.n) {
         confettiRound = net.round.n;
@@ -1216,7 +1280,9 @@
       }
       html += `<div class="res-head">
         <div class="res-kicker">${esc(DIFF_LABEL[g.difficulty] || '')} · ${esc(g.start)} → ${esc(g.end)}</div>
-        <h2>${done ? (winner ? `🏆 ${esc(winner.name)} wins!` : 'Round over, nobody made it') : headline}</h2>
+        <h2>${done ? (royaleWinner ? `👑 ${esc(royaleWinner)} wins the Battle Royale!` : winner ? `🏆 ${esc(winner.name)} wins!` : 'Round over, nobody made it') : headline}</h2>
+        ${done && royaleOut && !royaleWinner ? `<p class="royale-out">💥 ${esc(royaleOut)} is knocked out · ${royaleLeft} left</p>` : ''}
+        ${done && royaleOut && royaleWinner ? `<p class="royale-out">💥 ${esc(royaleOut)} is knocked out</p>` : ''}
         ${done ? '' : `<p class="muted">Waiting for ${plural(list.filter((p) => p.status === 'playing').length, 'racer')}… ${list.some((p) => p.verify === 'pending') ? 'Checking routes…' : ''}</p>`}
       </div>`;
       if (done) html += podiumHtml(list);
@@ -1358,6 +1424,79 @@
     if (launching || (game && !game.finished)) return;
     launching = true;
     try { await fn(); } finally { launching = false; }
+  }
+
+  // ---------- party modes ----------
+  // Which party mode the coming race uses (null for a normal race). Host decides; guests get it in state.
+  const partyOf = () => (net.isHost ? (!net.isPublic && net.diff === 'party' ? net.party || 'speed' : null) : net.partyMode || null);
+
+  // Wiki Bingo: a start page and 9 familiar topics from different subjects (at most 2 per subject).
+  function makeBingo() {
+    const picked = [];
+    const per = {};
+    for (let i = 0; i < 400 && picked.length < 10 && FAMILIAR.length > 20; i++) {
+      const a = anyOf(FAMILIAR);
+      if (picked.some((x) => x.t === a.t) || (per[a.s] || 0) >= 2) continue;
+      per[a.s] = (per[a.s] || 0) + 1;
+      picked.push(a);
+    }
+    if (picked.length < 10) throw new Error("Couldn't find random articles, try again");
+    return { start: picked[0].t, cards: picked.slice(1).map((x) => x.t) };
+  }
+
+  // Battle Royale: everyone starts; after each race the last-placed player is knocked out, until one is left.
+  function royaleBeforeRound() {
+    const ids = Object.entries(net.players).filter(([, p]) => p.connected).map(([id]) => id);
+    if (!net.royale || net.royale.winner) {
+      if (ids.length < 3) throw new Error('Battle Royale needs at least 3 players');
+      net.royale = { alive: ids, out: [], outIds: [], n: 0, lastOut: '', winner: '' };
+    }
+    const R = net.royale;
+    R.alive = R.alive.filter((id) => net.players[id] && net.players[id].connected);
+    if (R.alive.length < 2) { net.royale = null; return royaleBeforeRound(); }
+    R.n++;
+    R.lastOut = '';
+  }
+  function royaleAfterRound() {
+    const R = net.royale;
+    const list = ranked().filter((p) => R.alive.includes(p.id));
+    if (list.length >= 2) {
+      const loser = list[list.length - 1];
+      R.alive = R.alive.filter((id) => id !== loser.id);
+      R.out.push(loser.name);
+      R.outIds.push(loser.id);
+      R.lastOut = loser.name;
+    }
+    if (R.alive.length === 1) R.winner = (net.players[R.alive[0]] || {}).name || '';
+  }
+  const royaleInfo = () => {
+    if (!net.isHost) return net.royaleInfo || null;
+    const R = net.royale;
+    if (!R || net.isPublic || net.diff !== 'party' || net.party !== 'royale') return null;
+    return { n: R.n, left: R.alive.length, out: R.out.slice(-16), outIds: R.outIds.slice(-16), lastOut: R.lastOut, winner: R.winner };
+  };
+
+  function renderParty(pub) {
+    const panel = $('#party-panel');
+    const slot = net.isHost ? $('#party-host-slot') : $('#party-guest-slot');
+    if (panel.parentElement !== slot) slot.append(panel);
+    panel.classList.toggle('in-host', net.isHost);
+    const mode = partyOf();
+    const show = !pub && net.phase === 'lobby' && !!mode;
+    panel.classList.toggle('hidden', !show);
+    if (!show) return;
+    const players = activeCount();
+    $('#party-modes').innerHTML = PARTY_MODES.map((m) => `<button type="button" class="party-mode${m.key === mode ? ' selected' : ''}" data-party="${m.key}" role="radio" aria-checked="${m.key === mode}" ${net.isHost ? '' : 'disabled'}>
+      <b>${esc(m.name)}</b><span>${esc(m.desc)}</span></button>`).join('');
+    const R = royaleInfo();
+    let note = net.isHost ? '' : 'The host is picking a mode.';
+    if (net.isHost && mode === 'royale' && (!R || R.winner) && players < 3) note = 'Battle Royale needs at least 3 players';
+    $('#party-note').textContent = note;
+    $('#party-note').classList.toggle('hidden', !note);
+    const st = $('#royale-status');
+    const line = mode === 'royale' && R ? (R.winner ? `👑 ${esc(R.winner)} won the last Battle Royale` : `Round ${R.n} done · ${R.left} left${R.out.length ? ` · Out: ${R.out.map(esc).join(', ')}` : ''}`) : '';
+    st.innerHTML = line;
+    st.classList.toggle('hidden', !line);
   }
 
   // "Choose" in private rooms: three pairs of familiar topics everyone can see; the host picks one.
@@ -1715,6 +1854,9 @@
   function iAmDoneThisRound() {
     const me = net.players[net.myId];
     if (game && !game.finished) return false;
+    // Knocked out of a Battle Royale: you can't race any more, so you may watch.
+    const R = royaleInfo();
+    if (me && !me.inRound && R && !R.winner && R.outIds.includes(net.myId)) return true;
     return !!(me && me.inRound && DONE.includes(me.status));
   }
   function canSpectate(p) {
@@ -1838,7 +1980,7 @@
     }
     const who = $('#spec-who');
     const status = p.status === 'playing' ? `${plural(p.clicks, 'click')}${p.penalties ? ` +${p.penalties}` : ''}` : p.status === 'finished' ? `finished in ${plural(score(p), 'click')} 🎉` : p.status;
-    who.innerHTML = `${avatar(p)}<div><b>${esc(p.name)}</b><div class="muted">${esc(status)} · target <b>${esc(net.round ? net.round.end : '')}</b></div></div>`;
+    who.innerHTML = `${avatar(p)}<div><b>${esc(p.name)}</b><div class="muted">${esc(status)} · ${net.round && net.round.party === 'bingo' ? 'bingo card' : `target <b>${esc(net.round ? net.round.end : '')}</b>`}</div></div>`;
     // Their whole route so far, live, with the page they're on now highlighted.
     const trail = p.path && p.path.length ? p.path : p.livePath || [];
     $('#spec-path').innerHTML = trail.length
@@ -1906,8 +2048,9 @@
     return Object.entries(net.players)
       .map(([id, p]) => ({ id, ...p }))
       .filter((p) => p.inRound)
-      .sort((a, b) => group(a) - group(b) ||
-        (a.status === 'finished' ? score(a) - score(b) || a.time - b.time : b.clicks - a.clicks));
+      .sort((a, b) => group(a) - group(b) || (timeOnly(net.round)
+        ? (a.status === 'finished' ? a.time - b.time : (b.bingo || 0) - (a.bingo || 0) || b.clicks - a.clicks)
+        : (a.status === 'finished' ? score(a) - score(b) || a.time - b.time : b.clicks - a.clicks)));
   }
 
   function clearTimers() {
@@ -1921,7 +2064,8 @@
       net = freshNet();
       Object.assign(net, { isHost: true, isPublic, slot, code, myId: 'host' });
       const lastDiff = store.get('wr-room-diff');
-      if (['easy', 'medium', 'hard', 'choose', 'custom'].includes(lastDiff)) net.diff = lastDiff;
+      if (['easy', 'medium', 'hard', 'choose', 'custom', 'party'].includes(lastDiff)) net.diff = lastDiff;
+      net.party = PARTY_KEYS.includes(store.get('wr-party')) ? store.get('wr-party') : 'speed';
       if (net.diff === 'choose') { net.choices = makeChoices(); net.chosen = 0; }
       net.players.host = newPlayer(name, COLORS[0], myPfp());
       net.send = (msg) => hostHandle('host', msg);
@@ -2134,7 +2278,7 @@
       case 'spectate': {
         for (const set of net.watchers.values()) set.delete(id);
         const target = str(msg.id, 200);
-        if (target && net.players[target] && target !== id && p && p.inRound && DONE.includes(p.status)) {
+        if (target && net.players[target] && target !== id && mayWatch(id)) {
           if (!net.watchers.has(target)) net.watchers.set(target, new Set());
           net.watchers.get(target).add(id);
         }
@@ -2166,6 +2310,7 @@
           p.tabLeaves = int(msg.tabLeaves, 0, 9999);
           p.title = normTitle(str(msg.title, 300));
           p.livePath = cleanPath(msg.path).slice(-60); // only ever shown to people who are out of the race
+          if (net.round && net.round.party === 'bingo') p.bingo = bingoMarks(net.round.cards || [], p.livePath.map((x) => x.t)).size;
         }
         break;
       case 'finish':
@@ -2180,6 +2325,7 @@
         p.penalties = int(msg.penalties, 0, 999);
         p.tabLeaves = int(msg.tabLeaves, 0, 9999);
         p.title = path.length ? path[path.length - 1].t : p.title;
+        if (net.round.party === 'bingo') p.bingo = bingoMarks(net.round.cards || [], path.map((x) => x.t)).size;
         let type = msg.type;
         if (type === 'finish' && p.time > net.round.limit + GRACE_MS) type = 'timeout';
         // Loading and reading a page takes time: anything under ~0.7s per click wasn't really played.
@@ -2213,7 +2359,9 @@
     const p = net.players[id];
     let reason = null;
     try {
-      reason = await verifyPath(round, p.path);
+      // Bingo: the route has to be real link by link and visit a full line of the card.
+      if (round.party === 'bingo') reason = bingoLine(bingoMarks(round.cards || [], p.path.map((x) => x.t))) ? await verifyPath(round, p.path, false) : "Route doesn't complete a line on the bingo card";
+      else reason = await verifyPath(round, p.path);
     } catch {
       reason = null; // Wikipedia unreachable: give the benefit of the doubt.
     }
@@ -2230,6 +2378,7 @@
     if (racers.some((p) => p.status === 'playing' || p.verify === 'pending')) return;
     net.phase = 'results';
     clearTimeout(net.timers.deadline);
+    if (net.round && net.round.party === 'royale' && net.royale) royaleAfterRound();
     const top = ranked()[0];
     if (top && validFinish(top)) net.players[top.id].wins++;
     if (net.isPublic) {
@@ -2241,12 +2390,19 @@
   // Each player gets their own view of the state: while you're racing you can't see where
   // anyone else is or which route they took.
   // The round as other players may see it: never the planned answer route.
-  const publicRound = (r) => (r ? { start: r.start, end: r.end, difficulty: r.difficulty, n: r.n, limit: r.limit } : null);
+  const publicRound = (r) => (r ? { start: r.start, end: r.end, difficulty: r.difficulty, n: r.n, limit: r.limit, party: r.party || null, cards: r.cards || null } : null);
+  // A round from the host, checked: only known fields, sane sizes.
+  const parseRound = (r) => {
+    const party = PARTY_KEYS.includes(r.party) ? r.party : null;
+    const cards = party === 'bingo' && Array.isArray(r.cards) ? r.cards.slice(0, 9).map((x) => str(x, 300)).filter(Boolean) : null;
+    return { start: str(r.start, 300), end: str(r.end, 300), difficulty: str(r.difficulty, 20), n: int(r.n, 0, 1e9), limit: int(r.limit, 30e3, 30 * 60e3), party: party === 'bingo' && (!cards || cards.length !== 9) ? null : party, cards };
+  };
 
   function stateFor(viewerId) {
     const viewer = net.players[viewerId];
     // Pages and routes of people still racing only go to those who raced this round and are done.
-    const racing = net.phase === 'playing' && !(viewer && viewer.inRound && DONE.includes(viewer.status));
+    const knockedOut = !!(net.royale && !net.royale.winner && net.royale.outIds.includes(viewerId) && viewer && !viewer.inRound);
+    const racing = net.phase === 'playing' && !knockedOut && !(viewer && viewer.inRound && DONE.includes(viewer.status));
     const players = {};
     for (const [id, p] of Object.entries(net.players)) {
       const watchers = net.watchers.has(id) ? net.watchers.get(id).size : 0;
@@ -2260,6 +2416,7 @@
       autoStartIn: net.autoStartAt ? Math.max(0, net.autoStartAt - Date.now()) : 0,
       nextIn: net.nextAt && net.phase === 'results' ? Math.max(0, net.nextAt - Date.now()) : 0,
       choices: net.diff === 'choose' && !net.isPublic ? net.choices || [] : [], chosen: net.chosen || 0,
+      party: partyOf(), royale: royaleInfo(),
     };
   }
 
@@ -2311,15 +2468,27 @@
     btn.textContent = 'Picking articles…';
     try {
       if (net.isPublic) net.diff = tallyVotes();
-      const pair = await pickPair(net.diff, [$('#room-start').value, $('#room-end').value]);
+      const party = partyOf();
+      if (party === 'royale') royaleBeforeRound(); // throws if there aren't enough players
+      let pair, cards = null;
+      if (party === 'bingo') {
+        const card = (TEST_MODE && window.__WR_TEST_BINGO) || makeBingo();
+        cards = card.cards;
+        pair = { start: card.start, end: cards[0] };
+      } else {
+        pair = party && TEST_MODE && window.__WR_TEST_PAIR ? window.__WR_TEST_PAIR
+          : await pickPair(party ? (party === 'fog' ? 'easy' : 'medium') : net.diff, [$('#room-start').value, $('#room-end').value]);
+      }
       // Picking can take seconds; if the host left the room meanwhile, don't start a race in
       // whatever they're doing now.
       if (net !== me || !me.isHost || me.phase !== 'lobby') return;
       net.roundNum++;
-      const round = { ...pair, difficulty: net.diff, n: net.roundNum, limit: limitFor(net.diff) };
+      const round = { ...pair, difficulty: party || net.diff, n: net.roundNum, limit: limitFor(party || net.diff), party, cards };
       for (const [id, p] of Object.entries(net.players)) {
         if (!p.connected) { delete net.players[id]; continue; }
-        Object.assign(p, { status: 'playing', clicks: 0, penalties: 0, tabLeaves: 0, title: pair.start, time: 0, path: [], livePath: [{ t: pair.start, via: pair.start, back: false }], inRound: true, verify: null, flagReason: '' });
+        // Battle Royale: knocked-out players sit this one out (they can spectate).
+        if (party === 'royale' && !net.royale.alive.includes(id)) { Object.assign(p, { status: 'lobby', inRound: false, path: [], livePath: [], bingo: 0 }); continue; }
+        Object.assign(p, { bingo: 0, status: 'playing', clicks: 0, penalties: 0, tabLeaves: 0, title: pair.start, time: 0, path: [], livePath: [{ t: pair.start, via: pair.start, back: false }], inRound: true, verify: null, flagReason: '' });
       }
       net.phase = 'playing';
       net.round = round;
@@ -2341,9 +2510,11 @@
         checkRoundOver();
         broadcast();
       }, COUNTDOWN_MS + round.limit + GRACE_MS);
-      for (const [id, conn] of net.conns) if (conn.open && net.players[id]) conn.send({ type: 'start', round: publicRound(round) });
+      // Only racers get the start (Battle Royale: knocked-out players watch instead).
+      for (const [id, conn] of net.conns) if (conn.open && net.players[id] && net.players[id].inRound) conn.send({ type: 'start', round: publicRound(round) });
       broadcast();
-      beginRound(round);
+      if (net.players.host && net.players.host.inRound) beginRound(round);
+      else goToLobbyScreen();
       startBots(round);
     } catch (e) {
       if (net !== me) return;
@@ -2865,12 +3036,20 @@
     }
   }, 1300);
 
+  // Host: who may watch racers live — people done with this round, or knocked out of a Battle Royale.
+  function mayWatch(id) {
+    const p = net.players[id];
+    if (!p) return false;
+    if (p.inRound) return DONE.includes(p.status);
+    return !!(net.royale && !net.royale.winner && net.royale.outIds.includes(id));
+  }
+
   function relayView(id, out) {
     const set = net.watchers.get(id);
     if (!set) return;
     for (const w of set) {
       const viewer = net.players[w];
-      if (!viewer || !viewer.inRound || !DONE.includes(viewer.status)) continue;
+      if (!mayWatch(w)) continue;
       if (w === 'host') onView(out);
       else {
         const c = net.conns.get(w);
@@ -3236,7 +3415,7 @@
         connected: p.connected !== false, inRound: !!p.inRound, awaiting: !!p.awaiting,
         verify: ['pending', 'ok', 'failed'].includes(p.verify) ? p.verify : null,
         flagReason: str(p.flagReason, 200), ready: !!p.ready,
-        vote: ['easy', 'medium', 'hard'].includes(p.vote) ? p.vote : null, watchers: int(p.watchers, 0, 16),
+        vote: ['easy', 'medium', 'hard'].includes(p.vote) ? p.vote : null, watchers: int(p.watchers, 0, 16), bingo: int(p.bingo, 0, 9),
       };
     }
     return out;
@@ -3251,7 +3430,7 @@
       net.players = sanitizePlayers(d.players);
       net.phase = ['lobby', 'playing', 'results'].includes(d.phase) ? d.phase : 'lobby';
       const r = d.round && typeof d.round === 'object' ? d.round : null;
-      net.round = r ? { start: str(r.start, 300), end: str(r.end, 300), difficulty: str(r.difficulty, 20), n: int(r.n, 0, 1e9), limit: int(r.limit, 30e3, 30 * 60e3) } : null;
+      net.round = r ? parseRound(r) : null;
       net.succ = Array.isArray(d.succ) ? d.succ.filter((x) => typeof x === 'string' && /^[\w-]{1,64}$/.test(x)).slice(0, 16) : null;
       net.isPublic = !!d.isPublic;
       net.slot = Number.isInteger(d.slot) ? d.slot : null;
@@ -3261,11 +3440,18 @@
       net.roundStartedAt = Date.now() - int(d.roundElapsed, -60e3, 3600e3);
       net.choices = Array.isArray(d.choices) ? d.choices.slice(0, 3).map((c) => ({ start: str(c && c.start, 120), end: str(c && c.end, 120) })).filter((c) => c.start && c.end) : [];
       net.chosen = int(d.chosen, 0, 2);
+      net.partyMode = PARTY_KEYS.includes(d.party) ? d.party : null;
+      const R = d.royale && typeof d.royale === 'object' ? d.royale : null;
+      net.royaleInfo = R ? {
+        n: int(R.n, 0, 99), left: int(R.left, 0, 16), winner: str(R.winner, 40), lastOut: str(R.lastOut, 40),
+        out: Array.isArray(R.out) ? R.out.slice(0, 16).map((x) => cleanName(x)) : [],
+        outIds: Array.isArray(R.outIds) ? R.outIds.filter((x) => typeof x === 'string' && /^[\w-]{1,64}$/.test(x)).slice(0, 16) : [],
+      } : null;
       if (net.phase === 'lobby' && prevPhase !== 'lobby') goToLobbyScreen();
       renderNet();
     } else if (d.type === 'start' && d.round) {
       const r = d.round;
-      const round = { start: str(r.start, 300), end: str(r.end, 300), difficulty: str(r.difficulty, 20), n: int(r.n, 0, 1e9), limit: int(r.limit, 30e3, 30 * 60e3) };
+      const round = parseRound(r);
       if (!round.start || !round.end) return;
       net.round = round;
       net.phase = 'playing';
@@ -3510,6 +3696,7 @@
     else if (p.status === 'gaveup') meta = 'gave up';
     else if (p.status === 'timeout') meta = 'out of time';
     else if (p.status === 'left') meta = 'left';
+    else if (net.round && net.round.party === 'bingo') meta = `racing · ★ ${p.bingo || 0}/9`;
     else meta = `racing · ${plural(p.clicks, 'click')}${p.penalties ? ` +${p.penalties}` : ''}${showTitle && p.title ? ` · on ${esc(p.title)}` : ''}`;
     const rank = validFinish(p) ? `<span class="rank ${i === 0 ? 'gold' : ''}">${i === 0 ? '🏆' : i + 1}</span>` : '<span class="rank">·</span>';
     return `<li class="${p.id === net.myId ? 'me' : ''} ${p.connected === false ? 'off' : ''}">
@@ -3547,6 +3734,7 @@
     const pub = net.isPublic;
     syncRoomDiff();
     renderChoices(pub);
+    renderParty(pub);
     const code = pub && net.slot != null ? pubCode(net.slot) : net.code || (pub ? '' : '');
     $('#room-label').textContent = pub ? 'Public Room' : 'Private Room';
     const canHide = !!code && !net.matching;
@@ -3590,6 +3778,7 @@
     const count = activeCount();
     let wait;
     if (net.matching) wait = '🔎 Searching for an open room…';
+    else if (net.phase === 'playing' && royaleInfo() && royaleInfo().outIds.includes(net.myId)) wait = "💥 You're knocked out of this Battle Royale. Spectate the others or play Lane Rush.";
     else if (net.phase === 'playing') wait = "A race is in progress. You'll be in the next one. Spectate someone or play Lane Rush meanwhile.";
     else if (net.phase === 'results') wait = 'Round just finished. Next one coming up…';
     else if (pub && count < 2) wait = 'Waiting for at least one more racer to join…';
@@ -3605,6 +3794,8 @@
       if (p.inRound) {
         meta = p.status === 'finished' ? `finished · ${plural(score(p), 'click')}` : p.status === 'playing' ? `racing · ${plural(p.clicks, 'click')}` : p.status === 'gaveup' ? 'gave up' : p.status === 'timeout' ? 'out of time' : p.status;
       } else if (net.phase !== 'lobby') meta = 'waiting for next round';
+      const R = royaleInfo();
+      if (R && !R.winner && R.outIds.includes(id)) meta = '💥 knocked out';
       if (p.awaiting) meta = 'reconnecting…';
       return `<li class="${id === net.myId ? 'me' : ''}">
         ${avatar(pl)}<span class="pname">${esc(p.name)}</span>
@@ -3617,7 +3808,9 @@
       </li>`;
     }).join('') : `<li class="muted">${net.matching ? 'Searching…' : 'Connecting…'}</li>`;
     const ready = net.isHost && net.peer && net.peer.open;
-    $('#start-race').disabled = !ready || net.phase === 'playing' || net.starting;
+    const R = royaleInfo();
+    const royaleShort = partyOf() === 'royale' && (!R || R.winner) && count < 3;
+    $('#start-race').disabled = !ready || net.phase === 'playing' || net.starting || royaleShort;
   }
 
   function renderRacers() {
@@ -3889,7 +4082,17 @@
       renderLobby();
     });
     $('#toggle-public').addEventListener('click', hostTogglePublic);
+    $('#party-modes').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-party]');
+      if (!b || !net.isHost || !PARTY_KEYS.includes(b.dataset.party)) return;
+      if (b.dataset.party !== net.party) net.royale = null; // switching modes ends a Battle Royale
+      net.party = b.dataset.party;
+      store.set('wr-party', net.party);
+      broadcast();
+      renderLobby();
+    });
     $$('#room-diff .btn').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.diff !== 'party') net.royale = null;
       net.diff = b.dataset.diff;
       store.set('wr-room-diff', net.diff);
       if (net.diff === 'choose' && !(net.choices && net.choices.length)) hostShuffleChoices();
@@ -3923,6 +4126,7 @@
 
     $('#btn-back').addEventListener('click', goBack);
     $('#btn-giveup').addEventListener('click', giveUp);
+    $('#bingo-grid').addEventListener('click', (e) => { const b = e.target.closest('[data-bingo]'); if (b) setBingoTarget(int(b.dataset.bingo, 0, 8)); });
     // The language menu closes when you click anywhere else.
     document.addEventListener('click', (e) => { const l = $('.lang-switch[open]'); if (l && !l.contains(e.target)) l.open = false; });
     $('#btn-panel').addEventListener('click', () => $('#panel').classList.toggle('open'));
