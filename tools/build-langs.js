@@ -48,7 +48,7 @@ for (const [code, htmlLang, col] of LANGS) {
   }
   const [head, rest] = [html.slice(0, html.indexOf('<body')), html.slice(html.indexOf('<body'))];
   // Body text and attributes (not inside scripts, the demo board or the language switcher).
-  let body = rest.replace(/(<script[\s\S]*?<\/script>)|(<nav class="lang-switch"[\s\S]*?<\/nav>)|>([^<]+)</g, (all, script, nav, text) => {
+  let body = rest.replace(/(<script[\s\S]*?<\/script>)|(<details class="lang-switch"[\s\S]*?<\/details>)|>([^<]+)</g, (all, script, nav, text) => {
     if (script || nav) return all;
     const out = tr(text);
     return out == null ? all : `>${encText(out)}<`;
@@ -57,9 +57,10 @@ for (const [code, htmlLang, col] of LANGS) {
     const out = tr(v);
     return out == null ? all : `${a}="${encAttr(out)}"`;
   });
-  body = body.replace(/(<nav class="lang-switch"[\s\S]*?<\/nav>)/, (nav) => nav
+  body = body.replace(/(<details class="lang-switch"[\s\S]*?<\/details>)/, (box) => box
     .replace(/ aria-current="page"/g, '')
-    .replace(`href="/${code}/"`, `href="/${code}/" aria-current="page"`));
+    .replace(`href="/${code}/"`, `href="/${code}/" aria-current="page"`)
+    .replace(/(<summary[^>]*>)EN</, `$1${code.toUpperCase()}<`));
   // Article pool for this language instead of the English one, plus the live translator.
   body = body
     .replace(/\s*<script src="\/pairs\.js[^"]*" defer><\/script>/, '')

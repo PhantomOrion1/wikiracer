@@ -3923,6 +3923,8 @@
 
     $('#btn-back').addEventListener('click', goBack);
     $('#btn-giveup').addEventListener('click', giveUp);
+    // The language menu closes when you click anywhere else.
+    document.addEventListener('click', (e) => { const l = $('.lang-switch[open]'); if (l && !l.contains(e.target)) l.open = false; });
     $('#btn-panel').addEventListener('click', () => $('#panel').classList.toggle('open'));
     $('#spec-close').addEventListener('click', closeSpectate);
 

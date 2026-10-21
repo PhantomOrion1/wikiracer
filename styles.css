@@ -556,9 +556,6 @@ input { border-radius: 0; font-family: var(--sans); }
 .site-foot nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; font-size: 13px; }
 .site-foot nav a { color: var(--text); text-decoration: none; padding: 4px 0; }
 .site-foot nav a:hover { text-decoration: underline; }
-.site-foot .lang-switch { gap: 4px 14px; font-size: 12.5px; }
-.site-foot .lang-switch a { color: var(--muted); }
-.site-foot .lang-switch a[aria-current="page"] { color: var(--text); font-weight: 700; }
 .site-foot .credit { max-width: 70ch; margin: 0 auto; line-height: 1.5; }
 .article-credit { margin: 32px 0 8px; padding-top: 12px; border-top: 1px solid #c8ccd1; font-size: 12px; color: #54595d; line-height: 1.5; }
 .article-credit a { color: #54595d; }
@@ -1042,3 +1039,15 @@ h3.sec { font-size: 18px; color: var(--text); }
 .path li + li::before { content: "›"; position: absolute; left: -10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 900; }
 .path li.back { background: transparent; color: var(--muted); border-style: dashed; font-weight: 600; }
 .path li:last-child { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
+
+/* Language picker: a faint "EN" in the home page's top-left corner that opens a small menu. */
+#home { position: relative; }
+.lang-switch { position: absolute; top: 8px; left: 10px; z-index: 30; font: 600 11px var(--mono); letter-spacing: .08em; }
+.lang-switch summary { list-style: none; cursor: pointer; padding: 4px 6px; color: var(--muted); opacity: .45; user-select: none; transition: opacity .15s; }
+.lang-switch summary::-webkit-details-marker { display: none; }
+.lang-switch summary::after { content: " ▾"; font-size: 9px; }
+.lang-switch summary:hover, .lang-switch summary:focus-visible, .lang-switch[open] summary { opacity: 1; }
+.lang-switch nav { position: absolute; top: 100%; left: 0; display: grid; min-width: 130px; padding: 4px; background: var(--surface); border: 2px solid var(--ink-line); box-shadow: 4px 4px 0 var(--accent-fill); }
+.lang-switch nav a { padding: 6px 10px; color: var(--text); text-decoration: none; font: 600 13px var(--sans); letter-spacing: 0; }
+.lang-switch nav a:hover { background: var(--surface-2); }
+.lang-switch nav a[aria-current="page"] { font-weight: 800; color: var(--accent); }
