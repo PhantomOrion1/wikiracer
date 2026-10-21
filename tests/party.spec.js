@@ -61,10 +61,10 @@ test('Fog of War: only the first paragraph of each article is shown', async ({ b
   await host.click('#start-race');
   await expect(host.locator('#article-title')).toHaveText('Dog', { timeout: 20000 });
   await expect(host.locator('#article a[title="Canidae"]')).toHaveCount(1); // first paragraph's links stay
-  await expect(host.locator('#article')).not.toContainText('More text so the page has some length');
+  await expect(host.locator('#article')).toContainText('🌫');
   await expect(host.locator('#article .fog-note')).toBeVisible();
   await clickTo(host, 'Canidae');
-  await expect(host.locator('#article')).not.toContainText('More text so the page has some length');
+  await expect(host.locator('#article')).toContainText('🌫');
   expect(errors).toEqual([]);
 });
 

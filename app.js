@@ -212,7 +212,7 @@
   // Party modes (private rooms only). The host picks one; everyone in the room sees the choice.
   const PARTY_MODES = [
     { key: 'speed', name: 'Speed Race', desc: "Clicks don't matter, only speed." },
-    { key: 'fog', name: 'Fog of War', desc: 'Only the first paragraph of each article is visible.' },
+    { key: 'fog', name: 'Fog of War', desc: 'Only the intro of each article is visible.' },
     { key: 'bingo', name: 'Wiki Bingo', desc: 'Same 3×3 card for everyone. First full line wins.' },
     { key: 'royale', name: 'Battle Royale', desc: 'Last place is knocked out every round. 3+ players.' },
   ];
@@ -950,11 +950,15 @@
     const out = root.querySelector('.mw-parser-output') || root;
     // Link text lives in data-label (drawn by CSS so find-in-page can't see it), so count it too.
     const len = (p) => (p.textContent + [...p.querySelectorAll('[data-label]')].map((a) => a.dataset.label).join('')).trim().length;
-    const lead = [...out.querySelectorAll('p')].find((p) => !p.closest('table, .infobox, .hatnote, figure, .mw-empty-elt') && len(p) > 30);
+    // The intro: up to 3 real paragraphs before the first section heading.
+    const all = [...out.children];
+    const stop = all.findIndex((el) => el.matches('h2, .mw-heading, .mw-heading2'));
+    const intro = (stop < 0 ? all : all.slice(0, stop)).filter((el) => el.matches('p') && len(el) > 30).slice(0, 3);
+    const lead = intro.length ? null : [...out.querySelectorAll('p')].find((p) => !p.closest('table, .infobox, .hatnote, figure, .mw-empty-elt') && len(p) > 30);
     const note = document.createElement('p');
     note.className = 'fog-note';
-    note.textContent = '🌫 Fog of War: only the first paragraph is visible.';
-    out.replaceChildren(...(lead ? [lead] : []), note);
+    note.textContent = '🌫 Fog of War: only the intro is visible.';
+    out.replaceChildren(...(intro.length ? intro : lead ? [lead] : []), note);
   }
 
   // Wiki Bingo: visiting a page on the card marks it; tapping a square makes it your target.
