@@ -1100,3 +1100,6 @@ h3.sec { font-size: 18px; color: var(--text); }
 #room-custom.custom-line > :not(.custom-label):not(.custom-arrow) { flex: 1 1 0; min-width: 0; }
 #room-custom.custom-line > :not(input):not(.custom-label):not(.custom-arrow) input { width: 100%; }
 @media (max-width: 560px) { #room-custom.custom-line { flex-wrap: wrap; } #room-custom.custom-line > :not(.custom-label):not(.custom-arrow) { flex: 1 1 0; } }
+#room-custom.custom-line { padding: 8px 12px 8px 14px; margin-left: 0; margin-right: 0; border: 2px solid var(--line); }
+#room-custom.custom-line.selected { border-color: var(--accent-fill); box-shadow: inset 4px 0 0 var(--accent-fill); }
+#room-custom.custom-line.selected .custom-label { color: var(--accent); }

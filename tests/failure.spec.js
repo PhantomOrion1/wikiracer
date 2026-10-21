@@ -373,15 +373,20 @@ test('Choose: everyone sees three pairs, only the host can pick, and the race us
   await host.locator('#choose-list .choice').nth(1).click();
   await expect(friend.locator('#choose-list .choice').nth(1)).toHaveClass(/selected/);
   const pick = await host.evaluate(() => window.__wr.net().choices[1]);
-  // Picking a suggestion fills the boxes; they can still be edited before starting.
-  await expect(host.locator('#room-start')).toHaveValue(pick.start);
-  await expect(host.locator('#room-end')).toHaveValue(pick.end);
+  // Picking a suggestion doesn't touch the "Or choose your own" boxes...
+  await expect(host.locator('#room-start')).toHaveValue('');
+  await expect(host.locator('#room-custom')).not.toHaveClass(/selected/);
+  // ...typing switches to your own pair (and deselects the suggestion)...
   await host.fill('#room-start', 'Dog');
-  await host.fill('#room-end', 'Wolf');
+  await expect(host.locator('#room-custom')).toHaveClass(/selected/);
+  await expect(friend.locator('#choose-list .choice.selected')).toHaveCount(0);
+  // ...and clicking a suggestion again makes that the race.
+  await host.locator('#choose-list .choice').nth(1).click();
+  await expect(host.locator('#room-custom')).not.toHaveClass(/selected/);
   await host.click('#start-race');
   await friend.waitForFunction(() => window.__wr.net().round, null, { timeout: 20000 });
   expect(await friend.evaluate(() => { const r = window.__wr.net().round; return { start: r.start, end: r.end, difficulty: r.difficulty }; }))
-    .toEqual({ start: 'Dog', end: 'Wolf', difficulty: 'custom' });
+    .toEqual({ start: pick.start, end: pick.end, difficulty: 'custom' });
   await Promise.all(ctxs.map((c) => c.close()));
 });
 

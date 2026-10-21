@@ -2480,6 +2480,7 @@
         pair = { start: card.start, end: cards[0] };
       } else {
         pair = party && TEST_MODE && window.__WR_TEST_PAIR ? window.__WR_TEST_PAIR
+          : net.diff === 'custom' && !party && net.choices && net.choices[net.chosen] ? { start: net.choices[net.chosen].start, end: net.choices[net.chosen].end }
           : await pickPair(party ? (party === 'fog' ? 'easy' : 'medium') : net.diff, [$('#room-start').value, $('#room-end').value]);
       }
       // Picking can take seconds; if the host left the room meanwhile, don't start a race in
@@ -3729,6 +3730,8 @@
     $('#choose-shuffle').classList.toggle('hidden', !net.isHost);
     $('#choose-note').textContent = net.isHost ? '' : 'The host is picking one of these.';
     $('#choose-note').classList.toggle('hidden', net.isHost);
+    const typed = !!($('#room-start').value.trim() || $('#room-end').value.trim());
+    $('#room-custom').classList.toggle('selected', net.isHost && net.chosen < 0 && typed);
     $('#choose-list').innerHTML = choices.map((c, i) => `<li><button type="button" class="choice${i === net.chosen ? ' selected' : ''}" data-choice="${i}" ${net.isHost ? '' : 'disabled'} aria-pressed="${i === net.chosen}">
       <span>${esc(c.start)}</span><i aria-hidden="true">→</i><b>${esc(c.end)}</b></button></li>`).join('');
   }
@@ -4101,14 +4104,17 @@
       syncRoomDiff();
     }));
     $('#start-race').addEventListener('click', hostStartRace);
+    // Typing your own pair switches from the suggestions to "Or choose your own".
+    $$('#room-start, #room-end').forEach((el) => el.addEventListener('input', () => {
+      if (!net.isHost) return;
+      if (net.chosen !== -1) { net.chosen = -1; broadcast(); }
+      renderLobby();
+    }));
     $('#choose-shuffle').addEventListener('click', hostShuffleChoices);
     $('#choose-list').addEventListener('click', (e) => {
       const b = e.target.closest('[data-choice]');
       if (!b || !net.isHost) return;
       net.chosen = int(b.dataset.choice, 0, 2);
-      // Picking a suggestion fills the boxes (you can still edit them).
-      const c = net.choices[net.chosen];
-      if (c) { $('#room-start').value = c.start; $('#room-end').value = c.end; }
       broadcast();
       renderLobby();
     });
