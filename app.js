@@ -1519,7 +1519,7 @@
   function hostShuffleChoices() {
     if (!net.isHost) return;
     net.choices = makeChoices();
-    net.chosen = 0;
+    net.chosen = -1;
     broadcast();
     renderLobby();
   }
@@ -2068,9 +2068,10 @@
       net = freshNet();
       Object.assign(net, { isHost: true, isPublic, slot, code, myId: 'host' });
       const lastDiff = store.get('wr-room-diff');
-      if (['easy', 'medium', 'hard', 'choose', 'custom', 'party'].includes(lastDiff)) net.diff = lastDiff;
+      // Choose and Custom are one tab now: Custom shows 3 suggested pairs above the two boxes.
+      if (['easy', 'medium', 'hard', 'choose', 'custom', 'party'].includes(lastDiff)) net.diff = lastDiff === 'choose' ? 'custom' : lastDiff;
       net.party = PARTY_KEYS.includes(store.get('wr-party')) ? store.get('wr-party') : 'speed';
-      if (net.diff === 'choose') { net.choices = makeChoices(); net.chosen = 0; }
+      if (net.diff === 'custom') { net.choices = makeChoices(); net.chosen = -1; }
       net.players.host = newPlayer(name, COLORS[0], myPfp());
       net.send = (msg) => hostHandle('host', msg);
       const me = net;
@@ -2419,7 +2420,7 @@
       roundElapsed: net.phase !== 'lobby' && net.roundStartedAt ? Date.now() - net.roundStartedAt : 0,
       autoStartIn: net.autoStartAt ? Math.max(0, net.autoStartAt - Date.now()) : 0,
       nextIn: net.nextAt && net.phase === 'results' ? Math.max(0, net.nextAt - Date.now()) : 0,
-      choices: net.diff === 'choose' && !net.isPublic ? net.choices || [] : [], chosen: net.chosen || 0,
+      choices: net.diff === 'custom' && !net.isPublic ? net.choices || [] : [], chosen: net.chosen ?? -1,
       party: partyOf(), royale: royaleInfo(),
     };
   }
@@ -2544,7 +2545,7 @@
     }
     net.phase = 'lobby';
     net.nextAt = 0;
-    if (net.diff === 'choose' && !net.isPublic) { net.choices = makeChoices(); net.chosen = 0; }
+    if (net.diff === 'custom' && !net.isPublic) { net.choices = makeChoices(); net.chosen = -1; }
     for (const [id, p] of Object.entries(net.players)) {
       if (!p.connected) delete net.players[id];
       else Object.assign(p, { status: 'lobby', inRound: false, ready: false, vote: null });
@@ -3249,7 +3250,7 @@
     const n = freshNet();
     Object.assign(n, {
       isHost: true, isPublic: old.isPublic, slot: old.slot, code: old.code, roomId: old.roomId, myId: 'host', peer,
-      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: (old.round && ['easy', 'medium', 'hard', 'choose'].includes(old.round.difficulty)) ? old.round.difficulty : (old.choices && old.choices.length ? 'choose' : old.diff),
+      phase: old.phase, round: old.round, roundNum: old.round ? old.round.n : 0, roundStartedAt: old.roundStartedAt, diff: (old.round && ['easy', 'medium', 'hard', 'choose'].includes(old.round.difficulty)) ? old.round.difficulty : (old.choices && old.choices.length ? 'custom' : old.diff),
       choices: old.choices || [], chosen: old.chosen || 0,
       joined: true, myName: old.myName,
     });
@@ -3443,7 +3444,7 @@
       net.nextAt = d.nextIn ? Date.now() + int(d.nextIn, 0, 60e3) : 0;
       net.roundStartedAt = Date.now() - int(d.roundElapsed, -60e3, 3600e3);
       net.choices = Array.isArray(d.choices) ? d.choices.slice(0, 3).map((c) => ({ start: str(c && c.start, 120), end: str(c && c.end, 120) })).filter((c) => c.start && c.end) : [];
-      net.chosen = int(d.chosen, 0, 2);
+      net.chosen = int(d.chosen, -1, 2);
       net.partyMode = PARTY_KEYS.includes(d.party) ? d.party : null;
       const R = d.royale && typeof d.royale === 'object' ? d.royale : null;
       net.royaleInfo = R ? {
@@ -3723,9 +3724,9 @@
     if (panel.parentElement !== slot) slot.append(panel);
     panel.classList.toggle('in-host', net.isHost);
     const choices = net.choices || [];
-    const show = !pub && net.phase === 'lobby' && choices.length > 0 && (!net.isHost || net.diff === 'choose');
+    const show = !pub && net.phase === 'lobby' && choices.length > 0 && (!net.isHost || net.diff === 'custom');
     panel.classList.toggle('hidden', !show);
-    $('#start-race').textContent = net.isHost && net.diff === 'choose' && !net.starting ? 'Play this race' : (net.starting ? 'Picking articles…' : 'Start race');
+    $('#start-race').textContent = net.starting ? 'Picking articles…' : 'Start race';
     if (!show) return;
     $('#choose-shuffle').classList.toggle('hidden', !net.isHost);
     $('#choose-note').textContent = net.isHost ? '' : 'The host is picking one of these.';
@@ -4099,7 +4100,7 @@
       if (b.dataset.diff !== 'party') net.royale = null;
       net.diff = b.dataset.diff;
       store.set('wr-room-diff', net.diff);
-      if (net.diff === 'choose' && !(net.choices && net.choices.length)) hostShuffleChoices();
+      if (net.diff === 'custom' && !(net.choices && net.choices.length)) hostShuffleChoices();
       else { broadcast(); renderLobby(); }
       syncRoomDiff();
     }));
@@ -4109,6 +4110,9 @@
       const b = e.target.closest('[data-choice]');
       if (!b || !net.isHost) return;
       net.chosen = int(b.dataset.choice, 0, 2);
+      // Picking a suggestion fills the boxes (you can still edit them).
+      const c = net.choices[net.chosen];
+      if (c) { $('#room-start').value = c.start; $('#room-end').value = c.end; }
       broadcast();
       renderLobby();
     });

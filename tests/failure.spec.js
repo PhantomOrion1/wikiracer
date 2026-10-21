@@ -362,7 +362,7 @@ test('Choose: everyone sees three pairs, only the host can pick, and the race us
   for (const p of [host, friend]) await mockWikipedia(p);
   const code = await createPrivateRoom(host, 'Host');
   await joinPrivateRoom(friend, 'Friend', code);
-  await host.click('[data-diff=choose]');
+  await host.click('[data-diff=custom]'); // Choose and Custom are one tab
   await expect(host.locator('#choose-list .choice')).toHaveCount(3);
   await expect(friend.locator('#choose-list .choice')).toHaveCount(3);
   await expect(friend.locator('#choose-list .choice').first()).toBeDisabled();
@@ -373,11 +373,15 @@ test('Choose: everyone sees three pairs, only the host can pick, and the race us
   await host.locator('#choose-list .choice').nth(1).click();
   await expect(friend.locator('#choose-list .choice').nth(1)).toHaveClass(/selected/);
   const pick = await host.evaluate(() => window.__wr.net().choices[1]);
-  await expect(host.locator('#start-race')).toHaveText('Play this race');
+  // Picking a suggestion fills the boxes; they can still be edited before starting.
+  await expect(host.locator('#room-start')).toHaveValue(pick.start);
+  await expect(host.locator('#room-end')).toHaveValue(pick.end);
+  await host.fill('#room-start', 'Dog');
+  await host.fill('#room-end', 'Wolf');
   await host.click('#start-race');
   await friend.waitForFunction(() => window.__wr.net().round, null, { timeout: 20000 });
   expect(await friend.evaluate(() => { const r = window.__wr.net().round; return { start: r.start, end: r.end, difficulty: r.difficulty }; }))
-    .toEqual({ start: pick.start, end: pick.end, difficulty: 'choose' });
+    .toEqual({ start: 'Dog', end: 'Wolf', difficulty: 'custom' });
   await Promise.all(ctxs.map((c) => c.close()));
 });
 
