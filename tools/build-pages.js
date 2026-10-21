@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const SITE = 'https://wikiracer.live';
 const NAME = 'WikiRacer Live';
 const ISSUES = 'https://github.com/PhantomOrion1/wikiracer/issues';
-const CSS_V = '5';
+const CSS_V = '6';
 
 globalThis.window = globalThis;
 require(path.join(ROOT, 'pairs.js'));
@@ -29,7 +29,7 @@ const TR = require('./i18n/pages');
 const TR_LANGS = Object.keys(TR);
 const TRANSLATED = new Set(['/how-to-play/', '/multiplayer/', '/party-modes/', '/wiki-bingo/', '/wikipedia-fog-of-war/', '/wikipedia-speed-race/', '/wikipedia-battle-royale/']);
 
-function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noindex = false, lang = 'en' }) {
+function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noindex = false, lang = 'en', heroH1 = false }) {
   const canonical = SITE + url;
   const L = lang === 'en' ? null : TR[lang];
   const home = L ? `/${lang}/` : '/';
@@ -81,7 +81,7 @@ function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noi
   </div></header>
   <main>
     ${crumbs.length ? `<p class="crumbs">${trail.map(([u, n]) => `<a href="${u}">${esc(n)}</a>`).join(' / ')} / ${esc(h1)}</p>` : ''}
-    <h1>${esc(h1)}</h1>
+    ${heroH1 ? '' : `<h1>${esc(h1)}</h1>`}
     ${body}
   </main>
   <footer class="foot"><div class="in">
@@ -394,6 +394,75 @@ const PARTY_PAGES = [
   },
 ];
 const list = (items, tag = 'ul') => `<${tag}>${items.map((x) => `<li>${x}</li>`).join('')}</${tag}>`;
+// ---- party page template (shared by every language) ----
+const PARTY_KEY = { 'wiki-bingo': 'bingo', 'wikipedia-fog-of-war': 'fog', 'wikipedia-speed-race': 'speed', 'wikipedia-battle-royale': 'royale' };
+const PARTY_ICON = { bingo: '★', fog: '☁', speed: '⏱', royale: '👑' };
+const EN_EXTRA = {
+  kicker: 'Party mode', free: 'Free · No sign-up · Up to 8 players', players: 'Players', time: 'Time', winner: 'Winner',
+  ctaTitle: (n) => `Ready for a round of ${n}?`, ctaText: 'Make a private room, send your friends the link, and the mode is already picked.',
+  clicksDontCount: 'Clicks don’t count', out: 'Out', round: 'Round 3', live: 'Live',
+  win: { bingo: 'First full line', fog: 'Fewest clicks', speed: 'Fastest finish', royale: 'Last one standing' },
+  visual: { bingo: ['Pizza', 'Moon', 'Paris', 'Volcano', 'Chess', 'Ancient Egypt', 'Dinosaur', 'Coffee', 'Football'], fogTitle: 'Volcano', fogText: 'A volcano is an opening in the [[Earth’s crust]] where [[magma]], ash and gas escape. Many sit along the [[Ring of Fire]].', route: ['Pizza', 'Italy', 'Mount Vesuvius'] },
+};
+const FACTS = { bingo: ['2–8', '10:00'], fog: ['2–8', '10:00'], speed: ['2–8', '5:00'], royale: ['3–8', '5:00'] };
+const links = (t) => esc(t).replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b) => `<u>${b || a}</u>`);
+function partyVisual(key, X) {
+  const V = X.visual;
+  if (key === 'bingo') {
+    const marked = new Set([0, 1, 2, 4, 7]);
+    return `<div class="pv pv-bingo" aria-hidden="true"><div class="pv-bar"><span>★ 5/9</span><span>BINGO!</span></div><div class="pv-grid">${V.bingo.map((t, i) => `<span class="${marked.has(i) ? 'on' : ''}${i < 3 ? ' win' : ''}">${esc(t)}</span>`).join('')}</div></div>`;
+  }
+  if (key === 'fog') {
+    return `<div class="pv pv-fog" aria-hidden="true"><div class="pv-title">${esc(V.fogTitle)}</div><p>${links(V.fogText)}</p><div class="pv-mist"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>`;
+  }
+  if (key === 'speed') {
+    return `<div class="pv pv-speed" aria-hidden="true"><div class="pv-clock">0:47</div><div class="pv-route">${V.route.map((t, i) => `${i ? '<b>→</b>' : ''}<span>${esc(t)}</span>`).join('')}</div><div class="pv-tag">${esc(X.clicksDontCount)}</div></div>`;
+  }
+  const rows = [['Maya', '👑', ''], ['Leo', '2', ''], ['Sam', '💥', 'out'], ['Ava', '💥', 'out']];
+  return `<div class="pv pv-royale" aria-hidden="true"><div class="pv-bar"><span>${esc(X.round)}</span><span>● ${esc(X.live)}</span></div>${rows.map(([n, r, o]) => `<div class="pv-row ${o}"><b>${r}</b><span>${n}</span>${o ? `<em>${esc(X.out)}</em>` : ''}</div>`).join('')}</div>`;
+}
+function partyBody(m, { home, ui, X, modes, partyModesUrl }) {
+  const key = PARTY_KEY[m.slug];
+  const play = `${home}?party=${key}`;
+  const [players, time] = FACTS[key];
+  return `
+    <section class="p-hero">
+      <div class="p-hero-text">
+        <p class="p-kicker">${PARTY_ICON[key]} ${esc(X.kicker)}</p>
+        <h1>${esc(m.name)}</h1>
+        <p class="lead">${m.lead}</p>
+        <div class="cta"><a class="play big" href="${play}">${esc(ui.play(m.name))} →</a></div>
+        <p class="p-free">${esc(X.free)}</p>
+      </div>
+      ${partyVisual(key, X)}
+    </section>
+    <div class="p-facts">
+      <div><small>${esc(X.players)}</small><b>${players}</b></div>
+      <div><small>${esc(X.time)}</small><b>${time}</b></div>
+      <div><small>${esc(X.winner)}</small><b>${esc(X.win[key])}</b></div>
+    </div>
+    <h2>${esc(ui.howToPlay)}</h2>
+    <ol class="p-steps">${m.how.map((x) => `<li>${x}</li>`).join('')}</ol>
+    <h2>${esc(ui.rules)}</h2>
+    <ul class="p-rules">${m.rules.map((x) => `<li>${x}</li>`).join('')}</ul>
+    <h2>${esc(ui.tips)}</h2>
+    <div class="p-tips">${m.tips.map((x) => `<div>💡 ${x}</div>`).join('')}</div>
+    <section class="p-cta">
+      <h2>${esc(X.ctaTitle(m.name))}</h2>
+      <p>${esc(X.ctaText)}</p>
+      <a class="play big" href="${play}">${esc(ui.play(m.name))} →</a>
+    </section>
+    <h2>${esc(ui.otherModes)}</h2>
+    <div class="p-modes">${modes.filter((x) => x.slug !== m.slug).map((x) => `<a href="${x.url}"><span>${PARTY_ICON[PARTY_KEY[x.slug]]}</span><b>${esc(x.name)}</b><small>${esc(ui.howItWorks)} →</small></a>`).join('')}</div>
+    <p class="p-all"><a href="${partyModesUrl}">${esc(ui.partyModes)}</a></p>`;
+}
+const STR = require('./i18n/strings');
+const MODE_DESC = { speed: "Clicks don't matter, only speed.", fog: 'Only the intro of each article is visible.', bingo: 'Same 3×3 card for everyone. First full line wins.', royale: 'Last place is knocked out every round. 3+ players.' };
+const COL = { en: 0, es: 1, pt: 2, de: 3, fr: 4 };
+const descIn = (lang, key) => { const row = STR.exact.find((r) => r[0] === MODE_DESC[key]); return row ? row[COL[lang]] : MODE_DESC[key]; };
+const overviewCards = (lang, home, modes, ui) => `<div class="p-overview">${modes.map((m) => { const k = PARTY_KEY[m.slug]; return `<div class="p-card"><span class="p-icon">${PARTY_ICON[k]}</span><h2>${esc(m.name)}</h2><p>${esc(descIn(lang, k))}</p><div class="p-card-cta"><a class="play" href="${home}?party=${k}">${esc(ui.play(m.name))}</a><a href="${m.url}">${esc(ui.howItWorks)} →</a></div></div>`; }).join('')}</div>`;
+const EN_UI = { home: 'Home', partyModes: 'All party modes', howItWorks: 'How it works', howToPlay: 'How to play', rules: 'Rules', tips: 'Tips', otherModes: 'Other party modes', play: (n) => `Play ${n}` };
+
 add({
   url: '/party-modes/',
   title: `Wikipedia Party Games: Wiki Bingo, Fog of War & More | ${NAME}`,
@@ -401,25 +470,15 @@ add({
   h1: 'Party modes',
   body: `
     <p class="lead">Private rooms have four party modes that change how a Wikipedia race works. Make a room, press <b>🎉 Party</b>, and the host picks one. Everyone in the room can see the choice.</p>
-    <ul class="pairs">${PARTY_PAGES.map((m) => `<li><span class="route">${esc(m.name)}</span><a class="go" href="/${m.slug}/">How it works</a></li>`).join('')}</ul>
-    <div class="cta"><a class="play" href="/">Make a room</a><a class="play ghost" href="/multiplayer/">Play with friends</a></div>`,
+    ${overviewCards('en', '/', PARTY_PAGES.map((m) => ({ slug: m.slug, name: m.name, url: `/${m.slug}/` })), EN_UI)}
+    <div class="cta"><a class="play ghost" href="/multiplayer/">Play with friends</a><a class="play ghost" href="/how-to-play/">How to play</a></div>`,
 });
+
 for (const m of PARTY_PAGES) {
   add({
-    url: `/${m.slug}/`, title: m.title, description: m.description, h1: m.name, crumbs: [['/party-modes/', 'Party modes']],
+    url: `/${m.slug}/`, title: m.title, description: m.description, h1: m.name, crumbs: [['/party-modes/', 'Party modes']], heroH1: true,
     jsonld: [{ '@context': 'https://schema.org', '@type': 'HowTo', name: `How to play ${m.name}`, step: m.how.map((t, i) => ({ '@type': 'HowToStep', position: i + 1, text: t.replace(/<[^>]+>/g, '') })) }],
-    body: `
-    <p class="lead">${m.lead}</p>
-    <div class="cta"><a class="play" href="/">Play ${esc(m.name)}</a></div>
-    <h2>How to play</h2>
-    ${list(m.how, 'ol')}
-    <h2>Rules</h2>
-    ${list(m.rules)}
-    <h2>Tips</h2>
-    ${list(m.tips)}
-    <h2>Other party modes</h2>
-    <ul class="pairs">${PARTY_PAGES.filter((x) => x !== m).map((x) => `<li><span class="route">${esc(x.name)}</span><a class="go" href="/${x.slug}/">How it works</a></li>`).join('')}</ul>
-    <div class="cta"><a class="play" href="/">Make a room</a><a class="play ghost" href="/how-to-play/">How to play</a></div>`,
+    body: partyBody(m, { home: '/', ui: EN_UI, X: EN_EXTRA, modes: PARTY_PAGES.map((x) => ({ slug: x.slug, name: x.name, url: `/${x.slug}/` })), partyModesUrl: '/party-modes/' }),
   });
 }
 
@@ -437,25 +496,14 @@ for (const lang of TR_LANGS) {
     url: `${p}party-modes/`, lang, title: pm.title, description: pm.description, h1: pm.h1,
     body: `
     <p class="lead">${pm.lead}</p>
-    <ul class="pairs">${modes.map((m) => `<li><span class="route">${esc(m.name)}</span><a class="go" href="${p}${m.slug}/">${esc(L.ui.howItWorks)}</a></li>`).join('')}</ul>
-    <div class="cta"><a class="play" href="${p}">${esc(L.ui.makeRoom)}</a><a class="play ghost" href="${p}multiplayer/">${esc(L.ui.playWithFriends)}</a></div>`,
+    ${overviewCards(lang, p, modes.map((m) => ({ slug: m.slug, name: m.name, url: `${p}${m.slug}/` })), L.ui)}
+    <div class="cta"><a class="play ghost" href="${p}multiplayer/">${esc(L.ui.playWithFriends)}</a><a class="play ghost" href="${p}how-to-play/">${esc(L.ui.howToPlay)}</a></div>`,
   });
   for (const m of modes) {
     add({
-      url: `${p}${m.slug}/`, lang, title: m.title, description: m.description, h1: m.name, crumbs: [[`${p}party-modes/`, L.ui.partyModes]],
+      url: `${p}${m.slug}/`, lang, title: m.title, description: m.description, h1: m.name, crumbs: [[`${p}party-modes/`, L.ui.partyModes]], heroH1: true,
       jsonld: [{ '@context': 'https://schema.org', '@type': 'HowTo', inLanguage: L.htmlLang, name: L.ui.howTo(m.name), step: m.how.map((x, i) => ({ '@type': 'HowToStep', position: i + 1, text: x.replace(/<[^>]+>/g, '') })) }],
-      body: `
-    <p class="lead">${m.lead}</p>
-    <div class="cta"><a class="play" href="${p}">${esc(L.ui.play(m.name))}</a></div>
-    <h2>${esc(L.ui.howToPlay)}</h2>
-    ${list(m.how, 'ol')}
-    <h2>${esc(L.ui.rules)}</h2>
-    ${list(m.rules)}
-    <h2>${esc(L.ui.tips)}</h2>
-    ${list(m.tips)}
-    <h2>${esc(L.ui.otherModes)}</h2>
-    <ul class="pairs">${modes.filter((x) => x !== m).map((x) => `<li><span class="route">${esc(x.name)}</span><a class="go" href="${p}${x.slug}/">${esc(L.ui.howItWorks)}</a></li>`).join('')}</ul>
-    <div class="cta"><a class="play" href="${p}">${esc(L.ui.makeRoom)}</a><a class="play ghost" href="${p}how-to-play/">${esc(L.ui.howToPlay)}</a></div>`,
+      body: partyBody(m, { home: p, ui: L.ui, X: L.extra, modes: modes.map((x) => ({ slug: x.slug, name: x.name, url: `${p}${x.slug}/` })), partyModesUrl: `${p}party-modes/` }),
     });
   }
 }

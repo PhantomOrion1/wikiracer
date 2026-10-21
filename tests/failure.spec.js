@@ -193,7 +193,9 @@ test('Quick match opens more public rooms when every room is full', async ({ bro
   await Promise.all(ctxs.map((c) => c.close()));
 });
 
-test('Joining by code keeps trying until the host shows up (e.g. host switched apps)', async ({ browser }) => {
+// (The local test server never answers "no such room", so the join keeps retrying here; the real
+// server answers at once and the player is told the room doesn't exist.)
+test('Joining by code waits on the home screen and gets in once the room appears', async ({ browser }) => {
   const ctxs = await Promise.all([0, 1].map(() => browser.newContext()));
   const [host, friend] = await Promise.all(ctxs.map((c) => c.newPage()));
   for (const p of [host, friend]) await mockWikipedia(p);
@@ -204,10 +206,10 @@ test('Joining by code keeps trying until the host shows up (e.g. host switched a
   await friend.click('#join-form button[type=submit]');
   await friend.waitForTimeout(6000); // the room doesn't exist yet
   expect(await friend.evaluate(() => window.__wr.net().joined)).toBeFalsy();
-  await expect(friend.locator('#lobby')).toHaveClass(/active/); // still trying, not bounced home
-  await expect(friend.locator('#lobby')).toContainText(/Waiting for room/);
+  await expect(friend.locator('#home')).toHaveClass(/active/); // no lobby until the room answers
   await host.evaluate((c) => window.__wr.hostRoom({ name: 'Host', code: c }), code);
   await friend.waitForFunction(() => window.__wr.net().joined, null, { timeout: 30000 });
+  await expect(friend.locator('#lobby')).toHaveClass(/active/);
   await host.waitForFunction(() => Object.keys(window.__wr.net().players).length === 2);
   await Promise.all(ctxs.map((c) => c.close()));
 });
@@ -647,15 +649,15 @@ test('Relay logins still load when multiplayer is touched before config.json arr
   await expect.poll(() => page.evaluate(() => JSON.stringify(window.__wr.iceServers())), { timeout: 10000 }).toContain('turns:relay.example:443');
 });
 
-test('Joining a code that does not exist shows a search, not a room', async ({ page }) => {
+test('Joining a code that does not exist stays on the home screen and says so', async ({ page }) => {
   await mockWikipedia(page);
   await openHome(page, 'Tester');
   await page.fill('#join-code', 'QZ7KX');
   await page.click('#join-form button[type=submit]');
-  await expect(page.locator('#room-label')).toHaveText('Looking for room');
-  await expect(page.locator('#room-code')).toHaveClass(/pending/);
-  await expect(page.locator('#invite')).toBeHidden();
-  await expect(page.locator('#lobby-players')).toContainText('Looking for this room');
+  await expect(page.locator('#toast')).toContainText('Looking for room QZ7KX');
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#home')).toHaveClass(/active/);
+  await expect(page.locator('#lobby')).not.toHaveClass(/active/);
 });
 
 test('Solo "Pick your own" only makes the Solo card taller', async ({ page }) => {

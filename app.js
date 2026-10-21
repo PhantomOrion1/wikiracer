@@ -795,6 +795,8 @@
       return li;
     }));
     $('#toc').open = !matchMedia('(max-width: 1100px)').matches;
+    $('#toc').scrollTop = 0; // a new article starts at the top of its contents list too
+    tocCurrent = null;
     markTocSection();
   }
 
@@ -1302,7 +1304,7 @@
         if (winner) burstConfetti();
       }
       html += `<div class="res-head">
-        <div class="res-kicker">${esc(DIFF_LABEL[g.difficulty] || '')} · ${esc(g.start)} → ${esc(g.end)}</div>
+        <div class="res-kicker">${esc(DIFF_LABEL[g.difficulty] || '')} · ${esc(g.start)}${g.party === 'bingo' ? ' · ★ 3×3' : ` → ${esc(g.end)}`}</div>
         <h2>${done ? (royaleWinner ? `👑 ${esc(royaleWinner)} wins the Battle Royale!` : winner ? `🏆 ${esc(winner.name)} wins!` : 'Round over, nobody made it') : headline}</h2>
         ${done && royaleOut && !royaleWinner ? `<p class="royale-out">💥 ${esc(royaleOut)} is knocked out · ${royaleLeft} left</p>` : ''}
         ${done && royaleOut && royaleWinner ? `<p class="royale-out">💥 ${esc(royaleOut)} is knocked out</p>` : ''}
@@ -1823,13 +1825,13 @@
     const sameClicks = finished ? stats.buckets.find((b) => b.clicks === rec.score) : null;
     let verdict;
     if (!finished) verdict = `You're one of the ${Math.round(stats.dnf * 100)}% who didn't make it today. The target was a tough one!`;
-    else if (rec.score < stats.par) verdict = `🤯 Nobody else found a route this short today! The next best was ${stats.par} clicks.`;
-    else if (rec.score === stats.par) verdict = `🏆 You matched today's best route! Only ${Math.round((sameClicks ? sameClicks.share : 0) * 100)}% of players found a ${stats.par}-click path.`;
+    else if (rec.score < stats.par) verdict = `Nobody else found a route this short today! The next best was ${stats.par} clicks.`;
+    else if (rec.score === stats.par) verdict = `You matched today's best route! Only ${Math.round((sameClicks ? sameClicks.share : 0) * 100)}% of players found a ${stats.par}-click path.`;
     else verdict = `You beat <b>${Math.round(beat * 100)}%</b> of players (${playersBeaten.toLocaleString()} of ${stats.players.toLocaleString()})${sameClicks ? `. ${Math.round(sameClicks.share * 100)}% also took ${rec.score} clicks, and your time broke the tie` : ''}.`;
 
     $('#results-body').innerHTML = `<div class="res-head">
         <div class="res-kicker">Daily #${rec.n} · ${esc(rec.start)} → ${esc(rec.end)}</div>
-        <h2>${finished ? '🎉 Daily complete!' : rec.result === 'timeout' ? "⏰ Time's up!" : rec.abandoned ? '🚪 You left mid-challenge' : '🏳️ You gave up'}</h2></div>
+        <h2>${finished ? 'Daily complete!' : rec.result === 'timeout' ? "Time's up!" : rec.abandoned ? 'You left mid-challenge' : 'You gave up'}</h2></div>
       <div class="big-stats">
         <div><b>${finished ? rec.score : '—'}</b><small>clicks${rec.penalties ? ` (incl. +${rec.penalties})` : ''}</small></div>
         <div><b>${fmtTime(rec.time)}</b><small>time</small></div>
@@ -1839,10 +1841,10 @@
       <h3 class="sec">How everyone did today</h3>
       ${histogramHtml(stats, rec)}
       <div class="daily-facts">
-        <span>👥 <b>${stats.players.toLocaleString()}</b> players</span>
-        <span>⚡ Best today: <b>${finished ? Math.min(stats.par, rec.score) : stats.par}</b> clicks</span>
-        <span>📊 Median: <b>${stats.medianClicks}</b> clicks · <b>${fmtTime(stats.timeMedian(stats.medianClicks))}</b></span>
-        <span>🚫 Didn't finish: <b>${Math.round(stats.dnf * 100)}%</b></span>
+        <span><b>${stats.players.toLocaleString()}</b> players</span>
+        <span>Best today: <b>${finished ? Math.min(stats.par, rec.score) : stats.par}</b> clicks</span>
+        <span>Median: <b>${stats.medianClicks}</b> clicks · <b>${fmtTime(stats.timeMedian(stats.medianClicks))}</b></span>
+        <span>Didn't finish: <b>${Math.round(stats.dnf * 100)}%</b></span>
       </div>
       ${(() => { const r = store.get(`wr-route:${pairKey(rec.start, rec.end)}`); return r ? `<h3 class="sec">Shortest route we found (${r.length - 1} clicks)</h3>${routeHtml(r)}` : ''; })()}
       <h3 class="sec">Your route</h3>
@@ -1857,7 +1859,7 @@
       b.onclick = fn;
       actions.append(b);
     };
-    add('📤 Share result', 'primary', () => shareDaily(rec, beat));
+    add('Share result', 'primary', () => shareDaily(rec, beat));
     add('Home', 'ghost', () => { closeResults(); game = null; renderDailyCard(); show('home'); });
     $('#results').classList.remove('hidden');
     $('#results .modal').scrollTop = 0;
@@ -2154,7 +2156,8 @@
     joinRoom(code);
   }
 
-  async function createRoom() {
+  async function createRoom(party = null) {
+    party = PARTY_KEYS.includes(party) ? party : null;
     const name = getName();
     if (!name || !(await peerReady())) return;
     matchToken++;
@@ -2165,7 +2168,9 @@
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await hostRoom({ name, code: makeCode() });
-        track('room_created');
+        // Arrived from a party mode page (?party=bingo): that mode is picked already.
+        if (party) { net.diff = 'party'; net.party = party; broadcast(); }
+        track('room_created', party ? { party } : {});
         setLobbyStatus('Send the invite link to your friends (up to 8 players), then start the race.');
         renderLobby();
         return;
@@ -3371,7 +3376,8 @@
     net = freshNet();
     net.code = code;
     net.joining = true; // until the host answers, this is a search, not a room
-    show('lobby');
+    // Stay on the home screen until the room answers: a code that doesn't exist just gets a message.
+    toast(`Looking for room ${shownCode(code)}…`, 6000);
     setLobbyStatus(`Joining room ${shownCode(code)}…`);
     renderLobby();
 
@@ -3387,14 +3393,15 @@
     // Keep trying for a while instead of failing on the first miss: a host who just switched apps
     // to send the code (phones pause background tabs) drops off the signalling server for a few
     // seconds, and a slow network can take a while to connect.
-    // A room the server says doesn't exist gets ~10s (enough for a host who briefly switched apps
-    // to send the code); other problems (slow network) get the full 30s.
-    const JOIN_FOR_MS = 30000, NOT_FOUND_MS = 10000, ATTEMPT_MS = 9000, t0 = Date.now();
+    // The server says straight away when no room has this code: check once more (a host may be
+    // reconnecting that very second), then say so. Other problems (slow network) get the full 30s.
+    const JOIN_FOR_MS = 30000, ATTEMPT_MS = 9000, t0 = Date.now();
+    let notFound = 0;
     let attempts = 0, pending = null, retryTimer = null, lastErr = '';
     const giveUp = () => {
       track('issue', { kind: 'join_failed', error: lastErr || 'timeout', attempts });
       fail(lastErr === 'peer-unavailable'
-        ? `Room ${shownCode(code)} wasn't found. Check the code, and ask the host to keep the game open.`
+        ? `Room ${shownCode(code)} doesn't exist. Check the code and try again.`
         : peer.open
           ? "Found the room but couldn't connect to the other players. Work or school networks often block this: try home Wi-Fi or a phone hotspot."
           : "Couldn't connect to that room. Check your connection and try again.");
@@ -3404,9 +3411,10 @@
       lastErr = why || lastErr;
       if (pending) { try { pending.close(); } catch {} pending = null; }
       clearTimeout(retryTimer);
-      if (Date.now() - t0 > (lastErr === 'peer-unavailable' ? NOT_FOUND_MS : JOIN_FOR_MS)) return giveUp();
+      notFound = why === 'peer-unavailable' ? notFound + 1 : 0;
+      if (notFound >= 2 || Date.now() - t0 > JOIN_FOR_MS) return giveUp();
       setLobbyStatus(`Waiting for room ${shownCode(code)}… (the host needs the game open)`);
-      retryTimer = setTimeout(attempt, 2000);
+      retryTimer = setTimeout(attempt, notFound ? 1500 : 2000);
     };
     const attempt = () => {
       if (net !== me || me.joined) return;
@@ -3419,6 +3427,9 @@
         clearTimeout(t);
         if (net !== me || pending !== conn) { try { conn.close(); } catch {} return; }
         pending = null;
+        clearToast(`Looking for room ${shownCode(code)}…`);
+        show('lobby');
+        renderLobby();
         attachGuest(conn, name, me, fail);
       });
       conn.on('error', () => { clearTimeout(t); if (pending === conn) retry('conn-error'); });
@@ -3676,7 +3687,8 @@
     window.MiniGame.close();
     const overlay = $('#countdown');
     $('#cd-diff').textContent = kicker || `${DIFF_LABEL[round.difficulty] || ''} · ${fmtTime(round.limit)} on the clock`;
-    $('#cd-route').innerHTML = `${esc(round.start)} → <b>${esc(round.end)}</b>`;
+    // Wiki Bingo has no single target: show the start and the card instead.
+    $('#cd-route').innerHTML = round.party === 'bingo' ? `${esc(round.start)} · <b>★ 3×3</b>` : `${esc(round.start)} → <b>${esc(round.end)}</b>`;
     overlay.classList.remove('hidden');
     return new Promise((resolve) => {
       let n = 3;
@@ -4128,7 +4140,7 @@
 
     renderDailyCard();
     $('#quick-match').addEventListener('click', () => quickMatch());
-    $('#create-room').addEventListener('click', createRoom);
+    $('#create-room').addEventListener('click', () => createRoom());
     $('#join-form').addEventListener('submit', (e) => { e.preventDefault(); joinRoom($('#join-code').value); });
     $('#leave-lobby').addEventListener('click', leaveRoomAndGoHome);
     $('#skip-room').addEventListener('click', () => quickMatch());
@@ -4248,6 +4260,18 @@
       banner.classList.remove('hidden');
       $('#banner-join').addEventListener('click', () => joinRoom(code));
       if (!nameInput.value) nameInput.focus();
+    } else if (PARTY_KEYS.includes(q.get('party'))) {
+      // From a party mode page: open a private room with that mode picked (asking for a name first
+      // if we don't have one yet).
+      const mode = PARTY_MODES.find((m) => m.key === q.get('party'));
+      history.replaceState(null, '', baseUrl());
+      banner.innerHTML = `<h2>${esc(mode.name)}</h2>
+        <p class="muted">${esc(mode.desc)}</p>
+        <button class="btn primary wide" id="banner-party">Create a private room</button>`;
+      banner.classList.remove('hidden');
+      $('#banner-party').addEventListener('click', () => createRoom(mode.key));
+      if (nameInput.value.trim()) createRoom(mode.key);
+      else nameInput.focus();
     } else if (q.get('s') && q.get('e')) {
       const challenge = { by: cleanName(q.get('by') || 'A friend'), clicks: int(q.get('c'), 0, 999), ...parseChallengeRun(q) };
       const s = str(q.get('s'), 300);

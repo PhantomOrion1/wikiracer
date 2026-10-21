@@ -146,3 +146,23 @@ test('Public results stay up longer when more people raced (10s + 2s per extra r
   }));
   expect(times).toEqual([10000, 12000, 16000, 22000]);
 });
+
+test('Party page links open a private room with that mode already picked', async ({ browser }) => {
+  // With a saved name: straight into the room
+  const page = await (await browser.newContext()).newPage();
+  await mockWikipedia(page);
+  await page.addInitScript(() => { try { localStorage.setItem('wr-name', JSON.stringify('Juju')); } catch {} });
+  await page.goto('/?party=bingo&debug');
+  await expect(page.locator('#room-code')).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 20000 });
+  await expect(page.locator('[data-diff=party]')).toHaveClass(/selected/);
+  await expect(page.locator('[data-party=bingo]')).toHaveClass(/selected/);
+  // Without a name: asks for one first
+  const fresh = await (await browser.newContext()).newPage();
+  await mockWikipedia(fresh);
+  await fresh.goto('/?party=royale&debug');
+  await expect(fresh.locator('#challenge-banner')).toContainText('Battle Royale');
+  await fresh.fill('#name-input', 'Ana');
+  await fresh.click('#banner-party');
+  await expect(fresh.locator('#room-code')).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 20000 });
+  await expect(fresh.locator('[data-party=royale]')).toHaveClass(/selected/);
+});

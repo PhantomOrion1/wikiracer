@@ -465,3 +465,34 @@ module.exports = {
   },
 };
 void N;
+
+// Party page extras: hero labels, quick facts, closing call-to-action and the example content
+// shown in each mode's picture (titles are real articles in that language).
+module.exports.es.extra = {
+  kicker: 'Modo fiesta', free: 'Gratis · Sin registro · Hasta 8 jugadores', players: 'Jugadores', time: 'Tiempo', winner: 'Gana',
+  ctaTitle: (n) => `¿Listos para una ronda de ${n}?`, ctaText: 'Crea una sala privada, envía el enlace a tus amigos y el modo ya estará elegido.',
+  clicksDontCount: 'Los clics no cuentan', out: 'Fuera', round: 'Ronda 3', live: 'En vivo',
+  win: { bingo: 'Primera línea completa', fog: 'Menos clics', speed: 'El más rápido', royale: 'El último en pie' },
+  visual: { bingo: ['Pizza', 'Luna', 'París', 'Volcán', 'Ajedrez', 'Antiguo Egipto', 'Dinosauria', 'Café', 'Fútbol'], fogTitle: 'Volcán', fogText: 'Un volcán es una abertura en la [[corteza terrestre]] por la que salen [[magma]], ceniza y gases. Muchos se encuentran en el [[Cinturón de Fuego del Pacífico]].', route: ['Pizza', 'Italia', 'Vesubio'] },
+};
+module.exports.pt.extra = {
+  kicker: 'Modo festa', free: 'Grátis · Sem cadastro · Até 8 jogadores', players: 'Jogadores', time: 'Tempo', winner: 'Vence',
+  ctaTitle: (n) => `Bora uma rodada de ${n}?`, ctaText: 'Crie uma sala privada, mande o link para os amigos e o modo já vem escolhido.',
+  clicksDontCount: 'Cliques não contam', out: 'Fora', round: 'Rodada 3', live: 'Ao vivo',
+  win: { bingo: 'Primeira linha completa', fog: 'Menos cliques', speed: 'O mais rápido', royale: 'O último de pé' },
+  visual: { bingo: ['Pizza', 'Lua', 'Paris', 'Vulcão', 'Xadrez', 'Antigo Egito', 'Dinossauro', 'Café', 'Futebol'], fogTitle: 'Vulcão', fogText: 'Um vulcão é uma abertura na [[crosta terrestre]] por onde saem [[magma]], cinzas e gases. Muitos ficam no [[Círculo de Fogo do Pacífico]].', route: ['Pizza', 'Itália', 'Vesúvio'] },
+};
+module.exports.de.extra = {
+  kicker: 'Party-Modus', free: 'Kostenlos · Ohne Anmeldung · Bis zu 8 Spieler', players: 'Spieler', time: 'Zeit', winner: 'Sieg',
+  ctaTitle: (n) => `Bereit für eine Runde ${n}?`, ctaText: 'Erstelle einen privaten Raum, schick den Link an Freunde, und der Modus ist schon gewählt.',
+  clicksDontCount: 'Klicks zählen nicht', out: 'Raus', round: 'Runde 3', live: 'Live',
+  win: { bingo: 'Erste volle Reihe', fog: 'Wenigste Klicks', speed: 'Schnellster', royale: 'Wer übrig bleibt' },
+  visual: { bingo: ['Pizza', 'Mond', 'Paris', 'Vulkan', 'Schach', 'Altes Ägypten', 'Dinosaurier', 'Kaffee', 'Fußball'], fogTitle: 'Vulkan', fogText: 'Ein Vulkan ist eine Öffnung in der [[Erdkruste]], aus der [[Magma]], Asche und Gase austreten. Viele liegen am [[Pazifischer Feuerring|Pazifischen Feuerring]].', route: ['Pizza', 'Italien', 'Vesuv'] },
+};
+module.exports.fr.extra = {
+  kicker: 'Mode fête', free: 'Gratuit · Sans inscription · Jusqu’à 8 joueurs', players: 'Joueurs', time: 'Temps', winner: 'Victoire',
+  ctaTitle: (n) => `Prêts pour une partie de ${n} ?`, ctaText: 'Crée un salon privé, envoie le lien à tes amis, et le mode est déjà choisi.',
+  clicksDontCount: 'Les clics ne comptent pas', out: 'Éliminé', round: 'Manche 3', live: 'En direct',
+  win: { bingo: 'Première ligne complète', fog: 'Le moins de clics', speed: 'Le plus rapide', royale: 'Le dernier debout' },
+  visual: { bingo: ['Pizza', 'Lune', 'Paris', 'Volcan', 'Échecs', 'Égypte antique', 'Dinosaure', 'Café', 'Football'], fogTitle: 'Volcan', fogText: 'Un volcan est une ouverture dans la [[croûte terrestre]] d’où s’échappent [[magma]], cendres et gaz. Beaucoup se trouvent sur la [[ceinture de feu du Pacifique]].', route: ['Pizza', 'Italie', 'Vésuve'] },
+};

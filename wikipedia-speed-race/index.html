@@ -32,7 +32,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/fonts/archivo-latin-ad60be.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts/fonts.css">
-  <link rel="stylesheet" href="/pages.css?v=5">
+  <link rel="stylesheet" href="/pages.css?v=6">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://wikiracer.live/"},{"@type":"ListItem","position":2,"name":"Party modes","item":"https://wikiracer.live/party-modes/"},{"@type":"ListItem","position":3,"name":"Speed Race","item":"https://wikiracer.live/wikipedia-speed-race/"}]}</script>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"HowTo","name":"How to play Speed Race","step":[{"@type":"HowToStep","position":1,"text":"Make a private room and share the code."},{"@type":"HowToStep","position":2,"text":"Press 🎉 Party and pick Speed Race."},{"@type":"HowToStep","position":3,"text":"Everyone starts on the same article with the same target."},{"@type":"HowToStep","position":4,"text":"Click links as fast as you can. First to the target wins."}]}</script>
 </head>
@@ -43,19 +43,37 @@
   </div></header>
   <main>
     <p class="crumbs"><a href="/">Home</a> / <a href="/party-modes/">Party modes</a> / Speed Race</p>
-    <h1>Speed Race</h1>
     
-    <p class="lead">Speed Race is a pure race against the clock. Clicks don’t count at all: whoever reaches the target article first wins, however many pages it took.</p>
-    <div class="cta"><a class="play" href="/">Play Speed Race</a></div>
+    
+    <section class="p-hero">
+      <div class="p-hero-text">
+        <p class="p-kicker">⏱ Party mode</p>
+        <h1>Speed Race</h1>
+        <p class="lead">Speed Race is a pure race against the clock. Clicks don’t count at all: whoever reaches the target article first wins, however many pages it took.</p>
+        <div class="cta"><a class="play big" href="/?party=speed">Play Speed Race →</a></div>
+        <p class="p-free">Free · No sign-up · Up to 8 players</p>
+      </div>
+      <div class="pv pv-speed" aria-hidden="true"><div class="pv-clock">0:47</div><div class="pv-route"><span>Pizza</span><b>→</b><span>Italy</span><b>→</b><span>Mount Vesuvius</span></div><div class="pv-tag">Clicks don’t count</div></div>
+    </section>
+    <div class="p-facts">
+      <div><small>Players</small><b>2–8</b></div>
+      <div><small>Time</small><b>5:00</b></div>
+      <div><small>Winner</small><b>Fastest finish</b></div>
+    </div>
     <h2>How to play</h2>
-    <ol><li>Make a private room and share the code.</li><li>Press <b>🎉 Party</b> and pick <b>Speed Race</b>.</li><li>Everyone starts on the same article with the same target.</li><li>Click links as fast as you can. First to the target wins.</li></ol>
+    <ol class="p-steps"><li>Make a private room and share the code.</li><li>Press <b>🎉 Party</b> and pick <b>Speed Race</b>.</li><li>Everyone starts on the same article with the same target.</li><li>Click links as fast as you can. First to the target wins.</li></ol>
     <h2>Rules</h2>
-    <ul><li>Only time counts; extra clicks and Back presses cost nothing but seconds.</li><li>Every finishing route is checked against Wikipedia.</li><li>You have 5 minutes.</li></ul>
+    <ul class="p-rules"><li>Only time counts; extra clicks and Back presses cost nothing but seconds.</li><li>Every finishing route is checked against Wikipedia.</li><li>You have 5 minutes.</li></ul>
     <h2>Tips</h2>
-    <ul><li>Don’t read, skim: headings and the contents list are your friends.</li><li>Jump to a big hub article fast, then narrow down.</li><li>Going back is free in Speed Race, so don’t be afraid to try a link.</li></ul>
+    <div class="p-tips"><div>💡 Don’t read, skim: headings and the contents list are your friends.</div><div>💡 Jump to a big hub article fast, then narrow down.</div><div>💡 Going back is free in Speed Race, so don’t be afraid to try a link.</div></div>
+    <section class="p-cta">
+      <h2>Ready for a round of Speed Race?</h2>
+      <p>Make a private room, send your friends the link, and the mode is already picked.</p>
+      <a class="play big" href="/?party=speed">Play Speed Race →</a>
+    </section>
     <h2>Other party modes</h2>
-    <ul class="pairs"><li><span class="route">Wiki Bingo</span><a class="go" href="/wiki-bingo/">How it works</a></li><li><span class="route">Fog of War</span><a class="go" href="/wikipedia-fog-of-war/">How it works</a></li><li><span class="route">Battle Royale</span><a class="go" href="/wikipedia-battle-royale/">How it works</a></li></ul>
-    <div class="cta"><a class="play" href="/">Make a room</a><a class="play ghost" href="/how-to-play/">How to play</a></div>
+    <div class="p-modes"><a href="/wiki-bingo/"><span>★</span><b>Wiki Bingo</b><small>How it works →</small></a><a href="/wikipedia-fog-of-war/"><span>☁</span><b>Fog of War</b><small>How it works →</small></a><a href="/wikipedia-battle-royale/"><span>👑</span><b>Battle Royale</b><small>How it works →</small></a></div>
+    <p class="p-all"><a href="/party-modes/">All party modes</a></p>
   </main>
   <footer class="foot"><div class="in">
     <nav aria-label="Site"><a href="/">Play</a><a href="/how-to-play/">How to play</a><a href="/multiplayer/">Play with friends</a><a href="/wiki-race-ideas/">Race ideas</a><a href="/party-modes/">Party modes</a><a href="/wikipedia-speedrun/">Wikipedia speedrun</a><a href="/faq/">FAQ</a><a href="/privacy/">Privacy &amp; terms</a></nav>

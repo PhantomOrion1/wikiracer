@@ -301,6 +301,15 @@ module.exports.exact = [
   ['Waiting for players to reconnect…', 'Esperando a que los jugadores se reconecten…', 'Esperando os jogadores reconectarem…', 'Warte, bis die Spieler wieder verbunden sind…', 'En attente de la reconnexion des joueurs…'],
   ['Looking for room', 'Buscando sala', 'Procurando sala', 'Suche Raum', 'Recherche du salon'],
   ['Looking for this room…', 'Buscando esta sala…', 'Procurando esta sala…', 'Suche diesen Raum…', 'Recherche de ce salon…'],
+  // daily results (no emojis)
+  ['Daily complete!', '¡Reto diario completado!', 'Desafio diário concluído!', 'Tagesrennen geschafft!', 'Défi du jour réussi !'],
+  ['You left mid-challenge', 'Saliste a mitad del reto', 'Você saiu no meio do desafio', 'Mitten im Rennen verlassen', 'Tu as quitté en cours de défi'],
+  ["Time's up!", '¡Se acabó el tiempo!', 'O tempo acabou!', 'Zeit um!', 'Temps écoulé !'],
+  ['You gave up', 'Te rendiste', 'Você desistiu', 'Du hast aufgegeben', 'Tu as abandonné'],
+  ['Best today:', 'Mejor de hoy:', 'Melhor de hoje:', 'Bestwert heute:', 'Meilleur du jour :'],
+  ['Median:', 'Mediana:', 'Mediana:', 'Median:', 'Médiane :'],
+  ["Didn't finish:", 'No terminaron:', 'Não terminaram:', 'Nicht im Ziel:', 'Pas arrivés :'],
+  ['Share result', 'Compartir resultado', 'Compartilhar resultado', 'Ergebnis teilen', 'Partager le résultat'],
   // ---- party modes ----
   ['🎉 Party', '🎉 Fiesta', '🎉 Festa', '🎉 Party', '🎉 Fête'],
   ['Party mode', 'Modo fiesta', 'Modo festa', 'Party-Modus', 'Mode fête'],
@@ -396,8 +405,8 @@ module.exports.patterns = [
   ['^(\\d+)-day streak · ([\\d.,\\s]+) today$', 'Racha de $1 días · $2 hoy', 'Sequência de $1 dias · $2 hoje', '$1-Tage-Serie · $2 heute', 'Série de $1 jours · $2 aujourd’hui'],
   ['^([\\d.,\\s]+) today$', '$1 hoy', '$1 hoje', '$1 heute', '$1 aujourd’hui'],
   ["^You're one of the (\\d+)% who didn't make it today\\. The target was a tough one!$", 'Eres parte del $1% que no lo logró hoy. ¡El objetivo era difícil!', 'Você está entre os $1% que não conseguiram hoje. O destino era difícil!', 'Du gehörst zu den $1%, die es heute nicht geschafft haben. Das Ziel war knifflig!', `Tu fais partie des $1% qui n’ont pas réussi aujourd’hui. La cible était coriace${N}!`],
-  ['^🤯 Nobody else found a route this short today! The next best was (\\d+) clicks\\.$', '🤯 ¡Nadie más encontró una ruta tan corta hoy! La siguiente mejor fue de $1 clics.', '🤯 Ninguém mais achou uma rota tão curta hoje! A segunda melhor teve $1 cliques.', '🤯 Niemand sonst hat heute so eine kurze Route gefunden! Die nächstbeste hatte $1 Klicks.', `🤯 Personne d’autre n’a trouvé un itinéraire aussi court aujourd’hui${N}! Le suivant faisait $1 clics.`],
-  ["^🏆 You matched today's best route! Only (\\d+)% of players found a (\\d+)-click path\\.$", '🏆 ¡Igualaste la mejor ruta de hoy! Solo el $1% encontró un camino de $2 clics.', '🏆 Você igualou a melhor rota de hoje! Só $1% acharam um caminho de $2 cliques.', '🏆 Du hast die beste Route des Tages erreicht! Nur $1% fanden einen Weg mit $2 Klicks.', `🏆 Tu as égalé le meilleur itinéraire du jour${N}! Seuls $1% ont trouvé un chemin en $2 clics.`],
+  ['^Nobody else found a route this short today! The next best was (\\d+) clicks\\.$', '¡Nadie más encontró una ruta tan corta hoy! La siguiente mejor fue de $1 clics.', 'Ninguém mais achou uma rota tão curta hoje! A segunda melhor teve $1 cliques.', 'Niemand sonst hat heute so eine kurze Route gefunden! Die nächstbeste hatte $1 Klicks.', `Personne d’autre n’a trouvé un itinéraire aussi court aujourd’hui${N}! Le suivant faisait $1 clics.`],
+  ["^You matched today's best route! Only (\\d+)% of players found a (\\d+)-click path\\.$", '¡Igualaste la mejor ruta de hoy! Solo el $1% encontró un camino de $2 clics.', 'Você igualou a melhor rota de hoje! Só $1% acharam um caminho de $2 cliques.', 'Du hast die beste Route des Tages erreicht! Nur $1% fanden einen Weg mit $2 Klicks.', `Tu as égalé le meilleur itinéraire du jour${N}! Seuls $1% ont trouvé un chemin en $2 clics.`],
   ['^of players \\(([\\d.,\\s]+) of ([\\d.,\\s]+)\\)\\. (\\d+)% also took (\\d+) clicks, and your time broke the tie\\.$', 'de los jugadores ($1 de $2). El $3% también hizo $4 clics y tu tiempo desempató.', 'dos jogadores ($1 de $2). $3% também fizeram $4 cliques, e seu tempo desempatou.', 'der Spieler geschlagen ($1 von $2). $3% brauchten auch $4 Klicks, deine Zeit hat entschieden.', 'des joueurs ($1 sur $2). $3% ont aussi fait $4 clics, ton temps a fait la différence.'],
   ['^of players \\(([\\d.,\\s]+) of ([\\d.,\\s]+)\\)\\.$', 'de los jugadores ($1 de $2).', 'dos jogadores ($1 de $2).', 'der Spieler geschlagen ($1 von $2).', 'des joueurs ($1 sur $2).'],
   ['^clicks \\(incl\\. \\+(\\d+)\\)$', 'clics (incl. +$1)', 'cliques (incl. +$1)', 'Klicks (inkl. +$1)', 'clics (dont +$1)'],
@@ -421,6 +430,8 @@ module.exports.patterns = [
   ['^👑 (.+) won the last Battle Royale$', '👑 $1 ganó el último Battle Royale', '👑 $1 venceu o último Battle Royale', '👑 $1 hat das letzte Battle Royale gewonnen', '👑 $1 a remporté le dernier Battle Royale'],
   ['^Round (\\d+) done · (\\d+) left · Out: (.+)$', 'Ronda $1 terminada · quedan $2 · Fuera: $3', 'Rodada $1 encerrada · restam $2 · Fora: $3', 'Runde $1 vorbei · noch $2 · Raus: $3', 'Manche $1 finie · il en reste $2 · Éliminés : $3'],
   ['^Round (\\d+) done · (\\d+) left$', 'Ronda $1 terminada · quedan $2', 'Rodada $1 encerrada · restam $2', 'Runde $1 vorbei · noch $2', 'Manche $1 finie · il en reste $2'],
+  ['^Looking for room (.+)…$', 'Buscando la sala $1…', 'Procurando a sala $1…', 'Suche Raum $1…', 'Recherche du salon $1…'],
+  ["^Room (.+) doesn't exist\\. Check the code and try again\\.$", 'La sala $1 no existe. Revisa el código e inténtalo de nuevo.', 'A sala $1 não existe. Confira o código e tente de novo.', 'Raum $1 gibt es nicht. Prüf den Code und versuch es noch mal.', 'Le salon $1 n’existe pas. Vérifie le code et réessaie.'],
 ];
 
 module.exports.scoped = [
