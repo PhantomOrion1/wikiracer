@@ -2905,7 +2905,8 @@
     // Fewest clicks wins, and real people rarely find the very shortest route, so even the best
     // fill-ins only take it some rounds (it used to be every round for good/sharp ones, so the same
     // bot won every race in 2 clicks). Otherwise they take a longer route, or add a wrong turn.
-    const optimal = Math.random() < ([0.12, 0.22, 0.35, 0.5][BOT_TIERS.indexOf(tier)] ?? 0.25);
+    const hardish = ['hard', 'random', 'fog'].includes(round.difficulty);
+    const optimal = Math.random() < ([0.12, 0.22, 0.35, 0.5][BOT_TIERS.indexOf(tier)] ?? 0.25) * (hardish ? 0.4 : 1);
     const route = options.length ? options[optimal ? 0 : options.length - 1 - Math.floor(Math.random() * Math.ceil(options.length / 2))] : null;
     const shortestLen = sorted.length ? sorted[0].length : 0;
     b.routeKey = route ? route.join('|') : null;
@@ -2916,6 +2917,13 @@
       const extra = (!sharp && Math.random() < 0.3) || (!optimal && route.length <= shortestLen && Math.random() < 0.6) ? 1 : 0;
       const detours = Math.min(pool.length, dm > 1.2 ? 2 : 1, (sharp || optimal ? 0 : randInt(tier.detours[0], tier.detours[1])) + (optimal ? 0 : extra));
       for (let k = 0; k < detours; k++) {
+        const w = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+        path.push({ t: w, via: w, back: false }, { t: round.start, via: round.start, back: true });
+      }
+      // Nobody realistic beats this many clicks on a difficulty (Hard pairs sometimes hide a 2-click
+      // route that people almost never spot): take wrong turns first until the route is that long.
+      const floor = { easy: 2, medium: 3, hard: 4, random: 4, fog: 3 }[round.difficulty] || 3;
+      while ((path.length - 1) + (route.length - 1) < floor && pool.length) {
         const w = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
         path.push({ t: w, via: w, back: false }, { t: round.start, via: round.start, back: true });
       }
