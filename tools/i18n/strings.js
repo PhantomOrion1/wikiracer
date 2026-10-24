@@ -310,6 +310,8 @@ module.exports.exact = [
   ['Median:', 'Mediana:', 'Mediana:', 'Median:', 'Médiane :'],
   ["Didn't finish:", 'No terminaron:', 'Não terminaram:', 'Nicht im Ziel:', 'Pas arrivés :'],
   ['Share result', 'Compartir resultado', 'Compartilhar resultado', 'Ergebnis teilen', 'Partager le résultat'],
+  ['Switch to light mode', 'Cambiar a modo claro', 'Mudar para o modo claro', 'Zum hellen Modus wechseln', 'Passer en mode clair'],
+  ['Switch to dark mode', 'Cambiar a modo oscuro', 'Mudar para o modo escuro', 'Zum dunklen Modus wechseln', 'Passer en mode sombre'],
   // ---- party modes ----
   ['🎉 Party', '🎉 Fiesta', '🎉 Festa', '🎉 Party', '🎉 Fête'],
   ['Party mode', 'Modo fiesta', 'Modo festa', 'Party-Modus', 'Mode fête'],

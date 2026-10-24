@@ -28,7 +28,7 @@ function wikiResponse(url) {
     if (!GRAPH[t]) return { error: { code: 'missingtitle', info: "The page you specified doesn't exist." } };
     return { parse: { title: t, displaytitle: `<span class="mw-page-title-main">${t}</span>`, text: articleHtml(t) } };
   }
-  if (action === 'opensearch') return [q.get('search'), [], [], []];
+  if (action === 'opensearch') { const pre = norm(q.get('search')); const hits = Object.keys(GRAPH).filter((t) => t.toLowerCase().startsWith(pre.toLowerCase())); return [q.get('search'), hits, [], []]; }
   if (action === 'query') {
     const titles = (q.get('titles') || '').split('|').filter(Boolean).map(norm);
     if (q.get('generator') || q.get('list')) return { query: { pages: [] } };

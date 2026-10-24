@@ -481,7 +481,7 @@
       const my = ++seq;
       timer = setTimeout(async () => {
         try {
-          const r = await fetch(API + '?' + new URLSearchParams({ action: 'opensearch', search: q, limit: '6', namespace: '0', format: 'json', origin: '*' }));
+          const r = await fetch(wikiBase() + '/w/api.php?' + new URLSearchParams({ action: 'opensearch', search: q, limit: '6', namespace: '0', format: 'json', origin: '*' }));
           const j = await r.json();
           if (my !== seq) return;
           items = Array.isArray(j[1]) ? j[1] : [];
@@ -1657,7 +1657,7 @@
     const dnf = 0.14 + rnd() * 0.12;
     const mu = Math.log(3.0 + rnd() * 1.5); // extra clicks above par (+1), log-normal
     const sigma = 0.5 + rnd() * 0.15;
-    const secPerClick = 20 + rnd() * 10;
+    const secPerClick = 32 + rnd() * 13; // hard pairs: most people read a while before each click
     const now = new Date();
     const minute = key === dateKey(now) ? now.getHours() * 60 + now.getMinutes() : 1440;
     const players = Math.round((5000 + rnd() * 9000) * dayProgress(minute)) + 8 + Math.floor(rnd() * 10);
@@ -1667,7 +1667,7 @@
       const hi = k === 12 ? 1 : lnCdf(k + 1.5, mu, sigma);
       buckets.push({ clicks: par + k, share: (hi - lo) * (1 - dnf), plus: k === 12 });
     }
-    const timeMedian = (c) => (secPerClick * c + 35) * 1000;
+    const timeMedian = (c) => Math.min(LIMITS.hard * 0.8, (secPerClick * c + 50) * 1000);
     const timeSigma = 0.45;
     let acc = 0;
     let medianClicks = par;
@@ -2906,7 +2906,7 @@
     // fill-ins only take it some rounds (it used to be every round for good/sharp ones, so the same
     // bot won every race in 2 clicks). Otherwise they take a longer route, or add a wrong turn.
     const hardish = ['hard', 'random', 'fog'].includes(round.difficulty);
-    const optimal = Math.random() < ([0.12, 0.22, 0.35, 0.5][BOT_TIERS.indexOf(tier)] ?? 0.25) * (hardish ? 0.4 : 1);
+    const optimal = Math.random() < ([0.08, 0.15, 0.25, 0.35][BOT_TIERS.indexOf(tier)] ?? 0.18) * (hardish ? 0.4 : 1);
     const route = options.length ? options[optimal ? 0 : options.length - 1 - Math.floor(Math.random() * Math.ceil(options.length / 2))] : null;
     const shortestLen = sorted.length ? sorted[0].length : 0;
     b.routeKey = route ? route.join('|') : null;
@@ -2922,7 +2922,7 @@
       }
       // Nobody realistic beats this many clicks on a difficulty (Hard pairs sometimes hide a 2-click
       // route that people almost never spot): take wrong turns first until the route is that long.
-      const floor = { easy: 2, medium: 3, hard: 4, random: 4, fog: 3 }[round.difficulty] || 3;
+      const floor = { easy: 3, medium: 4, hard: 5, random: 5, fog: 4 }[round.difficulty] || 4;
       while ((path.length - 1) + (route.length - 1) < floor && pool.length) {
         const w = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
         path.push({ t: w, via: w, back: false }, { t: round.start, via: round.start, back: true });
@@ -4208,6 +4208,26 @@
     $('#btn-back').addEventListener('click', goBack);
     $('#btn-giveup').addEventListener('click', giveUp);
     $('#bingo-grid').addEventListener('click', (e) => { const b = e.target.closest('[data-bingo]'); if (b) setBingoTarget(int(b.dataset.bingo, 0, 8)); });
+    // Light/dark switch (dark is the default; see theme.js). Shows the mode you'd switch to.
+    const themeBtn = $('#theme-switch');
+    const paintTheme = () => {
+      const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+      const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      themeBtn.innerHTML = dark
+        ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+      themeBtn.setAttribute('aria-label', label);
+      themeBtn.title = label;
+    };
+    if (themeBtn) {
+      paintTheme();
+      themeBtn.addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('wr-theme', next); } catch {}
+        paintTheme();
+      });
+    }
     // The language menu closes when you click anywhere else.
     document.addEventListener('click', (e) => { const l = $('.lang-switch[open]'); if (l && !l.contains(e.target)) l.open = false; });
     $('#btn-panel').addEventListener('click', () => $('#panel').classList.toggle('open'));

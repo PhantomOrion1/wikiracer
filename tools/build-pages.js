@@ -49,6 +49,7 @@ function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noi
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
+  <script src="/theme.js"></script>
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
   ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" href="${canonical}">`}
@@ -63,7 +64,7 @@ function page({ url, title, description, h1, crumbs = [], body, jsonld = [], noi
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="WikiRacer: race friends through Wikipedia, one link at a time">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#f4f2ed">
+  <meta name="theme-color" content="#111111">
   <meta name="application-name" content="${NAME}">
   <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" href="/icons/icon-96.png" sizes="96x96" type="image/png">

@@ -1042,7 +1042,8 @@ h3.sec { font-size: 18px; color: var(--text); }
 
 /* Language picker: a faint "EN" in the home page's top-left corner that opens a small menu. */
 #home { position: relative; }
-.lang-switch { position: absolute; top: 8px; left: 10px; z-index: 30; font: 600 11px var(--mono); letter-spacing: .08em; }
+.corner-tools { position: absolute; top: 8px; left: 10px; z-index: 30; display: flex; align-items: center; gap: 2px; }
+.lang-switch { position: relative; font: 600 11px var(--mono); letter-spacing: .08em; }
 /* The faintest grey that still passes WCAG AA contrast (4.5:1) on each background. */
 .lang-switch { --faint: #726e66; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lang-switch { --faint: #7f7c75; } }
@@ -1107,3 +1108,9 @@ h3.sec { font-size: 18px; color: var(--text); }
 /* Joining by code: the room isn't confirmed yet, so the code is shown faded. */
 .room-code.pending { opacity: .35; }
 .solo-open { align-items: start; }
+
+/* Light/dark switch, as quiet as the language button next to it. */
+.theme-switch { --faint: #726e66; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; background: none; border: 0; color: var(--faint); cursor: pointer; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .theme-switch { --faint: #7f7c75; } }
+:root[data-theme="dark"] .theme-switch { --faint: #7f7c75; }
+.theme-switch:hover, .theme-switch:focus-visible { color: var(--text); }

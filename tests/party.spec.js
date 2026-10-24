@@ -166,3 +166,34 @@ test('Party page links open a private room with that mode already picked', async
   await expect(fresh.locator('#room-code')).toHaveText(/^[A-Z0-9]{5}$/, { timeout: 20000 });
   await expect(fresh.locator('[data-party=royale]')).toHaveClass(/selected/);
 });
+
+test('Article suggestions appear while typing (private room Custom and Solo)', async ({ page }) => {
+  await mockWikipedia(page);
+  await createPrivateRoom(page, 'Host');
+  await page.click('[data-diff=custom]');
+  await page.click('#room-start');
+  await page.keyboard.type('Can', { delay: 50 });
+  await expect(page.locator('#room-custom .suggest-list li')).toHaveText(['Canidae'], { timeout: 5000 });
+  await page.click('#room-custom .suggest-list li');
+  await expect(page.locator('#room-start')).toHaveValue('Canidae');
+  await page.click('#leave-lobby');
+  await page.click('#solo-custom-toggle');
+  await page.click('#solo-custom input[name=start]');
+  await page.keyboard.type('Wo', { delay: 50 });
+  await expect(page.locator('#solo-custom .suggest-list li')).toHaveText(['Wolf'], { timeout: 5000 });
+});
+
+test('Dark mode by default; the switch turns light on and it is remembered', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' }); // even with a light system setting
+  await mockWikipedia(page);
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('#theme-switch')).toHaveAttribute('aria-label', 'Switch to light mode');
+  await page.click('#theme-switch');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.goto('/how-to-play/');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.goto('/');
+  await page.click('#theme-switch');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+});

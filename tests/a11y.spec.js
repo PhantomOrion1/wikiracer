@@ -11,6 +11,8 @@ const scan = async (page) => {
 for (const scheme of ['light', 'dark']) {
   test.describe(`${scheme} mode`, () => {
     test.use({ colorScheme: scheme });
+    // Dark is the site default; light is what the switch (top-left) picks and remembers.
+    test.beforeEach(async ({ page }) => { await page.addInitScript((t) => { try { localStorage.setItem('wr-theme', t); } catch {} }, scheme); });
     test('home page has no WCAG A/AA violations', async ({ page }) => {
       await mockWikipedia(page);
       await openHome(page);
